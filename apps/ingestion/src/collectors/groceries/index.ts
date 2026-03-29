@@ -1,11 +1,9 @@
 import { db, insertProducts, type NewProduct } from "@workspace/db";
 import type { MetricKey } from "@workspace/db/metrics";
+import { spawn } from "node:child_process";
+import { resolve } from "node:path";
 import type { CollectorResult } from "../types";
-import { BASKET } from "./basket";
-import { scrapeNewWorld } from "./newworld";
-import { scrapePakNSave } from "./paknsave";
 import type { ScrapedProduct } from "./types";
-import { scrapeWoolworths } from "./woolworths";
 
 const GROCERY_METRICS: MetricKey[] = [
   "milk",
@@ -15,54 +13,84 @@ const GROCERY_METRICS: MetricKey[] = [
   "cheese",
 ];
 
+const STORES = ["woolworths", "paknsave", "newworld"] as const;
+
+const SCRAPE_SCRIPT = resolve(
+  import.meta.dir,
+  "scrape-store.ts"
+);
+
 /**
- * Grocery collector: scrapes all 3 supermarkets, writes product-level data
- * to the `products` table, and computes headline averages for the `metrics` table.
- *
- * Handles partial failures gracefully: if one store fails, results from the
- * other stores are still used.
+ * Run a single store scraper in a separate bun process.
+ * Returns the scraped products, or empty array on failure.
+ */
+function scrapeInProcess(
+  store: string,
+  timeoutMs = 120_000
+): Promise<ScrapedProduct[]> {
+  return new Promise((resolvePromise) => {
+    const chunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
+
+    const child = spawn("bun", ["run", SCRAPE_SCRIPT, store], {
+      cwd: resolve(import.meta.dir, "../../.."),
+      env: { ...process.env },
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: timeoutMs,
+    });
+
+    child.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderrChunks.push(chunk);
+      // Forward store logs to our stderr in real-time
+      process.stderr.write(chunk);
+    });
+
+    child.on("close", (code) => {
+      const stdout = Buffer.concat(chunks).toString("utf-8").trim();
+      if (code !== 0) {
+        console.error(`[groceries] ${store} process exited with code ${code}`);
+      }
+
+      try {
+        const products = JSON.parse(stdout || "[]") as ScrapedProduct[];
+        resolvePromise(products);
+      } catch {
+        console.error(
+          `[groceries] ${store} returned invalid JSON: ${stdout.slice(0, 200)}`
+        );
+        resolvePromise([]);
+      }
+    });
+
+    child.on("error", (err) => {
+      console.error(`[groceries] ${store} process error: ${err.message}`);
+      resolvePromise([]);
+    });
+  });
+}
+
+/**
+ * Grocery collector: scrapes each supermarket in a separate process,
+ * writes product-level data to the `products` table, and computes
+ * headline averages for the `metrics` table.
  */
 export default async function collectGroceries(): Promise<CollectorResult[]> {
-  const errors: string[] = [];
-  let woolworthsProducts: ScrapedProduct[] = [];
-  let paknsaveProducts: ScrapedProduct[] = [];
-  let newworldProducts: ScrapedProduct[] = [];
+  console.log(
+    `[groceries] Scraping ${STORES.length} stores in separate processes...`
+  );
 
-  // Scrape all 3 stores (sequentially to avoid overloading)
-  try {
-    woolworthsProducts = await scrapeWoolworths(BASKET);
-  } catch (e) {
-    const msg = `[groceries] Woolworths failed: ${e instanceof Error ? e.message : e}`;
-    console.error(msg);
-    errors.push(msg);
+  // Run all stores sequentially (each in its own process)
+  const allProducts: ScrapedProduct[] = [];
+  for (const store of STORES) {
+    console.log(`[groceries] Starting ${store} (separate process)...`);
+    const products = await scrapeInProcess(store);
+    console.log(`[groceries] ${store}: ${products.length} products`);
+    allProducts.push(...products);
   }
-
-  try {
-    paknsaveProducts = await scrapePakNSave(BASKET);
-  } catch (e) {
-    const msg = `[groceries] Pak'nSave failed: ${e instanceof Error ? e.message : e}`;
-    console.error(msg);
-    errors.push(msg);
-  }
-
-  try {
-    newworldProducts = await scrapeNewWorld(BASKET);
-  } catch (e) {
-    const msg = `[groceries] New World failed: ${e instanceof Error ? e.message : e}`;
-    console.error(msg);
-    errors.push(msg);
-  }
-
-  const allProducts = [
-    ...woolworthsProducts,
-    ...paknsaveProducts,
-    ...newworldProducts,
-  ];
 
   if (allProducts.length === 0) {
-    throw new Error(
-      `All grocery sources failed:\n${errors.join("\n") || "No products scraped from any source"}`
-    );
+    throw new Error("All grocery sources failed: no products scraped");
   }
 
   // Write all individual product prices to the products table
@@ -130,7 +158,6 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
       sources.push(store);
     }
 
-    // Average of store averages (prevents stores with more products from dominating)
     const storeAvgValues = Object.values(storeAverages);
     const overallAverage =
       Math.round(

@@ -8,6 +8,9 @@
     "start": "bun run src/index.ts",
     "collect": "bun run src/collect-all.ts",
     "collect:fast": "bun run src/collect-all.ts --skip=groceries",
+    "scrape:woolworths": "bun run src/collectors/groceries/scrape-store.ts woolworths",
+    "scrape:paknsave": "bun run src/collectors/groceries/scrape-store.ts paknsave",
+    "scrape:newworld": "bun run src/collectors/groceries/scrape-store.ts newworld",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },

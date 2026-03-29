@@ -164,20 +164,10 @@ export async function scrapeFoodstuffs(
       return route.continue();
     });
 
-    // Visit homepage to establish session and trigger geolocation store selection
-    console.log(`${tag} Loading homepage...`);
-    try {
-      await page.goto(config.domain, {
-        waitUntil: "networkidle",
-        timeout: 60_000,
-      });
-      await delay(3000);
-    } catch (e) {
-      // Homepage timeout is non-fatal — search pages may still work
-      console.warn(
-        `${tag} Homepage load issue: ${e instanceof Error ? e.message : e}`
-      );
-    }
+    // Skip homepage — search pages work fine without it, and the homepage
+    // often hangs on networkidle due to persistent connections.
+    // Geolocation is set via browser context, so store selection happens
+    // automatically on the first search page load.
 
     for (const item of basket) {
       try {
