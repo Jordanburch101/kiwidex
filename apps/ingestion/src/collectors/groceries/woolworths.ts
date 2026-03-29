@@ -210,8 +210,10 @@ export async function scrapeWoolworths(
           );
         }
 
-        // Delay between pages
-        await delay(7000);
+        // Delay between pages (skip after last item)
+        if (basket.indexOf(item) < basket.length - 1) {
+          await delay(7000);
+        }
       } catch (e) {
         console.error(
           `[woolworths] Error scraping ${item.category}: ${e instanceof Error ? e.message : e}`

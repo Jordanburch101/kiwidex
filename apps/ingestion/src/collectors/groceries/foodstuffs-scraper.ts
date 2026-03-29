@@ -268,8 +268,10 @@ export async function scrapeFoodstuffs(
           );
         }
 
-        // Delay between searches
-        await delay(config.delayBetweenSearches);
+        // Delay between searches (skip after last item)
+        if (basket.indexOf(item) < basket.length - 1) {
+          await delay(config.delayBetweenSearches);
+        }
       } catch (e) {
         console.error(
           `${tag} Error scraping ${item.category}: ${e instanceof Error ? e.message : e}`
