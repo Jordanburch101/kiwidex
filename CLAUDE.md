@@ -18,29 +18,30 @@ Data flow: Data Sources → apps/ingestion (collectors) → packages/db (bulkIns
 ## Commands
 
 ```bash
-bun install          # Install all workspace dependencies
-bun run dev          # Start all dev servers (turbo)
-bun run build        # Build all packages
-bun run check        # Run ultracite/biome lint+format check
-bun run fix          # Auto-fix lint+format issues
+# Root-level (run from project root)
+bun install            # Install all workspace dependencies
+bun run dev            # Start all dev servers (turbo)
+bun run dev:web        # Start just the web app
+bun run dev:ingestion  # Start just the ingestion service
+bun run build          # Build all packages
+bun run check          # Run ultracite/biome lint+format check
+bun run fix            # Auto-fix lint+format issues
+bun run collect        # Run ALL collectors (including groceries ~3min)
+bun run collect:fast   # Run collectors except groceries (~6s)
+bun run db:push        # Push schema to local dev DB
+bun run db:seed        # Seed sample data
+bun run db:studio      # Open Drizzle Studio
 
-# packages/db
-cd packages/db
-bun test             # Run query helper tests
-bun run db:push      # Push schema to local dev DB
-bun run db:seed      # Seed sample data
-bun run db:generate  # Generate Drizzle migration
-bun run db:studio    # Open Drizzle Studio
-
-# apps/ingestion
-cd apps/ingestion
-bun test             # Run route tests
-bun run dev          # Start Elysia dev server (port 3001)
-
-# apps/web
-cd apps/web
-bun run dev          # Start Next.js dev server (port 3000)
+# Per-package commands
+cd packages/db && bun test           # DB query helper tests
+cd apps/ingestion && bun test        # Ingestion route tests
+cd apps/ingestion && bun run collect # Run all collectors
 ```
+
+## Environment
+
+- `DATABASE_URL` — libSQL connection string. Set in `.env` at root for collectors, and in `apps/web/.env.local` for the web app.
+- Local dev uses `file:packages/db/local.db` (root) or `file:../../packages/db/local.db` (from apps/web).
 
 ## Key Conventions
 
@@ -54,18 +55,44 @@ bun run dev          # Start Next.js dev server (port 3000)
 ## Database
 
 - **ORM**: Drizzle with libSQL
-- **Local dev**: `file:local.db` in `packages/db/`. Web app needs `DATABASE_URL=file:../../packages/db/local.db` in `apps/web/.env.local`
-- **Schema**: Single `metrics` table with unified schema (metric key, value, unit, date, source, metadata). Unique constraint on (metric, date).
-- **Query helpers**: `getLatestValue`, `getTimeSeries`, `getLatestByCategory`, `bulkInsert` — all accept a `db` parameter for testability.
+- **Tables**: `metrics` (time-series data points) + `products` (individual grocery product prices)
+- **Schema**: `metrics` has unified schema (metric key, value, unit, date, source, metadata). Unique on (metric, date). `products` tracks individual product prices with brand, store, size. Unique on (productId, store, date).
+- **Query helpers**: `getLatestValue`, `getTimeSeries`, `getLatestByCategory`, `bulkInsert`, `insertProducts`, `getProductsByCategory` — all accept a `db` parameter for testability.
 
 ## Ingestion Service
 
 - **Framework**: Elysia on Bun
 - **Routes**: `GET /health`, `POST /collect/all`, `POST /collect/:source`
-- **Collectors**: Each source gets a folder under `src/collectors/` with an `index.ts` orchestrator. Register in `src/collectors/registry.ts`.
-- **Collector interface**: `() => Promise<CollectorResult[]>` — returns array of `{ metric, value, unit, date, source, metadata? }`.
-- **XLSX downloads**: Use `downloadXlsxFiles()` from `src/lib/xlsx-downloader.ts` (Playwright-based, bypasses Cloudflare).
-- **Date parsing**: Use `parseDateCell()` and `parseMonthCell()` from `src/lib/date-utils.ts`.
+- **CLI**: `bun run collect` runs all collectors directly (no HTTP), `bun run collect:fast` skips slow grocery scrapers
+
+### Collectors
+
+| Collector | Metrics | Source | Method |
+|-----------|---------|--------|--------|
+| `rbnz` | NZD/USD, NZD/AUD, NZD/EUR, OCR, mortgages | RBNZ B1/B2/B20 XLSX | Playwright download |
+| `stats-nz` | CPI, GDP, unemployment, wage growth, avg income | RBNZ M1/M5/M9 XLSX | Playwright download |
+| `reinz` | House price median | REINZ press releases | HTML fetch + regex |
+| `petrol` | Petrol 91/95/diesel | Gaspy (live) + MBIE (historical) | JSON API + CSV |
+| `electricity` | Electricity $/kWh | EA regional prices CSV | CSV fetch |
+| `minimum-wage` | Minimum wage | Static history | Hardcoded |
+| `rent-vs-buy` | Rent-to-price ratio | Derived from DB | Calculation |
+| `groceries` | Milk, eggs, bread, butter, cheese | Woolworths + Pak'nSave + New World | Playwright scraping |
+
+### Adding a new collector
+
+1. Create folder `src/collectors/{name}/index.ts`
+2. Export default function matching `Collector` type: `() => Promise<CollectorResult[]>`
+3. Register in `src/collectors/registry.ts`
+4. Use shared utilities: `xlsx-parser.ts`, `xlsx-downloader.ts`, `date-utils.ts`
+
+### Grocery scraper architecture
+
+- `basket.ts` — Standardised basket items with search queries, size validation regexes, price ranges
+- `brands.ts` — Brand extraction from 40+ known NZ grocery brands
+- `woolworths.ts` — Firefox + page.evaluate for Woolworths NZ
+- `foodstuffs-scraper.ts` — Shared Chromium + stealth scraper for Pak'nSave + New World
+- `paknsave.ts` / `newworld.ts` — Thin wrappers over foodstuffs-scraper
+- `index.ts` — Aggregator: runs all 3, writes products to `products` table, averages to `metrics`
 
 ## Hosting
 

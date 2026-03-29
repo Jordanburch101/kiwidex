@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
+    "collect": "bun run src/collect-all.ts",
+    "collect:fast": "bun run src/collect-all.ts --skip=groceries",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
