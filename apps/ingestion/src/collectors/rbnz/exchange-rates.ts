@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
-import type { CollectorResult } from "../types";
 import { parseDateCell } from "../../lib/date-utils";
+import type { CollectorResult } from "../types";
 
 const SOURCE_URL =
   "https://www.rbnz.govt.nz/statistics/series/exchange-and-interest-rates/exchange-rates-and-the-trade-weighted-index";
@@ -25,9 +25,13 @@ const COLUMN_MAP: Record<string, CollectorResult["metric"]> = {
 export function parseExchangeRates(buffer: Buffer): CollectorResult[] {
   const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
   const sheetName = workbook.SheetNames[0];
-  if (!sheetName) throw new Error("B1 XLSX has no sheets");
+  if (!sheetName) {
+    throw new Error("B1 XLSX has no sheets");
+  }
   const sheet = workbook.Sheets[sheetName];
-  if (!sheet) throw new Error("B1 XLSX sheet not found");
+  if (!sheet) {
+    throw new Error("B1 XLSX sheet not found");
+  }
   const data: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
   // Find the header row containing "NZD/USD" — this is the "Unit" row
@@ -36,7 +40,9 @@ export function parseExchangeRates(buffer: Buffer): CollectorResult[] {
 
   for (let i = 0; i < Math.min(data.length, 20); i++) {
     const row = data[i];
-    if (!row) continue;
+    if (!row) {
+      continue;
+    }
 
     const hasNzdUsd = row.some(
       (cell) => typeof cell === "string" && cell.includes("NZD/USD")
@@ -65,9 +71,15 @@ export function parseExchangeRates(buffer: Buffer): CollectorResult[] {
   // Data rows start after "Series Id" row (headerRowIndex + 2 typically),
   // but we detect by looking for a row whose first cell is a date.
   let dataStartIndex = headerRowIndex + 1;
-  for (let i = headerRowIndex + 1; i < Math.min(data.length, headerRowIndex + 5); i++) {
+  for (
+    let i = headerRowIndex + 1;
+    i < Math.min(data.length, headerRowIndex + 5);
+    i++
+  ) {
     const row = data[i];
-    if (!row) continue;
+    if (!row) {
+      continue;
+    }
     const firstCell = row[0];
     // Skip rows like "Series Id"
     if (typeof firstCell === "string" && !firstCell.match(/^\d/)) {
@@ -83,16 +95,24 @@ export function parseExchangeRates(buffer: Buffer): CollectorResult[] {
 
   for (let i = dataStartIndex; i < data.length; i++) {
     const row = data[i];
-    if (!row || !row[dateCol]) continue;
+    if (!row?.[dateCol]) {
+      continue;
+    }
 
     const isoDate = parseDateCell(row[dateCol]);
-    if (!isoDate) continue;
+    if (!isoDate) {
+      continue;
+    }
 
     for (const { col, metric } of metricCols) {
       const val = row[col];
-      if (val == null || val === "" || typeof val === "string") continue;
+      if (val == null || val === "" || typeof val === "string") {
+        continue;
+      }
       const num = Number(val);
-      if (isNaN(num)) continue;
+      if (Number.isNaN(num)) {
+        continue;
+      }
 
       results.push({
         metric,

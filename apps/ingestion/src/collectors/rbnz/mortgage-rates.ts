@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
-import type { CollectorResult } from "../types";
 import { parseMonthCell } from "../../lib/date-utils";
+import type { CollectorResult } from "../types";
 
 const SOURCE_URL =
   "https://www.rbnz.govt.nz/statistics/series/exchange-and-interest-rates/new-residential-mortgage-standard-interest-rates";
@@ -14,9 +14,13 @@ const COLUMN_MAP: Record<string, CollectorResult["metric"]> = {
 export function parseMortgageRates(buffer: Buffer): CollectorResult[] {
   const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
   const sheetName = workbook.SheetNames[0];
-  if (!sheetName) throw new Error("B20 XLSX has no sheets");
+  if (!sheetName) {
+    throw new Error("B20 XLSX has no sheets");
+  }
   const sheet = workbook.Sheets[sheetName];
-  if (!sheet) throw new Error("B20 XLSX sheet not found");
+  if (!sheet) {
+    throw new Error("B20 XLSX sheet not found");
+  }
   const data: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
   // Find the header row: look for a row containing "Floating" (case-insensitive)
@@ -26,7 +30,9 @@ export function parseMortgageRates(buffer: Buffer): CollectorResult[] {
 
   for (let i = 0; i < Math.min(data.length, 20); i++) {
     const row = data[i];
-    if (!row) continue;
+    if (!row) {
+      continue;
+    }
 
     const hasFloating = row.some(
       (cell) => typeof cell === "string" && /floating/i.test(cell)
@@ -35,7 +41,9 @@ export function parseMortgageRates(buffer: Buffer): CollectorResult[] {
     if (hasFloating) {
       headerRowIndex = i;
       for (let j = 0; j < row.length; j++) {
-        const header = String(row[j] ?? "").trim().toLowerCase();
+        const header = String(row[j] ?? "")
+          .trim()
+          .toLowerCase();
 
         if (/date/.test(header)) {
           dateCol = j;
@@ -66,16 +74,24 @@ export function parseMortgageRates(buffer: Buffer): CollectorResult[] {
 
   for (let i = headerRowIndex + 1; i < data.length; i++) {
     const row = data[i];
-    if (!row || !row[dateCol]) continue;
+    if (!row?.[dateCol]) {
+      continue;
+    }
 
     const isoDate = parseMonthCell(row[dateCol]);
-    if (!isoDate) continue;
+    if (!isoDate) {
+      continue;
+    }
 
     for (const { col, metric } of metricCols) {
       const val = row[col];
-      if (val == null || val === "" || typeof val === "string") continue;
+      if (val == null || val === "" || typeof val === "string") {
+        continue;
+      }
       const num = Number(val);
-      if (isNaN(num)) continue;
+      if (Number.isNaN(num)) {
+        continue;
+      }
 
       results.push({
         metric,

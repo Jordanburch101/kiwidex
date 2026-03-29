@@ -1,6 +1,6 @@
+import { bulkInsert, db } from "@workspace/db";
 import { Elysia } from "elysia";
 import { registry } from "./collectors/registry";
-import { bulkInsert, db } from "@workspace/db";
 
 const app = new Elysia()
   .get("/health", () => ({ status: "ok", collectors: Object.keys(registry) }))

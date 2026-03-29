@@ -1,19 +1,19 @@
-import { eq, and, gte, lte, desc, sql, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { metrics } from "./schema";
-import { METRIC_META, type MetricKey, type MetricCategory } from "./metrics";
+import { METRIC_META, type MetricCategory, type MetricKey } from "./metrics";
 import type * as schema from "./schema";
+import { metrics } from "./schema";
 
 type Db = LibSQLDatabase<typeof schema>;
 
-type DataPoint = {
-  metric: string;
-  value: number;
-  unit: string;
+interface DataPoint {
   date: string;
-  source?: string;
   metadata?: string;
-};
+  metric: string;
+  source?: string;
+  unit: string;
+  value: number;
+}
 
 export async function getLatestValue(db: Db, metric: MetricKey) {
   const rows = await db
@@ -49,7 +49,9 @@ export async function getLatestByCategory(db: Db, category: MetricCategory) {
     .filter(([, meta]) => meta.category === category)
     .map(([key]) => key);
 
-  if (categoryMetrics.length === 0) return [];
+  if (categoryMetrics.length === 0) {
+    return [];
+  }
 
   const rows = await db
     .select()
@@ -70,7 +72,9 @@ export async function getLatestByCategory(db: Db, category: MetricCategory) {
 const CHUNK_SIZE = 500;
 
 export async function bulkInsert(db: Db, dataPoints: DataPoint[]) {
-  if (dataPoints.length === 0) return;
+  if (dataPoints.length === 0) {
+    return;
+  }
 
   for (let i = 0; i < dataPoints.length; i += CHUNK_SIZE) {
     const chunk = dataPoints.slice(i, i + CHUNK_SIZE);

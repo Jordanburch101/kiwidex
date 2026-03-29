@@ -1,13 +1,19 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { Elysia } from "elysia";
 import { registry } from "../src/collectors/registry";
 import type { CollectorResult } from "../src/collectors/types";
 
 // Register a mock collector for testing
 const mockResults: CollectorResult[] = [
-  { metric: "petrol_91", value: 2.85, unit: "nzd_per_litre", date: "2026-03-29", source: "mock" },
+  {
+    metric: "petrol_91",
+    value: 2.85,
+    unit: "nzd_per_litre",
+    date: "2026-03-29",
+    source: "mock",
+  },
 ];
-registry["mock"] = async () => mockResults;
+registry.mock = async () => mockResults;
 
 // Build a test-only app that doesn't touch a real DB
 const collected: CollectorResult[][] = [];

@@ -1,16 +1,16 @@
 export { db } from "./client";
-export { metrics } from "./schema";
 export {
-  getLatestValue,
-  getTimeSeries,
-  getLatestByCategory,
-  bulkInsert,
-} from "./queries";
-export {
-  METRIC_KEYS,
   METRIC_CATEGORIES,
+  METRIC_KEYS,
   METRIC_META,
-  type MetricKey,
   type MetricCategory,
+  type MetricKey,
   type MetricMeta,
 } from "./metrics";
+export {
+  bulkInsert,
+  getLatestByCategory,
+  getLatestValue,
+  getTimeSeries,
+} from "./queries";
+export { metrics } from "./schema";

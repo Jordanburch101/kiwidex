@@ -1,8 +1,8 @@
-import type { CollectorResult } from "../types";
 import { downloadXlsxFiles } from "../../lib/xlsx-downloader";
+import type { CollectorResult } from "../types";
 import { parseExchangeRates } from "./exchange-rates";
-import { parseOCR } from "./ocr";
 import { parseMortgageRates } from "./mortgage-rates";
+import { parseOCR } from "./ocr";
 
 const URLS = {
   b1: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/b/b1/hb1-daily.xlsx",
@@ -10,11 +10,11 @@ const URLS = {
   b20: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/b/b20/hb20.xlsx",
 } as const;
 
-type ParseResult = {
+interface ParseResult {
+  error?: string;
   name: string;
   results: CollectorResult[];
-  error?: string;
-};
+}
 
 function tryParse(
   name: string,

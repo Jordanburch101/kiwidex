@@ -1,4 +1,10 @@
-import { sqliteTable, text, real, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  integer,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const metrics = sqliteTable(
   "metrics",
@@ -14,7 +20,5 @@ export const metrics = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date().toISOString()),
   },
-  (table) => [
-    uniqueIndex("metric_date_uniq").on(table.metric, table.date),
-  ]
+  (table) => [uniqueIndex("metric_date_uniq").on(table.metric, table.date)]
 );

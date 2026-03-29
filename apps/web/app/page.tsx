@@ -2,8 +2,8 @@ import {
   getLatestByCategory,
   METRIC_CATEGORIES,
   METRIC_META,
-  type MetricKey,
   type MetricCategory,
+  type MetricKey,
 } from "@workspace/db";
 import { db } from "@workspace/db/client";
 
@@ -34,16 +34,16 @@ async function CategorySection({ category }: { category: MetricCategory }) {
 
   return (
     <section className="mb-8">
-      <h2 className="text-foreground mb-4 font-heading text-xl font-semibold">
+      <h2 className="mb-4 font-heading font-semibold text-foreground text-xl">
         {METRIC_CATEGORIES[category]}
       </h2>
       {data.length === 0 ? (
-        <p className="text-muted-foreground font-mono text-sm">No data yet</p>
+        <p className="font-mono text-muted-foreground text-sm">No data yet</p>
       ) : (
-        <div className="border-border overflow-x-auto rounded border">
+        <div className="overflow-x-auto rounded border border-border">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted/50 text-muted-foreground text-left text-xs">
+              <tr className="bg-muted/50 text-left text-muted-foreground text-xs">
                 <th className="px-3 py-2">Metric</th>
                 <th className="px-3 py-2 text-right">Value</th>
                 <th className="px-3 py-2 text-right">Date</th>
@@ -52,17 +52,17 @@ async function CategorySection({ category }: { category: MetricCategory }) {
             </thead>
             <tbody>
               {data.map((row) => (
-                <tr key={row.metric} className="border-border border-t">
+                <tr className="border-border border-t" key={row.metric}>
                   <td className="px-3 py-2">
                     {METRIC_META[row.metric as MetricKey]?.label ?? row.metric}
                   </td>
                   <td className="px-3 py-2 text-right font-mono">
                     {formatValue(row.metric as MetricKey, row.value)}
                   </td>
-                  <td className="text-muted-foreground px-3 py-2 text-right font-mono text-xs">
+                  <td className="px-3 py-2 text-right font-mono text-muted-foreground text-xs">
                     {row.date}
                   </td>
-                  <td className="text-muted-foreground px-3 py-2 text-xs">
+                  <td className="px-3 py-2 text-muted-foreground text-xs">
                     {row.source ?? "—"}
                   </td>
                 </tr>
@@ -81,13 +81,15 @@ export default function Page() {
   return (
     <div className="mx-auto max-w-4xl p-6">
       <header className="mb-8">
-        <h1 className="font-heading text-3xl font-bold">NZ Economy Dashboard</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <h1 className="font-bold font-heading text-3xl">
+          NZ Economy Dashboard
+        </h1>
+        <p className="mt-1 text-muted-foreground text-sm">
           Placeholder view — verifying data pipeline
         </p>
       </header>
       {categories.map((category) => (
-        <CategorySection key={category} category={category} />
+        <CategorySection category={category} key={category} />
       ))}
     </div>
   );

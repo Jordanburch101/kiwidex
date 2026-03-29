@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
-import type { CollectorResult } from "../types";
 import { parseDateCell } from "../../lib/date-utils";
+import type { CollectorResult } from "../types";
 
 const SOURCE_URL =
   "https://www.rbnz.govt.nz/statistics/series/exchange-and-interest-rates/wholesale-interest-rates";
@@ -21,9 +21,13 @@ const SOURCE_URL =
 export function parseOCR(buffer: Buffer): CollectorResult[] {
   const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
   const sheetName = workbook.SheetNames[0];
-  if (!sheetName) throw new Error("B2 XLSX has no sheets");
+  if (!sheetName) {
+    throw new Error("B2 XLSX has no sheets");
+  }
   const sheet = workbook.Sheets[sheetName];
-  if (!sheet) throw new Error("B2 XLSX sheet not found");
+  if (!sheet) {
+    throw new Error("B2 XLSX sheet not found");
+  }
   const data: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
   // Find the row containing "Official Cash Rate (OCR)" to identify the OCR column
@@ -32,7 +36,9 @@ export function parseOCR(buffer: Buffer): CollectorResult[] {
 
   for (let i = 0; i < Math.min(data.length, 20); i++) {
     const row = data[i];
-    if (!row) continue;
+    if (!row) {
+      continue;
+    }
 
     for (let j = 0; j < row.length; j++) {
       const cell = String(row[j] ?? "").trim();
@@ -42,7 +48,9 @@ export function parseOCR(buffer: Buffer): CollectorResult[] {
         break;
       }
     }
-    if (ocrCol !== -1) break;
+    if (ocrCol !== -1) {
+      break;
+    }
   }
 
   if (headerRowIndex === -1 || ocrCol === -1) {
@@ -54,9 +62,15 @@ export function parseOCR(buffer: Buffer): CollectorResult[] {
   // Data rows start after metadata rows. Skip until we find a row whose
   // first cell is a date (not a string label).
   let dataStartIndex = headerRowIndex + 1;
-  for (let i = headerRowIndex + 1; i < Math.min(data.length, headerRowIndex + 10); i++) {
+  for (
+    let i = headerRowIndex + 1;
+    i < Math.min(data.length, headerRowIndex + 10);
+    i++
+  ) {
     const row = data[i];
-    if (!row) continue;
+    if (!row) {
+      continue;
+    }
     const firstCell = row[0];
     // Skip rows like "Notes", "Unit", "Series Id"
     if (typeof firstCell === "string" && !firstCell.match(/^\d/)) {
@@ -72,15 +86,23 @@ export function parseOCR(buffer: Buffer): CollectorResult[] {
 
   for (let i = dataStartIndex; i < data.length; i++) {
     const row = data[i];
-    if (!row || !row[dateCol]) continue;
+    if (!row?.[dateCol]) {
+      continue;
+    }
 
     const isoDate = parseDateCell(row[dateCol]);
-    if (!isoDate) continue;
+    if (!isoDate) {
+      continue;
+    }
 
     const val = row[ocrCol];
-    if (val == null || val === "" || typeof val === "string") continue;
+    if (val == null || val === "" || typeof val === "string") {
+      continue;
+    }
     const num = Number(val);
-    if (isNaN(num)) continue;
+    if (Number.isNaN(num)) {
+      continue;
+    }
 
     results.push({
       metric: "ocr",

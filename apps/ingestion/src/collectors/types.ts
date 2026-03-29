@@ -1,12 +1,12 @@
 import type { MetricKey } from "@workspace/db/metrics";
 
-export type CollectorResult = {
-  metric: MetricKey;
-  value: number;
-  unit: string;
+export interface CollectorResult {
   date: string;
-  source: string;
   metadata?: string;
-};
+  metric: MetricKey;
+  source: string;
+  unit: string;
+  value: number;
+}
 
 export type Collector = () => Promise<CollectorResult[]>;

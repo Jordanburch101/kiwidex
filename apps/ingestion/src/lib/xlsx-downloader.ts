@@ -1,5 +1,5 @@
-import { chromium } from "playwright";
 import { readFile } from "node:fs/promises";
+import { chromium } from "playwright";
 
 /**
  * Download multiple XLSX files from URLs using a single Playwright browser session.
