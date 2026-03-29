@@ -1,20 +1,87 @@
-// packages/db/src/queries.ts (placeholder — full implementation in Task 5)
+import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import type { MetricKey, MetricCategory } from "./metrics.js";
+import { metrics } from "./schema.js";
+import { METRIC_META, type MetricKey, type MetricCategory } from "./metrics.js";
 import type * as schema from "./schema.js";
 
 type Db = LibSQLDatabase<typeof schema>;
 
-export async function getLatestValue(_db: Db, _metric: MetricKey) {
-  return null;
+type DataPoint = {
+  metric: string;
+  value: number;
+  unit: string;
+  date: string;
+  source?: string;
+  metadata?: string;
+};
+
+export async function getLatestValue(db: Db, metric: MetricKey) {
+  const rows = await db
+    .select()
+    .from(metrics)
+    .where(eq(metrics.metric, metric))
+    .orderBy(desc(metrics.date))
+    .limit(1);
+  return rows[0] ?? null;
 }
 
-export async function getTimeSeries(_db: Db, _metric: MetricKey, _from: string, _to: string) {
-  return [];
+export async function getTimeSeries(
+  db: Db,
+  metric: MetricKey,
+  from: string,
+  to: string
+) {
+  return db
+    .select()
+    .from(metrics)
+    .where(
+      and(
+        eq(metrics.metric, metric),
+        gte(metrics.date, from),
+        lte(metrics.date, to)
+      )
+    )
+    .orderBy(metrics.date);
 }
 
-export async function getLatestByCategory(_db: Db, _category: MetricCategory) {
-  return [];
+export async function getLatestByCategory(db: Db, category: MetricCategory) {
+  const categoryMetrics = Object.entries(METRIC_META)
+    .filter(([, meta]) => meta.category === category)
+    .map(([key]) => key);
+
+  const results: (typeof metrics.$inferSelect)[] = [];
+
+  for (const metricKey of categoryMetrics) {
+    const row = await getLatestValue(db, metricKey as MetricKey);
+    if (row) results.push(row);
+  }
+
+  return results;
 }
 
-export async function bulkInsert(_db: Db, _dataPoints: unknown[]) {}
+export async function bulkInsert(db: Db, dataPoints: DataPoint[]) {
+  if (dataPoints.length === 0) return;
+
+  for (const point of dataPoints) {
+    await db
+      .insert(metrics)
+      .values({
+        metric: point.metric,
+        value: point.value,
+        unit: point.unit,
+        date: point.date,
+        source: point.source ?? null,
+        metadata: point.metadata ?? null,
+      })
+      .onConflictDoUpdate({
+        target: [metrics.metric, metrics.date],
+        set: {
+          value: sql`excluded.value`,
+          unit: sql`excluded.unit`,
+          source: sql`excluded.source`,
+          metadata: sql`excluded.metadata`,
+          createdAt: sql`datetime('now')`,
+        },
+      });
+  }
+}
