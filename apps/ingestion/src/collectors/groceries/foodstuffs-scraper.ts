@@ -164,25 +164,16 @@ export async function scrapeFoodstuffs(
       return route.continue();
     });
 
-    // Visit homepage to establish session and store selection
+    // Visit homepage to establish session and trigger geolocation store selection
     console.log(`${tag} Loading homepage...`);
     try {
       await page.goto(config.domain, {
-        waitUntil: "domcontentloaded",
-        timeout: 30_000,
+        waitUntil: "networkidle",
+        timeout: 60_000,
       });
       await delay(3000);
-
-      // Verify store selection loaded (look for store name or address indicator)
-      const hasStoreIndicator = await page
-        .locator('[data-testid="store-name"], [class*="store-selector"]')
-        .count();
-      if (hasStoreIndicator === 0) {
-        console.warn(
-          `${tag} No store selection indicator found, results may vary by region`
-        );
-      }
     } catch (e) {
+      // Homepage timeout is non-fatal — search pages may still work
       console.warn(
         `${tag} Homepage load issue: ${e instanceof Error ? e.message : e}`
       );
@@ -195,15 +186,15 @@ export async function scrapeFoodstuffs(
         console.log(`${tag} Searching: ${query} (${item.category})`);
 
         await page.goto(searchUrl, {
-          waitUntil: "domcontentloaded",
-          timeout: 30_000,
+          waitUntil: "networkidle",
+          timeout: 60_000,
         });
 
         // Wait for product cards to appear
         try {
           await page.waitForSelector(
             '[data-testid="price-dollars"], div[data-testid*="-EA-"]',
-            { timeout: 15_000 }
+            { timeout: 30_000 }
           );
         } catch {
           console.warn(

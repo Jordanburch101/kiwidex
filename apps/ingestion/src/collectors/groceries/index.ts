@@ -45,15 +45,13 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
     errors.push(msg);
   }
 
-  // New World is currently blocked by Cloudflare (all requests timeout).
-  // Disabled to avoid ~3min of wasted time. Re-enable when bypass is found.
-  // try {
-  //   newworldProducts = await scrapeNewWorld(BASKET);
-  // } catch (e) {
-  //   const msg = `[groceries] New World failed: ${e instanceof Error ? e.message : e}`;
-  //   console.error(msg);
-  //   errors.push(msg);
-  // }
+  try {
+    newworldProducts = await scrapeNewWorld(BASKET);
+  } catch (e) {
+    const msg = `[groceries] New World failed: ${e instanceof Error ? e.message : e}`;
+    console.error(msg);
+    errors.push(msg);
+  }
 
   const allProducts = [
     ...woolworthsProducts,
