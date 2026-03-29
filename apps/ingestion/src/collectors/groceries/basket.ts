@@ -61,7 +61,7 @@ export const BASKET: BasketItem[] = [
       newworld: "toast white bread",
     },
     sizePatterns: [/\b700\s*g\b/i, /\b600\s*g\b/i],
-    includePatterns: [/toast|white/i],
+    includePatterns: [/toast/i],
     excludePatterns: [SPECIALTY_BREAD],
     priceRange: { min: 1.50, max: 7 },
   },
@@ -77,7 +77,7 @@ export const BASKET: BasketItem[] = [
     sizePatterns: [/\b500\s*g\b/i],
     includePatterns: [/butter/i],
     excludePatterns: [SPECIALTY_BUTTER],
-    priceRange: { min: 4, max: 12 },
+    priceRange: { min: 4, max: 15 },
   },
   {
     category: "cheese",
