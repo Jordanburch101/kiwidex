@@ -224,9 +224,19 @@ export async function scrapeFoodstuffs(
         for (const p of parsed) {
           const fullName = p.name;
 
-          // Strict size validation: reject products that don't match size patterns
+          // Strict size validation
           const sizeMatch = item.sizePatterns.some((re) => re.test(fullName));
           if (!sizeMatch) {
+            continue;
+          }
+
+          // Exclude specialty/flavoured products
+          if (item.excludePatterns.some((re) => re.test(fullName))) {
+            continue;
+          }
+
+          // Include patterns: if defined, product must match at least one
+          if (item.includePatterns && !item.includePatterns.some((re) => re.test(fullName))) {
             continue;
           }
 

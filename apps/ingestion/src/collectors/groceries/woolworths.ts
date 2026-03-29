@@ -160,9 +160,19 @@ export async function scrapeWoolworths(
 
         let matched = 0;
         for (const p of parsed) {
-          // Strict size validation: reject products that don't match size patterns
+          // Strict size validation
           const sizeMatch = item.sizePatterns.some((re) => re.test(p.name));
           if (!sizeMatch) {
+            continue;
+          }
+
+          // Exclude specialty/flavoured products
+          if (item.excludePatterns.some((re) => re.test(p.name))) {
+            continue;
+          }
+
+          // Include patterns: if defined, product must match at least one
+          if (item.includePatterns && !item.includePatterns.some((re) => re.test(p.name))) {
             continue;
           }
 
