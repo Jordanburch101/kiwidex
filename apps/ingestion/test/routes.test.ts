@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { Elysia } from "elysia";
-import { registry } from "../src/collectors/registry.js";
-import type { CollectorResult } from "../src/collectors/types.js";
+import { registry } from "../src/collectors/registry";
+import type { CollectorResult } from "../src/collectors/types";
 
 // Register a mock collector for testing
 const mockResults: CollectorResult[] = [

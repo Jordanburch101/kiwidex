@@ -1,8 +1,8 @@
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { metrics } from "./schema.js";
-import { METRIC_META, type MetricKey, type MetricCategory } from "./metrics.js";
-import type * as schema from "./schema.js";
+import { metrics } from "./schema";
+import { METRIC_META, type MetricKey, type MetricCategory } from "./metrics";
+import type * as schema from "./schema";
 
 type Db = LibSQLDatabase<typeof schema>;
 

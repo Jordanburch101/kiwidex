@@ -1,11 +1,11 @@
-export { db } from "./client.js";
-export { metrics } from "./schema.js";
+export { db } from "./client";
+export { metrics } from "./schema";
 export {
   getLatestValue,
   getTimeSeries,
   getLatestByCategory,
   bulkInsert,
-} from "./queries.js";
+} from "./queries";
 export {
   METRIC_KEYS,
   METRIC_CATEGORIES,
@@ -13,4 +13,4 @@ export {
   type MetricKey,
   type MetricCategory,
   type MetricMeta,
-} from "./metrics.js";
+} from "./metrics";

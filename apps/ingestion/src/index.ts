@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { registry } from "./collectors/registry.js";
+import { registry } from "./collectors/registry";
 import { bulkInsert, db } from "@workspace/db";
 
 const app = new Elysia()

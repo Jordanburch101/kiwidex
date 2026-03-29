@@ -2,13 +2,13 @@ import { describe, test, expect, beforeAll, beforeEach } from "bun:test";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { sql } from "drizzle-orm";
-import * as schema from "../src/schema.js";
+import * as schema from "../src/schema";
 import {
   getLatestValue,
   getTimeSeries,
   getLatestByCategory,
   bulkInsert,
-} from "../src/queries.js";
+} from "../src/queries";
 
 function createTestDb() {
   const client = createClient({ url: ":memory:" });

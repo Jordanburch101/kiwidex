@@ -1,8 +1,8 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
-import * as schema from "./schema.js";
-import { bulkInsert } from "./queries.js";
-import { METRIC_META, type MetricKey } from "./metrics.js";
+import * as schema from "./schema";
+import { bulkInsert } from "./queries";
+import { METRIC_META, type MetricKey } from "./metrics";
 
 const client = createClient({
   url: process.env.DATABASE_URL ?? "file:local.db",
