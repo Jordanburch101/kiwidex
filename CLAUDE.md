@@ -94,6 +94,58 @@ cd apps/ingestion && bun run collect # Run all collectors
 - `paknsave.ts` / `newworld.ts` — Thin wrappers over foodstuffs-scraper
 - `index.ts` — Aggregator: runs all 3, writes products to `products` table, averages to `metrics`
 
+## Development Environment — cmux
+
+This project runs in **cmux** (terminal multiplexer with built-in browser). Always use cmux commands instead of opening URLs manually or using external browser tools.
+
+```bash
+# View the dev site
+cmux browser open http://localhost:3000
+
+# Check page content (accessibility snapshot — better than screenshot)
+cmux browser snapshot
+
+# Take a screenshot
+cmux browser screenshot
+
+# Navigate to a URL
+cmux browser goto http://localhost:3000
+
+# Wait for page load
+cmux browser wait --load-state complete
+
+# Snapshot specific element
+cmux browser snapshot --selector ".metric-card"
+
+# Open browser in a split pane
+cmux new-pane --type browser --url http://localhost:3000
+
+# Check current cmux layout
+cmux identify --json
+cmux list-panes
+```
+
+**When verifying frontend changes:** Use `cmux browser open` + `cmux browser snapshot` to check the rendered page. Don't ask the user to open URLs or send screenshots.
+
+## Frontend Structure (apps/web)
+
+```
+app/
+  page.tsx                — thin shell composing section components
+  layout.tsx              — root layout (Playfair Display, Noto Sans, Geist Mono)
+components/
+  theme-provider.tsx      — dark mode toggle (app-specific)
+  sections/               — async Server Components (fetch own data)
+    masthead.tsx, ticker.tsx, overview.tsx, *-deep-dive.tsx, footer.tsx
+  charts/                 — "use client" Recharts wrappers
+    area-chart.tsx, multi-line-chart.tsx
+lib/
+  data.ts                 — formatters (formatValue, computeChange, etc.)
+  queries.ts              — centralised DB fetching functions
+```
+
+**UI primitives** live in `@workspace/ui` (sparkline, metric-card, compact-row, marquee, section-header). Import as `@workspace/ui/components/sparkline`.
+
 ## Hosting
 
 Railway (both web app and ingestion service). libSQL also on Railway.
