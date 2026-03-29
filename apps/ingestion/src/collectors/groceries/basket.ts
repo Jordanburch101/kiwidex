@@ -18,7 +18,7 @@ export interface BasketItem {
 // Common exclusions for non-standard/specialty products
 const SPECIALTY_MILK = /organic|flavour|chocolate|strawberry|banana|protein\+|calci|lacto.?free|zero.?lacto|a2\b|oat|soy|almond|coconut|rice|uht|long.?life|powder/i;
 const SPECIALTY_EGGS = /quail|duck|liquid|free.?flow|organic|omega|barn/i;
-const SPECIALTY_BREAD = /sourdough|ciabatta|brioche|gluten.?free|low.?carb|rye|wholemeal|wholegrain|multigrain|grain|ancient|keto|protein|wrap|pita|english.?muffin|bun|roll/i;
+const SPECIALTY_BREAD = /sourdough|ciabatta|brioche|gluten.?free|low.?carb|rye|wholemeal|wheatmeal|wholegrain|multigrain|grain|ancient|keto|protein|wrap|pita|english.?muffin|bun|roll|high.?fibre/i;
 const SPECIALTY_BUTTER = /almond|peanut|cashew|spread|margarine|olive|garlic|herb|truffle|cultured|ghee|vegan/i;
 const SPECIALTY_CHEESE = /cream.?cheese|brie|camembert|cheddar|parmesan|feta|halloumi|mozzarella|edam|gouda|vintage|aged|tasty|smoked|pepper|chili|cumin|cranberry|apricot|slice|shred|grate/i;
 
