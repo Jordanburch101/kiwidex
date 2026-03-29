@@ -96,22 +96,50 @@ function normalise(data: DataPoint[], startDate: string): DataPoint[] {
 /**
  * Merge multiple item series into a single array of objects keyed by date,
  * suitable for Recharts ComposedChart.
+ *
+ * Items have different data frequencies (petrol = weekly, groceries = monthly).
+ * We forward-fill missing values so every date row has a value for every item.
  */
 function mergeByDate(
   items: { key: string; data: DataPoint[] }[]
 ): Record<string, string | number>[] {
-  const map = new Map<string, Record<string, string | number>>();
+  // Collect all unique dates across all items
+  const allDates = new Set<string>();
   for (const item of items) {
     for (const pt of item.data) {
-      if (!map.has(pt.date)) {
-        map.set(pt.date, { date: pt.date });
-      }
-      map.get(pt.date)![item.key] = pt.value;
+      allDates.add(pt.date);
     }
   }
-  return Array.from(map.values()).sort((a, b) =>
-    (a.date as string).localeCompare(b.date as string)
-  );
+  const sortedDates = Array.from(allDates).sort();
+
+  // For each item, build a lookup and prepare forward-fill
+  const itemLookups = items.map((item) => {
+    const lookup = new Map<string, number>();
+    for (const pt of item.data) {
+      lookup.set(pt.date, pt.value);
+    }
+    return { key: item.key, lookup };
+  });
+
+  // Build merged rows with forward-fill
+  const result: Record<string, string | number>[] = [];
+  const lastKnown: Record<string, number | undefined> = {};
+
+  for (const date of sortedDates) {
+    const row: Record<string, string | number> = { date };
+    for (const { key, lookup } of itemLookups) {
+      const val = lookup.get(date);
+      if (val !== undefined) {
+        lastKnown[key] = val;
+        row[key] = val;
+      } else if (lastKnown[key] !== undefined) {
+        row[key] = lastKnown[key]!;
+      }
+    }
+    result.push(row);
+  }
+
+  return result;
 }
 
 /**
