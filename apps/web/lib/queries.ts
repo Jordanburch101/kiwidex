@@ -241,6 +241,41 @@ export async function getOverviewData() {
   return { fuelGroceries, housingRates, economyRows };
 }
 
+// ---------- Cost of Living chart ----------
+
+const COST_OF_LIVING_ITEMS: {
+  metric: MetricKey;
+  label: string;
+  color: string;
+}[] = [
+  { metric: "petrol_91", label: "Petrol 91", color: "#cc4444" },
+  { metric: "milk", label: "Milk 2L", color: "#5599aa" },
+  { metric: "eggs", label: "Eggs", color: "#e68a00" },
+  { metric: "bread", label: "Bread", color: "#3a8a3a" },
+  { metric: "butter", label: "Butter", color: "#aa8855" },
+  { metric: "cheese", label: "Cheese", color: "#8855aa" },
+];
+
+export async function getCostOfLivingData() {
+  const from = getOneYearAgo();
+  const to = getToday();
+
+  const seriesList = await Promise.all(
+    COST_OF_LIVING_ITEMS.map(async (item) => {
+      const series = await getTimeSeries(db, item.metric, from, to);
+      return {
+        key: item.metric,
+        label: item.label,
+        unit: METRIC_META[item.metric].unit,
+        color: item.color,
+        data: toChartPoints(series),
+      };
+    })
+  );
+
+  return seriesList;
+}
+
 export async function getGroceryChartData() {
   const from = getOneYearAgo();
   const to = getToday();
