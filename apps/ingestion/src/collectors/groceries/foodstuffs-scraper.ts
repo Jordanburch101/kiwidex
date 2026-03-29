@@ -2,9 +2,6 @@ import type { BasketItem } from "./basket";
 import { extractBrand } from "./brands";
 import type { ScrapedProduct } from "./types";
 
-/**
- * Configuration for a Foodstuffs-platform store (Pak'nSave or New World).
- */
 export interface FoodstuffsConfig {
   storeName: string;
   storeKey: "paknsave" | "newworld";
@@ -21,7 +18,7 @@ export const PAKNSAVE_CONFIG: FoodstuffsConfig = {
   searchUrl: (q) =>
     `https://www.paknsave.co.nz/shop/search?q=${encodeURIComponent(q)}`,
   geolocation: { latitude: -36.8485, longitude: 174.7633 },
-  delayBetweenSearches: 11_000,
+  delayBetweenSearches: 12_000,
 };
 
 export const NEWWORLD_CONFIG: FoodstuffsConfig = {
@@ -31,22 +28,19 @@ export const NEWWORLD_CONFIG: FoodstuffsConfig = {
   searchUrl: (q) =>
     `https://www.newworld.co.nz/shop/search?q=${encodeURIComponent(q)}`,
   geolocation: { latitude: -36.8485, longitude: 174.7633 },
-  delayBetweenSearches: 11_000,
+  delayBetweenSearches: 12_000,
 };
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function randomDelay(min: number, max: number): Promise<void> {
+  return delay(min + Math.random() * (max - min));
+}
+
 /**
- * Extract product data from a Foodstuffs (Pak'nSave / New World) search results page.
- *
- * Both stores use the same Next.js platform with data-testid attributes:
- * - Product card: `div[data-testid*="-EA-"]`
- * - Product title: `[data-testid="product-title"]`
- * - Product subtitle (size): `[data-testid="product-subtitle"]`
- * - Price dollars: `[data-testid="price-dollars"]`
- * - Price cents: `[data-testid="price-cents"]`
+ * Extract product data from a Foodstuffs search results page via page.evaluate.
  */
 function extractProductsFromPage(): {
   name: string;
@@ -82,29 +76,113 @@ function extractProductsFromPage(): {
     }
   }
 
-  // Fallback: broader text-based price extraction
-  if (items.length === 0) {
-    const allCards = document.querySelectorAll(
-      '[class*="product"], [class*="search-result"]'
-    );
-    for (const card of allCards) {
-      const name = card.querySelector("h3, p")?.textContent?.trim() || "";
-      const priceText = card.textContent || "";
-      const match = priceText.match(/\$\s*(\d+)[.\s]*(\d{2})/);
-      if (name && match) {
-        const price =
-          Number.parseInt(match[1]!, 10) +
-          Number.parseInt(match[2]!, 10) / 100;
-        items.push({ name, price, subtitle: "" });
-      }
-    }
-  }
-
   return items;
 }
 
 // Register stealth plugin once at module scope
 let stealthRegistered = false;
+
+const MAX_RETRIES = 2;
+
+/**
+ * Navigate to a URL with retry logic and Cloudflare challenge handling.
+ * Returns true if the page loaded successfully with product results.
+ */
+async function navigateWithRetry(
+  page: import("playwright").Page,
+  url: string,
+  tag: string,
+  attempt = 1
+): Promise<boolean> {
+  try {
+    await page.goto(url, {
+      waitUntil: "domcontentloaded",
+      timeout: 45_000,
+    });
+
+    // Wait for page to settle — catch Cloudflare redirects
+    await delay(2000);
+
+    // Check if we landed on a Cloudflare challenge or error page
+    const currentUrl = page.url();
+    if (
+      currentUrl.includes("chrome-error") ||
+      currentUrl.includes("challenges.cloudflare")
+    ) {
+      if (attempt <= MAX_RETRIES) {
+        console.warn(
+          `${tag} Cloudflare challenge detected (attempt ${attempt}/${MAX_RETRIES}), waiting...`
+        );
+        await delay(10_000 * attempt);
+        return navigateWithRetry(page, url, tag, attempt + 1);
+      }
+      console.error(`${tag} Cloudflare blocked after ${MAX_RETRIES} retries`);
+      return false;
+    }
+
+    // Wait for product cards or timeout
+    try {
+      await page.waitForSelector(
+        '[data-testid="price-dollars"], div[data-testid*="-EA-"]',
+        { timeout: 20_000 }
+      );
+      return true;
+    } catch {
+      // No product cards found — could be empty results or Cloudflare
+      const html = await page.content();
+      if (
+        html.includes("Checking your browser") ||
+        html.includes("challenge-platform")
+      ) {
+        if (attempt <= MAX_RETRIES) {
+          console.warn(
+            `${tag} Cloudflare JS challenge (attempt ${attempt}/${MAX_RETRIES}), waiting...`
+          );
+          await delay(15_000 * attempt);
+          return navigateWithRetry(page, url, tag, attempt + 1);
+        }
+        console.error(`${tag} Cloudflare challenge not resolved`);
+        return false;
+      }
+      // Genuine empty results — page loaded but no products
+      return true;
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+
+    // Handle "navigation interrupted" — page is redirecting (Cloudflare)
+    if (msg.includes("interrupted by another navigation")) {
+      if (attempt <= MAX_RETRIES) {
+        console.warn(
+          `${tag} Navigation interrupted (attempt ${attempt}/${MAX_RETRIES}), waiting...`
+        );
+        // Wait for the redirect to complete
+        try {
+          await page.waitForLoadState("domcontentloaded", { timeout: 30_000 });
+        } catch {
+          // ignore
+        }
+        await delay(5_000 * attempt);
+        return navigateWithRetry(page, url, tag, attempt + 1);
+      }
+      return false;
+    }
+
+    // ERR_TIMED_OUT or other network errors — retry with backoff
+    if (
+      (msg.includes("ERR_TIMED_OUT") || msg.includes("Timeout")) &&
+      attempt <= MAX_RETRIES
+    ) {
+      console.warn(
+        `${tag} Timeout (attempt ${attempt}/${MAX_RETRIES}), retrying in ${10 * attempt}s...`
+      );
+      await delay(10_000 * attempt);
+      return navigateWithRetry(page, url, tag, attempt + 1);
+    }
+
+    throw e;
+  }
+}
 
 /**
  * Scrape all matching products for the given basket items from a Foodstuffs store.
@@ -124,7 +202,7 @@ export async function scrapeFoodstuffs(
       typeof stealthModule.default === "function"
         ? stealthModule.default
         : (stealthModule as unknown as { default: () => unknown }).default;
-    // biome-ignore lint/suspicious/noExplicitAny: stealth plugin types don't align with playwright-extra's CompatiblePlugin
+    // biome-ignore lint/suspicious/noExplicitAny: stealth plugin types don't align with playwright-extra
     chromium.use(stealthFn() as any);
     stealthRegistered = true;
   }
@@ -142,7 +220,7 @@ export async function scrapeFoodstuffs(
     });
     const page = await context.newPage();
 
-    // Block images/fonts/trackers for speed (but NOT challenges.cloudflare.com)
+    // Block heavy resources for speed (NOT Cloudflare challenge scripts)
     await page.route("**/*", (route) => {
       const url = route.request().url();
       const resourceType = route.request().resourceType();
@@ -164,72 +242,62 @@ export async function scrapeFoodstuffs(
       return route.continue();
     });
 
-    // Skip homepage — search pages work fine without it, and the homepage
-    // often hangs on networkidle due to persistent connections.
-    // Geolocation is set via browser context, so store selection happens
-    // automatically on the first search page load.
+    // Warmup: visit homepage with short timeout to establish Cloudflare cookies.
+    // Don't wait for networkidle — just domcontentloaded + a pause.
+    console.log(`${tag} Warming up (homepage)...`);
+    try {
+      await page.goto(config.domain, {
+        waitUntil: "domcontentloaded",
+        timeout: 20_000,
+      });
+    } catch {
+      // Homepage timeout is fine — cookies may still be set
+    }
+    // Let any Cloudflare challenge JS run
+    await delay(5000);
 
-    for (const item of basket) {
+    for (let i = 0; i < basket.length; i++) {
+      const item = basket[i]!;
       try {
         const query = item.searchQueries[config.storeKey];
         const searchUrl = config.searchUrl(query);
         console.log(`${tag} Searching: ${query} (${item.category})`);
 
-        await page.goto(searchUrl, {
-          waitUntil: "domcontentloaded",
-          timeout: 45_000,
-        });
-
-        // Wait for product cards to appear
-        try {
-          await page.waitForSelector(
-            '[data-testid="price-dollars"], div[data-testid*="-EA-"]',
-            { timeout: 30_000 }
-          );
-        } catch {
-          console.warn(
-            `${tag} Timeout waiting for products for: ${query}`
-          );
+        const success = await navigateWithRetry(page, searchUrl, tag);
+        if (!success) {
+          console.warn(`${tag} Skipping ${item.category} — navigation failed`);
+          if (i < basket.length - 1) await delay(config.delayBetweenSearches);
+          continue;
         }
 
-        // Scroll to trigger lazy loads
-        for (let i = 0; i < 3; i++) {
+        // Scroll to trigger lazy loads with human-like timing
+        for (let s = 0; s < 3; s++) {
           await page.evaluate(() => window.scrollBy(0, 600));
-          await delay(120);
+          await randomDelay(200, 500);
         }
 
-        // Extract products from the page
+        // Extract products
         const parsed = await page.evaluate(extractProductsFromPage);
 
         let matched = 0;
         for (const p of parsed) {
           const fullName = p.name;
 
-          // Strict size validation
-          const sizeMatch = item.sizePatterns.some((re) => re.test(fullName));
-          if (!sizeMatch) {
+          if (!item.sizePatterns.some((re) => re.test(fullName))) continue;
+          if (item.excludePatterns.some((re) => re.test(fullName))) continue;
+          if (
+            item.includePatterns &&
+            !item.includePatterns.some((re) => re.test(fullName))
+          )
             continue;
-          }
 
-          // Exclude specialty/flavoured products
-          if (item.excludePatterns.some((re) => re.test(fullName))) {
-            continue;
-          }
-
-          // Include patterns: if defined, product must match at least one
-          if (item.includePatterns && !item.includePatterns.some((re) => re.test(fullName))) {
-            continue;
-          }
-
-          // Per-product price range validation
           if (p.price < item.priceRange.min || p.price > item.priceRange.max) {
             console.warn(
-              `${tag} Rejected ${item.category} product "$${p.price}" (${fullName}) - out of range [${item.priceRange.min}-${item.priceRange.max}]`
+              `${tag} Rejected ${item.category} "$${p.price}" (${fullName}) - out of range`
             );
             continue;
           }
 
-          // Generate a stable product ID from the name
           const productId = fullName
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
@@ -244,24 +312,25 @@ export async function scrapeFoodstuffs(
             size: item.standardUnit,
             price: p.price,
             unitPrice: undefined,
-            source: config.searchUrl(query),
+            source: searchUrl,
           });
           matched++;
         }
 
         if (matched === 0) {
           console.warn(
-            `${tag} No valid products matched for ${item.category} (${parsed.length} candidates, none passed size/price filters)`
+            `${tag} No products matched for ${item.category} (${parsed.length} candidates)`
           );
         } else {
-          console.log(
-            `${tag} ${item.category}: ${matched} products matched`
-          );
+          console.log(`${tag} ${item.category}: ${matched} products matched`);
         }
 
-        // Delay between searches (skip after last item)
-        if (basket.indexOf(item) < basket.length - 1) {
-          await delay(config.delayBetweenSearches);
+        // Delay between searches with jitter (skip after last)
+        if (i < basket.length - 1) {
+          await randomDelay(
+            config.delayBetweenSearches,
+            config.delayBetweenSearches + 3000
+          );
         }
       } catch (e) {
         console.error(

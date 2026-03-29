@@ -12,13 +12,7 @@ function randomDelay(min: number, max: number): Promise<void> {
 }
 
 /**
- * Extract product name and price from Woolworths search results using page.evaluate.
- *
- * Woolworths NZ uses Angular with custom elements:
- * - Product card: `cdx-card`
- * - Product name: `h3[id*="-title"]`
- * - Price dollars: `product-price h3 em`
- * - Price cents: `product-price h3 span`
+ * Extract product name and price from Woolworths search results.
  */
 function extractProducts(): { name: string; price: number }[] {
   const items: { name: string; price: number }[] = [];
@@ -27,9 +21,7 @@ function extractProducts(): { name: string; price: number }[] {
   for (const card of cards) {
     const titleEl = card.querySelector('h3[id*="-title"]');
     const name = titleEl?.textContent?.trim() || "";
-    if (!name) {
-      continue;
-    }
+    if (!name) continue;
 
     const dollarEl = card.querySelector("product-price h3 em");
     const centEl = card.querySelector("product-price h3 span");
@@ -47,40 +39,64 @@ function extractProducts(): { name: string; price: number }[] {
     }
   }
 
-  // Fallback: broader text-based price extraction
-  if (items.length === 0) {
-    const allCards = document.querySelectorAll(
-      ".product-entry, [class*='product-card']"
-    );
-    for (const card of allCards) {
-      const name = card.querySelector("h3")?.textContent?.trim() || "";
-      if (!name) {
-        continue;
-      }
-      const text = card.textContent || "";
-      const match = text.match(/\$\s*(\d+)\s*(\d{2})/);
-      if (match) {
-        const price =
-          Number.parseInt(match[1]!, 10) +
-          Number.parseInt(match[2]!, 10) / 100;
-        items.push({ name, price });
-      }
-    }
-  }
-
   return items;
 }
 
+const MAX_RETRIES = 2;
+
 /**
- * Scrape ALL matching products from Woolworths NZ for the given basket items.
- *
- * Strategy:
- * 1. Visit homepage to establish session cookies
- * 2. Navigate to search results for each basket item
- * 3. Extract ALL products that pass size and price validation
- *
- * Search URL pattern: /shop/searchproducts?search={query}
+ * Navigate to a Woolworths search URL with retry logic.
  */
+async function navigateWithRetry(
+  page: import("playwright").Page,
+  url: string,
+  attempt = 1
+): Promise<boolean> {
+  try {
+    await page.goto(url, {
+      waitUntil: "domcontentloaded",
+      timeout: 30_000,
+    });
+
+    // Wait for Angular to render product cards
+    try {
+      await page.waitForSelector("cdx-card", { timeout: 15_000 });
+      return true;
+    } catch {
+      // Check if we got a Cloudflare challenge
+      const html = await page.content();
+      if (
+        html.includes("Checking your browser") ||
+        html.includes("challenge-platform")
+      ) {
+        if (attempt <= MAX_RETRIES) {
+          console.warn(
+            `[woolworths] Cloudflare challenge (attempt ${attempt}/${MAX_RETRIES}), waiting...`
+          );
+          await delay(10_000 * attempt);
+          return navigateWithRetry(page, url, attempt + 1);
+        }
+        return false;
+      }
+      // Page loaded but no cdx-card elements — could be empty results
+      return true;
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (
+      (msg.includes("Timeout") || msg.includes("ERR_TIMED_OUT")) &&
+      attempt <= MAX_RETRIES
+    ) {
+      console.warn(
+        `[woolworths] Timeout (attempt ${attempt}/${MAX_RETRIES}), retrying...`
+      );
+      await delay(8_000 * attempt);
+      return navigateWithRetry(page, url, attempt + 1);
+    }
+    throw e;
+  }
+}
+
 export async function scrapeWoolworths(
   basket: BasketItem[]
 ): Promise<ScrapedProduct[]> {
@@ -93,21 +109,14 @@ export async function scrapeWoolworths(
       userAgent:
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0",
       viewport: { width: 1280, height: 800 },
-      extraHTTPHeaders: {
-        "x-requested-with": "OnlineShopping.WebApp",
-      },
     });
     const page = await context.newPage();
 
-    // Block images/fonts/trackers for speed
+    // Block heavy resources
     await page.route("**/*", (route) => {
-      const url = route.request().url();
       const resourceType = route.request().resourceType();
-      if (
-        resourceType === "image" ||
-        resourceType === "font" ||
-        resourceType === "media"
-      ) {
+      const url = route.request().url();
+      if (["image", "font", "media"].includes(resourceType)) {
         return route.abort();
       }
       if (
@@ -121,70 +130,59 @@ export async function scrapeWoolworths(
       return route.continue();
     });
 
-    // Visit homepage first to establish session cookies
-    console.log("[woolworths] Loading homepage for session...");
-    await page.goto("https://www.woolworths.co.nz", {
-      waitUntil: "networkidle",
-      timeout: 45_000,
-    });
-    await delay(2000);
+    // Warmup: visit homepage to establish session cookies
+    console.log("[woolworths] Warming up...");
+    try {
+      await page.goto("https://www.woolworths.co.nz", {
+        waitUntil: "domcontentloaded",
+        timeout: 20_000,
+      });
+    } catch {
+      // timeout is fine — cookies should still be set
+    }
+    await delay(3000);
 
-    for (const item of basket) {
+    for (let i = 0; i < basket.length; i++) {
+      const item = basket[i]!;
       try {
         const query = item.searchQueries.woolworths;
         const searchUrl = `https://www.woolworths.co.nz/shop/searchproducts?search=${encodeURIComponent(query)}`;
         console.log(`[woolworths] Searching: ${query} (${item.category})`);
 
-        await page.goto(searchUrl, {
-          waitUntil: "domcontentloaded",
-          timeout: 30_000,
-        });
-
-        // Wait for product cards to render
-        try {
-          await page.waitForSelector("cdx-card", { timeout: 15_000 });
-        } catch {
+        const success = await navigateWithRetry(page, searchUrl);
+        if (!success) {
           console.warn(
-            `[woolworths] Timeout waiting for products for: ${query}`
+            `[woolworths] Skipping ${item.category} — navigation failed`
           );
+          if (i < basket.length - 1) await randomDelay(7000, 10000);
+          continue;
         }
 
-        // Scroll down to trigger lazy loads
-        for (let i = 0; i < 5; i++) {
+        // Scroll to trigger lazy loads with human-like timing
+        for (let s = 0; s < 5; s++) {
           await page.evaluate(() => window.scrollBy(0, 600));
           await randomDelay(500, 1500);
         }
 
-        // Extract product data from the rendered page
         const parsed = await page.evaluate(extractProducts);
 
         let matched = 0;
         for (const p of parsed) {
-          // Strict size validation
-          const sizeMatch = item.sizePatterns.some((re) => re.test(p.name));
-          if (!sizeMatch) {
+          if (!item.sizePatterns.some((re) => re.test(p.name))) continue;
+          if (item.excludePatterns.some((re) => re.test(p.name))) continue;
+          if (
+            item.includePatterns &&
+            !item.includePatterns.some((re) => re.test(p.name))
+          )
             continue;
-          }
 
-          // Exclude specialty/flavoured products
-          if (item.excludePatterns.some((re) => re.test(p.name))) {
-            continue;
-          }
-
-          // Include patterns: if defined, product must match at least one
-          if (item.includePatterns && !item.includePatterns.some((re) => re.test(p.name))) {
-            continue;
-          }
-
-          // Per-product price range validation
           if (p.price < item.priceRange.min || p.price > item.priceRange.max) {
             console.warn(
-              `[woolworths] Rejected ${item.category} product "$${p.price}" (${p.name}) - out of range [${item.priceRange.min}-${item.priceRange.max}]`
+              `[woolworths] Rejected ${item.category} "$${p.price}" (${p.name}) - out of range`
             );
             continue;
           }
 
-          // Generate a stable product ID from the name
           const productId = p.name
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
@@ -206,23 +204,17 @@ export async function scrapeWoolworths(
 
         if (matched === 0) {
           console.warn(
-            `[woolworths] No valid products matched for ${item.category} (${parsed.length} candidates, none passed size/price filters)`
+            `[woolworths] No products matched for ${item.category} (${parsed.length} candidates)`
           );
-          if (parsed.length === 0) {
-            const bodyText = await page.evaluate(
-              () => document.body?.innerText?.substring(0, 500) || ""
-            );
-            console.warn(`[woolworths] Page text preview: ${bodyText}`);
-          }
         } else {
           console.log(
             `[woolworths] ${item.category}: ${matched} products matched`
           );
         }
 
-        // Delay between pages (skip after last item)
-        if (basket.indexOf(item) < basket.length - 1) {
-          await delay(7000);
+        // Delay with jitter (skip after last)
+        if (i < basket.length - 1) {
+          await randomDelay(7000, 10000);
         }
       } catch (e) {
         console.error(
