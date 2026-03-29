@@ -10,10 +10,15 @@ export {
 export {
   bulkInsert,
   getLatestByCategory,
+  getLatestRuns,
   getLatestValue,
   getProductsByCategory,
+  getStaleCollectors,
   getTimeSeries,
   insertProducts,
+  insertScraperRun,
   type NewProduct,
+  type NewScraperRun,
+  type ScraperRun,
 } from "./queries";
-export { metrics, products } from "./schema";
+export { metrics, products, scraperRuns } from "./schema";

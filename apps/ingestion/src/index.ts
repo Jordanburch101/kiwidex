@@ -1,9 +1,22 @@
 import { bulkInsert, db } from "@workspace/db";
 import { Elysia } from "elysia";
 import { registry } from "./collectors/registry";
+import { checkHealth } from "./monitoring";
 
 const app = new Elysia()
   .get("/health", () => ({ status: "ok", collectors: Object.keys(registry) }))
+  .get("/health/scrapers", async () => {
+    const health = await checkHealth();
+    const hasIssues = health.some(
+      (h) =>
+        h.status === "failed" ||
+        (h.daysSinceLastSuccess !== null && h.daysSinceLastSuccess >= 3)
+    );
+    return {
+      status: hasIssues ? "degraded" : "healthy",
+      collectors: health,
+    };
+  })
   .post("/collect/all", async () => {
     const summary: Record<string, { collected: number; error?: string }> = {};
 

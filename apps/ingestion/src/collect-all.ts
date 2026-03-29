@@ -1,5 +1,6 @@
 import { bulkInsert, db } from "@workspace/db";
 import { registry } from "./collectors/registry";
+import { checkAndAlert, recordRun } from "./monitoring";
 
 const skipList = new Set<string>();
 for (const arg of process.argv.slice(2)) {
@@ -31,15 +32,27 @@ for (const [name, collector] of Object.entries(registry)) {
   try {
     const results = await collector();
     await bulkInsert(db, results);
-    const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+    const durationMs = Date.now() - start;
+    const elapsed = (durationMs / 1000).toFixed(1);
     console.log(`  ${results.length} data points collected (${elapsed}s)\n`);
     summary[name] = { collected: results.length };
     totalCollected += results.length;
+
+    await recordRun(name, results.length > 0 ? "success" : "partial", {
+      totalProducts: results.length,
+      durationMs,
+    });
   } catch (e) {
-    const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+    const durationMs = Date.now() - start;
+    const elapsed = (durationMs / 1000).toFixed(1);
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`  FAILED (${elapsed}s): ${msg}\n`);
     summary[name] = { collected: 0, error: msg };
+
+    await recordRun(name, "failed", {
+      error: msg,
+      durationMs,
+    });
   }
 }
 
@@ -54,5 +67,16 @@ for (const [name, result] of Object.entries(summary)) {
   }
 }
 console.log(`\nTotal: ${totalCollected} data points collected`);
+
+// Check for alerts after all collectors have run
+console.log("\n=== Health Check ===");
+try {
+  await checkAndAlert();
+  console.log("  Health check complete\n");
+} catch (e) {
+  console.error(
+    `  Health check failed: ${e instanceof Error ? e.message : e}\n`
+  );
+}
 
 process.exit(0);

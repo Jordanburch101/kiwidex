@@ -23,6 +23,21 @@ export const metrics = sqliteTable(
   (table) => [uniqueIndex("metric_date_uniq").on(table.metric, table.date)]
 );
 
+export const scraperRuns = sqliteTable("scraper_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  collector: text("collector").notNull(),
+  store: text("store"),
+  status: text("status").notNull(),
+  totalProducts: integer("total_products"),
+  categories: text("categories"),
+  error: text("error"),
+  durationMs: integer("duration_ms"),
+  date: text("date").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
 export const products = sqliteTable(
   "products",
   {

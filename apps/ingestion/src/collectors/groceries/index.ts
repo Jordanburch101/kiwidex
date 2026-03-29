@@ -1,7 +1,8 @@
-import { db, insertProducts, type NewProduct } from "@workspace/db";
-import type { MetricKey } from "@workspace/db/metrics";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
+import { db, insertProducts, type NewProduct } from "@workspace/db";
+import type { MetricKey } from "@workspace/db/metrics";
+import { recordRun } from "../../monitoring";
 import type { CollectorResult } from "../types";
 import type { ScrapedProduct } from "./types";
 
@@ -15,10 +16,7 @@ const GROCERY_METRICS: MetricKey[] = [
 
 const STORES = ["woolworths", "paknsave", "newworld"] as const;
 
-const SCRAPE_SCRIPT = resolve(
-  import.meta.dir,
-  "scrape-store.ts"
-);
+const SCRAPE_SCRIPT = resolve(import.meta.dir, "scrape-store.ts");
 
 /**
  * Run a single store scraper in a separate bun process.
@@ -84,9 +82,32 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
   const allProducts: ScrapedProduct[] = [];
   for (const store of STORES) {
     console.log(`[groceries] Starting ${store} (separate process)...`);
+    const storeStart = Date.now();
     const products = await scrapeInProcess(store);
+    const storeDuration = Date.now() - storeStart;
     console.log(`[groceries] ${store}: ${products.length} products`);
     allProducts.push(...products);
+
+    // Record per-store scraper run
+    const storeDomain = `${store}.co.nz`;
+    if (products.length > 0) {
+      const categoryCounts: Record<string, number> = {};
+      for (const p of products) {
+        categoryCounts[p.category] = (categoryCounts[p.category] ?? 0) + 1;
+      }
+      await recordRun("groceries", "success", {
+        store: storeDomain,
+        totalProducts: products.length,
+        categories: categoryCounts,
+        durationMs: storeDuration,
+      });
+    } else {
+      await recordRun("groceries", "failed", {
+        store: storeDomain,
+        error: `${store} returned 0 products`,
+        durationMs: storeDuration,
+      });
+    }
   }
 
   if (allProducts.length === 0) {
@@ -150,9 +171,8 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
 
     for (const [store, prices] of storeMap) {
       const avg =
-        Math.round(
-          (prices.reduce((a, b) => a + b, 0) / prices.length) * 100
-        ) / 100;
+        Math.round((prices.reduce((a, b) => a + b, 0) / prices.length) * 100) /
+        100;
       storeAverages[store] = avg;
       totalCount += prices.length;
       sources.push(store);

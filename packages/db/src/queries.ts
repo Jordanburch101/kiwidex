@@ -2,11 +2,13 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { METRIC_META, type MetricCategory, type MetricKey } from "./metrics";
 import type * as schema from "./schema";
-import { metrics, products } from "./schema";
+import { metrics, products, scraperRuns } from "./schema";
 
 type Db = LibSQLDatabase<typeof schema>;
 
 export type NewProduct = typeof products.$inferInsert;
+export type NewScraperRun = typeof scraperRuns.$inferInsert;
+export type ScraperRun = typeof scraperRuns.$inferSelect;
 
 interface DataPoint {
   date: string;
@@ -152,4 +154,61 @@ export async function getProductsByCategory(
     .from(products)
     .where(and(...conditions))
     .orderBy(desc(products.date));
+}
+
+// --- Scraper run queries ---
+
+export async function insertScraperRun(
+  db: Db,
+  run: NewScraperRun
+): Promise<void> {
+  await db.insert(scraperRuns).values(run);
+}
+
+export async function getLatestRuns(db: Db): Promise<ScraperRun[]> {
+  const allRuns = await db
+    .select()
+    .from(scraperRuns)
+    .orderBy(desc(scraperRuns.createdAt));
+
+  const latest = new Map<string, ScraperRun>();
+  for (const run of allRuns) {
+    const key = run.store ? `${run.collector}:${run.store}` : run.collector;
+    if (!latest.has(key)) {
+      latest.set(key, run);
+    }
+  }
+
+  return Array.from(latest.values());
+}
+
+export async function getStaleCollectors(
+  db: Db,
+  maxAgeDays: number
+): Promise<string[]> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - maxAgeDays);
+  const cutoffISO = cutoff.toISOString();
+
+  const successfulRuns = await db
+    .select()
+    .from(scraperRuns)
+    .where(eq(scraperRuns.status, "success"))
+    .orderBy(desc(scraperRuns.createdAt));
+
+  const latestSuccess = new Map<string, string>();
+  for (const run of successfulRuns) {
+    if (!latestSuccess.has(run.collector)) {
+      latestSuccess.set(run.collector, run.createdAt);
+    }
+  }
+
+  const stale: string[] = [];
+  for (const [collector, lastSuccess] of latestSuccess) {
+    if (lastSuccess < cutoffISO) {
+      stale.push(collector);
+    }
+  }
+
+  return stale;
 }
