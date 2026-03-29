@@ -1,0 +1,87 @@
+import { bulkInsert, db } from "@workspace/db";
+import { Elysia } from "elysia";
+import { registry } from "./collectors/registry";
+import { checkHealth } from "./monitoring";
+
+function requireApiKey({
+  headers,
+}: { headers: Record<string, string | undefined> }) {
+  const key = process.env.INGESTION_API_KEY;
+  if (!key) return; // No key configured = auth disabled (local dev)
+
+  const provided =
+    headers["x-api-key"] || headers.authorization?.replace("Bearer ", "");
+  if (provided !== key) {
+    throw new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+const app = new Elysia()
+  .get("/health", () => ({ status: "ok", collectors: Object.keys(registry) }))
+  .get("/health/scrapers", async () => {
+    const health = await checkHealth();
+    const hasIssues = health.some(
+      (h) =>
+        h.status === "failed" ||
+        (h.daysSinceLastSuccess !== null && h.daysSinceLastSuccess >= 3)
+    );
+    return {
+      status: hasIssues ? "degraded" : "healthy",
+      collectors: health,
+    };
+  })
+  .post("/collect/all", async ({ headers }) => {
+    requireApiKey({ headers });
+
+    const summary: Record<string, { collected: number; error?: string }> = {};
+
+    for (const [name, collector] of Object.entries(registry)) {
+      try {
+        const results = await collector();
+        await bulkInsert(db, results);
+        summary[name] = { collected: results.length };
+      } catch (e) {
+        console.error(`[collect/all] ${name} failed:`, e);
+        summary[name] = {
+          collected: 0,
+          error: e instanceof Error ? e.message : "Unknown error",
+        };
+      }
+    }
+
+    return { summary };
+  })
+  .post("/collect/:source", async ({ params, headers }) => {
+    requireApiKey({ headers });
+
+    const collector = registry[params.source];
+    if (!collector) {
+      return new Response(
+        JSON.stringify({ error: `Unknown collector: ${params.source}` }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    try {
+      const results = await collector();
+      await bulkInsert(db, results);
+      return { source: params.source, collected: results.length };
+    } catch (e) {
+      console.error(`[collect] ${params.source} failed:`, e);
+      return new Response(
+        JSON.stringify({
+          error: "Collection failed",
+          source: params.source,
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  })
+  .listen(Number(process.env.PORT) || 3001);
+
+console.log(
+  `Ingestion service running at http://localhost:${app.server?.port}`
+);

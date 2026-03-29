@@ -1,0 +1,32 @@
+{
+  "name": "ingestion",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "collect": "bun run src/collect-all.ts",
+    "collect:fast": "bun run src/collect-all.ts --skip=groceries",
+    "scrape:woolworths": "bun run src/collectors/groceries/scrape-store.ts woolworths",
+    "scrape:paknsave": "bun run src/collectors/groceries/scrape-store.ts paknsave",
+    "scrape:newworld": "bun run src/collectors/groceries/scrape-store.ts newworld",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "cheerio": "^1.2.0",
+    "elysia": "^1.3.0",
+    "playwright": "^1.58.2",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "resend": "^6.9.4",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.11",
+    "@workspace/typescript-config": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

@@ -4,5 +4,26 @@
     "ultracite/biome/core",
     "ultracite/biome/react",
     "ultracite/biome/next"
-  ]
+  ],
+  "linter": {
+    "rules": {
+      "performance": {
+        "noNamespaceImport": "off",
+        "noBarrelFile": "off",
+        // Inline regex in parsers is readable and intentional
+        "useTopLevelRegex": "off"
+      },
+      "complexity": {
+        // Parser functions are inherently complex
+        "noExcessiveCognitiveComplexity": "off"
+      },
+      "suspicious": {
+        // Drizzle queries return thenable objects, not Promises — triggers false positives
+        "useAwait": "off"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
+      }
+    }
+  }
 }
