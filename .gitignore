@@ -35,5 +35,11 @@ npm-debug.log*
 .DS_Store
 *.pem
 
+# Local dev database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 # Superpowers brainstorming
 .superpowers/
