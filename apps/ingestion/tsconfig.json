@@ -1,0 +1,14 @@
+{
+  "extends": "@workspace/typescript-config/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@workspace/db/*": ["../../packages/db/src/*"],
+      "@workspace/db": ["../../packages/db/src/index.ts"]
+    },
+    "strictNullChecks": true
+  },
+  "include": ["src", "test"],
+  "exclude": ["node_modules"]
+}
