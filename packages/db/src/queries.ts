@@ -2,9 +2,11 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { METRIC_META, type MetricCategory, type MetricKey } from "./metrics";
 import type * as schema from "./schema";
-import { metrics } from "./schema";
+import { metrics, products } from "./schema";
 
 type Db = LibSQLDatabase<typeof schema>;
+
+export type NewProduct = typeof products.$inferInsert;
 
 interface DataPoint {
   date: string;
@@ -103,4 +105,51 @@ export async function bulkInsert(db: Db, dataPoints: DataPoint[]) {
       }
     });
   }
+}
+
+export async function insertProducts(db: Db, items: NewProduct[]) {
+  if (items.length === 0) {
+    return;
+  }
+
+  for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+    const chunk = items.slice(i, i + CHUNK_SIZE);
+    await db.transaction(async (tx) => {
+      for (const item of chunk) {
+        await tx
+          .insert(products)
+          .values(item)
+          .onConflictDoUpdate({
+            target: [products.productId, products.store, products.date],
+            set: {
+              name: sql`excluded.name`,
+              brand: sql`excluded.brand`,
+              size: sql`excluded.size`,
+              price: sql`excluded.price`,
+              unitPrice: sql`excluded.unit_price`,
+              category: sql`excluded.category`,
+              source: sql`excluded.source`,
+              createdAt: new Date().toISOString(),
+            },
+          });
+      }
+    });
+  }
+}
+
+export async function getProductsByCategory(
+  db: Db,
+  category: string,
+  date?: string
+) {
+  const conditions = [eq(products.category, category)];
+  if (date) {
+    conditions.push(eq(products.date, date));
+  }
+
+  return db
+    .select()
+    .from(products)
+    .where(and(...conditions))
+    .orderBy(desc(products.date));
 }

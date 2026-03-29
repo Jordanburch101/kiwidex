@@ -1,18 +1,18 @@
 import type { BasketItem } from "./basket";
 import {
-  PAKNSAVE_CONFIG,
+  NEWWORLD_CONFIG,
   scrapeFoodstuffs,
 } from "./foodstuffs-scraper";
 import type { ScrapedProduct } from "./types";
 
 /**
- * Scrape all matching products from Pak'nSave for the given basket items.
+ * Scrape all matching products from New World for the given basket items.
  *
- * Uses the shared Foodstuffs platform scraper since Pak'nSave and New World
+ * Uses the shared Foodstuffs platform scraper since New World and Pak'nSave
  * share the same Next.js platform with identical data-testid selectors.
  */
-export async function scrapePakNSave(
+export async function scrapeNewWorld(
   basket: BasketItem[]
 ): Promise<ScrapedProduct[]> {
-  return scrapeFoodstuffs(PAKNSAVE_CONFIG, basket);
+  return scrapeFoodstuffs(NEWWORLD_CONFIG, basket);
 }

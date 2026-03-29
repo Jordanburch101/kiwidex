@@ -11,6 +11,9 @@ export {
   bulkInsert,
   getLatestByCategory,
   getLatestValue,
+  getProductsByCategory,
   getTimeSeries,
+  insertProducts,
+  type NewProduct,
 } from "./queries";
-export { metrics } from "./schema";
+export { metrics, products } from "./schema";

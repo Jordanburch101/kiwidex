@@ -1,25 +1,7 @@
 import { firefox } from "playwright";
-import type { GroceryProduct, ScrapedPrice } from "./types";
-
-const PRODUCTS: GroceryProduct[] = [
-  {
-    query: "anchor milk standard blue 2l",
-    metric: "milk",
-    expectedSize: "2l",
-  },
-  {
-    query: "free range eggs 12 pack",
-    metric: "eggs",
-    expectedSize: "12pack",
-  },
-  { query: "tip top toast white", metric: "bread" },
-  { query: "anchor butter 500g", metric: "butter", expectedSize: "500g" },
-  {
-    query: "mainland mild cheese 1kg",
-    metric: "cheese",
-    expectedSize: "1kg",
-  },
-];
+import type { BasketItem } from "./basket";
+import { extractBrand } from "./brands";
+import type { ScrapedProduct } from "./types";
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -43,14 +25,12 @@ function extractProducts(): { name: string; price: number }[] {
   const cards = document.querySelectorAll("cdx-card");
 
   for (const card of cards) {
-    // Extract name from the title h3
     const titleEl = card.querySelector('h3[id*="-title"]');
     const name = titleEl?.textContent?.trim() || "";
     if (!name) {
       continue;
     }
 
-    // Extract price: dollars from <em>, cents from <span> inside product-price h3
     const dollarEl = card.querySelector("product-price h3 em");
     const centEl = card.querySelector("product-price h3 span");
 
@@ -81,7 +61,8 @@ function extractProducts(): { name: string; price: number }[] {
       const match = text.match(/\$\s*(\d+)\s*(\d{2})/);
       if (match) {
         const price =
-          Number.parseInt(match[1]!, 10) + Number.parseInt(match[2]!, 10) / 100;
+          Number.parseInt(match[1]!, 10) +
+          Number.parseInt(match[2]!, 10) / 100;
         items.push({ name, price });
       }
     }
@@ -91,20 +72,21 @@ function extractProducts(): { name: string; price: number }[] {
 }
 
 /**
- * Scrape grocery prices from Woolworths NZ using Firefox.
+ * Scrape ALL matching products from Woolworths NZ for the given basket items.
  *
  * Strategy:
  * 1. Visit homepage to establish session cookies
- * 2. Navigate to search results for each product
- * 3. Extract prices from rendered Angular components via page.evaluate
+ * 2. Navigate to search results for each basket item
+ * 3. Extract ALL products that pass size and price validation
  *
  * Search URL pattern: /shop/searchproducts?search={query}
- * (Note: the old /shop/search?q= pattern no longer works)
  */
-export async function scrapeWoolworths(): Promise<ScrapedPrice[]> {
+export async function scrapeWoolworths(
+  basket: BasketItem[]
+): Promise<ScrapedProduct[]> {
   console.log("[woolworths] Starting scrape...");
   const browser = await firefox.launch({ headless: true });
-  const results: ScrapedPrice[] = [];
+  const allProducts: ScrapedProduct[] = [];
 
   try {
     const context = await browser.newContext({
@@ -147,10 +129,11 @@ export async function scrapeWoolworths(): Promise<ScrapedPrice[]> {
     });
     await delay(2000);
 
-    for (const product of PRODUCTS) {
+    for (const item of basket) {
       try {
-        const searchUrl = `https://www.woolworths.co.nz/shop/searchproducts?search=${encodeURIComponent(product.query)}`;
-        console.log(`[woolworths] Searching: ${product.query}`);
+        const query = item.searchQueries.woolworths;
+        const searchUrl = `https://www.woolworths.co.nz/shop/searchproducts?search=${encodeURIComponent(query)}`;
+        console.log(`[woolworths] Searching: ${query} (${item.category})`);
 
         await page.goto(searchUrl, {
           waitUntil: "domcontentloaded",
@@ -162,7 +145,7 @@ export async function scrapeWoolworths(): Promise<ScrapedPrice[]> {
           await page.waitForSelector("cdx-card", { timeout: 15_000 });
         } catch {
           console.warn(
-            `[woolworths] Timeout waiting for products for: ${product.query}`
+            `[woolworths] Timeout waiting for products for: ${query}`
           );
         }
 
@@ -175,51 +158,63 @@ export async function scrapeWoolworths(): Promise<ScrapedPrice[]> {
         // Extract product data from the rendered page
         const parsed = await page.evaluate(extractProducts);
 
-        if (parsed.length > 0) {
-          // Pick the best match: prefer a product whose name contains expectedSize
-          let best = parsed[0]!;
-          if (product.expectedSize) {
-            const sizeMatch = parsed.find((p) =>
-              p.name.toLowerCase().includes(product.expectedSize!.toLowerCase())
-            );
-            if (sizeMatch) {
-              best = sizeMatch;
-            } else {
-              console.warn(
-                `[woolworths] No exact size match for "${product.expectedSize}", using top result`
-              );
-            }
+        let matched = 0;
+        for (const p of parsed) {
+          // Strict size validation: reject products that don't match size patterns
+          const sizeMatch = item.sizePatterns.some((re) => re.test(p.name));
+          if (!sizeMatch) {
+            continue;
           }
 
-          // Validate price is reasonable
-          if (best.price >= 0.5 && best.price <= 100) {
-            results.push({
-              metric: product.metric,
-              price: best.price,
-              productName: best.name,
-              source: "woolworths.co.nz",
-            });
-            console.log(
-              `[woolworths] ${product.metric}: $${best.price} (${best.name})`
-            );
-          } else {
+          // Per-product price range validation
+          if (p.price < item.priceRange.min || p.price > item.priceRange.max) {
             console.warn(
-              `[woolworths] Rejected ${product.metric}: $${best.price} (out of range)`
+              `[woolworths] Rejected ${item.category} product "$${p.price}" (${p.name}) - out of range [${item.priceRange.min}-${item.priceRange.max}]`
             );
+            continue;
+          }
+
+          // Generate a stable product ID from the name
+          const productId = p.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
+
+          allProducts.push({
+            productId,
+            store: "woolworths.co.nz",
+            category: item.category,
+            name: p.name,
+            brand: extractBrand(p.name),
+            size: item.standardUnit,
+            price: p.price,
+            unitPrice: undefined,
+            source: searchUrl,
+          });
+          matched++;
+        }
+
+        if (matched === 0) {
+          console.warn(
+            `[woolworths] No valid products matched for ${item.category} (${parsed.length} candidates, none passed size/price filters)`
+          );
+          if (parsed.length === 0) {
+            const bodyText = await page.evaluate(
+              () => document.body?.innerText?.substring(0, 500) || ""
+            );
+            console.warn(`[woolworths] Page text preview: ${bodyText}`);
           }
         } else {
-          console.warn(`[woolworths] No products found for: ${product.query}`);
-          const bodyText = await page.evaluate(
-            () => document.body?.innerText?.substring(0, 500) || ""
+          console.log(
+            `[woolworths] ${item.category}: ${matched} products matched`
           );
-          console.warn(`[woolworths] Page text preview: ${bodyText}`);
         }
 
         // Delay between pages
         await delay(7000);
       } catch (e) {
         console.error(
-          `[woolworths] Error scraping ${product.metric}: ${e instanceof Error ? e.message : e}`
+          `[woolworths] Error scraping ${item.category}: ${e instanceof Error ? e.message : e}`
         );
       }
     }
@@ -230,7 +225,7 @@ export async function scrapeWoolworths(): Promise<ScrapedPrice[]> {
   }
 
   console.log(
-    `[woolworths] Completed: ${results.length}/${PRODUCTS.length} prices scraped`
+    `[woolworths] Completed: ${allProducts.length} total products scraped`
   );
-  return results;
+  return allProducts;
 }

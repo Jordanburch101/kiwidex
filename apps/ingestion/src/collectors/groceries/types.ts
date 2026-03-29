@@ -12,3 +12,15 @@ export interface ScrapedPrice {
   productName: string;
   source: string;
 }
+
+export interface ScrapedProduct {
+  productId: string;
+  store: string;
+  category: string;
+  name: string;
+  brand: string;
+  size: string;
+  price: number;
+  unitPrice?: string;
+  source: string;
+}
