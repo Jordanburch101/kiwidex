@@ -20,7 +20,7 @@ const SPECIALTY_MILK = /organic|flavour|chocolate|strawberry|banana|protein\+|ca
 const SPECIALTY_EGGS = /quail|duck|liquid|free.?flow|organic|omega|barn/i;
 const SPECIALTY_BREAD = /sourdough|ciabatta|brioche|gluten.?free|low.?carb|rye|wholemeal|wheatmeal|wholegrain|multigrain|grain|ancient|keto|protein|wrap|pita|english.?muffin|bun|roll|high.?fibre/i;
 const SPECIALTY_BUTTER = /almond|peanut|cashew|spread|margarine|olive|garlic|herb|truffle|cultured|ghee|vegan/i;
-const SPECIALTY_CHEESE = /cream.?cheese|brie|camembert|cheddar|parmesan|feta|halloumi|mozzarella|edam|gouda|vintage|aged|tasty|smoked|pepper|chili|cumin|cranberry|apricot|slice|shred|grate/i;
+const SPECIALTY_CHEESE = /cream.?cheese|brie|camembert|parmesan|feta|halloumi|mozzarella|gouda|vintage|aged|smoked|pepper|chili|cumin|cranberry|apricot|slice|shred|grate/i;
 
 export const BASKET: BasketItem[] = [
   {
@@ -47,6 +47,7 @@ export const BASKET: BasketItem[] = [
       newworld: "free range eggs 12",
     },
     sizePatterns: [/\b12\s*(pack|pk|s)?\b/i, /\bdozen\b/i],
+    includePatterns: [/free.?range/i],
     excludePatterns: [SPECIALTY_EGGS],
     priceRange: { min: 5, max: 16 },
   },
@@ -88,7 +89,7 @@ export const BASKET: BasketItem[] = [
       newworld: "mild cheese 1kg",
     },
     sizePatterns: [/\b1\s*kg\b/i, /\b1000\s*g\b/i],
-    includePatterns: [/mild|colby/i],
+    includePatterns: [/mild|colby|cheddar|edam|tasty/i],
     excludePatterns: [SPECIALTY_CHEESE],
     priceRange: { min: 8, max: 22 },
   },

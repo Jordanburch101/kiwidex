@@ -115,9 +115,8 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
       continue;
     }
 
-    // Calculate per-store averages
+    // Calculate per-store averages, then average those (equal weight per store)
     const storeAverages: Record<string, number> = {};
-    let totalSum = 0;
     let totalCount = 0;
     const sources: string[] = [];
 
@@ -127,13 +126,17 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
           (prices.reduce((a, b) => a + b, 0) / prices.length) * 100
         ) / 100;
       storeAverages[store] = avg;
-      totalSum += prices.reduce((a, b) => a + b, 0);
       totalCount += prices.length;
       sources.push(store);
     }
 
-    // Overall average across all products from all stores
-    const overallAverage = Math.round((totalSum / totalCount) * 100) / 100;
+    // Average of store averages (prevents stores with more products from dominating)
+    const storeAvgValues = Object.values(storeAverages);
+    const overallAverage =
+      Math.round(
+        (storeAvgValues.reduce((a, b) => a + b, 0) / storeAvgValues.length) *
+          100
+      ) / 100;
 
     const metadata = JSON.stringify({
       woolworths_avg: storeAverages["woolworths.co.nz"] ?? null,

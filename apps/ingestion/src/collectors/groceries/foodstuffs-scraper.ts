@@ -186,8 +186,8 @@ export async function scrapeFoodstuffs(
         console.log(`${tag} Searching: ${query} (${item.category})`);
 
         await page.goto(searchUrl, {
-          waitUntil: "networkidle",
-          timeout: 60_000,
+          waitUntil: "domcontentloaded",
+          timeout: 45_000,
         });
 
         // Wait for product cards to appear
