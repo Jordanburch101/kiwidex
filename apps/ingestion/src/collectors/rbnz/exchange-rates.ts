@@ -1,5 +1,5 @@
-import * as XLSX from "xlsx";
 import { parseDateCell } from "../../lib/date-utils";
+import { parseXlsxSheet } from "../../lib/xlsx-parser";
 import type { CollectorResult } from "../types";
 
 const SOURCE_URL =
@@ -23,106 +23,13 @@ const COLUMN_MAP: Record<string, CollectorResult["metric"]> = {
  *   5+: [date, value, value, ...]
  */
 export function parseExchangeRates(buffer: Buffer): CollectorResult[] {
-  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
-    throw new Error("B1 XLSX has no sheets");
-  }
-  const sheet = workbook.Sheets[sheetName];
-  if (!sheet) {
-    throw new Error("B1 XLSX sheet not found");
-  }
-  const data: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-  // Find the header row containing "NZD/USD" — this is the "Unit" row
-  let headerRowIndex = -1;
-  const metricCols: { col: number; metric: CollectorResult["metric"] }[] = [];
-
-  for (let i = 0; i < Math.min(data.length, 20); i++) {
-    const row = data[i];
-    if (!row) {
-      continue;
-    }
-
-    const hasNzdUsd = row.some(
-      (cell) => typeof cell === "string" && cell.includes("NZD/USD")
-    );
-
-    if (hasNzdUsd) {
-      headerRowIndex = i;
-      for (let j = 0; j < row.length; j++) {
-        const header = String(row[j] ?? "").trim();
-        for (const [pattern, metric] of Object.entries(COLUMN_MAP)) {
-          if (metric && header === pattern) {
-            metricCols.push({ col: j, metric });
-          }
-        }
-      }
-      break;
-    }
-  }
-
-  if (headerRowIndex === -1 || metricCols.length === 0) {
-    throw new Error(
-      `Could not find header row in B1 exchange rate XLSX. First 10 rows: ${JSON.stringify(data.slice(0, 10))}`
-    );
-  }
-
-  // Data rows start after "Series Id" row (headerRowIndex + 2 typically),
-  // but we detect by looking for a row whose first cell is a date.
-  let dataStartIndex = headerRowIndex + 1;
-  for (
-    let i = headerRowIndex + 1;
-    i < Math.min(data.length, headerRowIndex + 5);
-    i++
-  ) {
-    const row = data[i];
-    if (!row) {
-      continue;
-    }
-    const firstCell = row[0];
-    // Skip rows like "Series Id"
-    if (typeof firstCell === "string" && !firstCell.match(/^\d/)) {
-      dataStartIndex = i + 1;
-      continue;
-    }
-    break;
-  }
-
-  // Date is always column 0
-  const dateCol = 0;
-  const results: CollectorResult[] = [];
-
-  for (let i = dataStartIndex; i < data.length; i++) {
-    const row = data[i];
-    if (!row?.[dateCol]) {
-      continue;
-    }
-
-    const isoDate = parseDateCell(row[dateCol]);
-    if (!isoDate) {
-      continue;
-    }
-
-    for (const { col, metric } of metricCols) {
-      const val = row[col];
-      if (val == null || val === "" || typeof val === "string") {
-        continue;
-      }
-      const num = Number(val);
-      if (Number.isNaN(num)) {
-        continue;
-      }
-
-      results.push({
-        metric,
-        value: num,
-        unit: "ratio",
-        date: isoDate,
-        source: SOURCE_URL,
-      });
-    }
-  }
-
-  return results;
+  return parseXlsxSheet({
+    buffer,
+    headerPatterns: ["NZD/USD"],
+    columnMap: COLUMN_MAP,
+    columnMatchMode: "exact",
+    unit: "ratio",
+    source: SOURCE_URL,
+    dateParseFn: parseDateCell,
+  });
 }
