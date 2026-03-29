@@ -1,43 +1,15 @@
 import * as XLSX from "xlsx";
 import type { CollectorResult } from "../types";
+import { parseMonthCell } from "../../lib/date-utils";
 
 const SOURCE_URL =
   "https://www.rbnz.govt.nz/statistics/series/exchange-and-interest-rates/new-residential-mortgage-standard-interest-rates";
 
-/** Map of header patterns to metric keys. */
 const COLUMN_MAP: Record<string, CollectorResult["metric"]> = {
   floating: "mortgage_floating",
   "1 year": "mortgage_1yr",
   "2 year": "mortgage_2yr",
 };
-
-function lastDayOfMonthISO(d: Date): string {
-  const year = d.getFullYear();
-  const month = d.getMonth();
-  const lastDay = new Date(year, month + 1, 0);
-  return lastDay.toISOString().split("T")[0]!;
-}
-
-/**
- * Parse a monthly date like "Feb 2026" to the last day of that month.
- */
-function parseMonthlyDate(cell: unknown): string | null {
-  if (cell instanceof Date) {
-    return lastDayOfMonthISO(cell);
-  }
-  if (typeof cell === "number") {
-    // Excel serial date
-    const date = new Date((cell - 25569) * 86400 * 1000);
-    return lastDayOfMonthISO(date);
-  }
-  if (typeof cell === "string") {
-    const d = new Date(cell);
-    if (!isNaN(d.getTime())) {
-      return lastDayOfMonthISO(d);
-    }
-  }
-  return null;
-}
 
 export function parseMortgageRates(buffer: Buffer): CollectorResult[] {
   const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
@@ -96,7 +68,7 @@ export function parseMortgageRates(buffer: Buffer): CollectorResult[] {
     const row = data[i];
     if (!row || !row[dateCol]) continue;
 
-    const isoDate = parseMonthlyDate(row[dateCol]);
+    const isoDate = parseMonthCell(row[dateCol]);
     if (!isoDate) continue;
 
     for (const { col, metric } of metricCols) {

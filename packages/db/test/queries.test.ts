@@ -1,7 +1,10 @@
-import { describe, test, expect, beforeAll, beforeEach } from "bun:test";
+import { describe, test, expect, beforeAll, beforeEach, afterAll } from "bun:test";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { sql } from "drizzle-orm";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import * as schema from "../src/schema";
 import {
   getLatestValue,
@@ -10,8 +13,13 @@ import {
   bulkInsert,
 } from "../src/queries";
 
+// Use a temp file DB instead of :memory: because libSQL in-memory mode
+// creates separate connections per operation, breaking transactions.
+const tmpDir = mkdtempSync(join(tmpdir(), "nz-ecom-test-"));
+const dbPath = join(tmpDir, "test.db");
+
 function createTestDb() {
-  const client = createClient({ url: ":memory:" });
+  const client = createClient({ url: `file:${dbPath}` });
   return drizzle(client, { schema });
 }
 
@@ -21,7 +29,7 @@ describe("query helpers", () => {
   beforeAll(async () => {
     testDb = createTestDb();
     await testDb.run(sql`
-      CREATE TABLE metrics (
+      CREATE TABLE IF NOT EXISTS metrics (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         metric TEXT NOT NULL,
         value REAL NOT NULL,
@@ -33,12 +41,18 @@ describe("query helpers", () => {
       )
     `);
     await testDb.run(sql`
-      CREATE UNIQUE INDEX metric_date_uniq ON metrics (metric, date)
+      CREATE UNIQUE INDEX IF NOT EXISTS metric_date_uniq ON metrics (metric, date)
     `);
   });
 
   beforeEach(async () => {
     await testDb.run(sql`DELETE FROM metrics`);
+  });
+
+  afterAll(() => {
+    try {
+      rmSync(tmpDir, { recursive: true });
+    } catch {}
   });
 
   describe("bulkInsert", () => {

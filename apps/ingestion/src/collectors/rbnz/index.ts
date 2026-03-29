@@ -1,5 +1,5 @@
 import type { CollectorResult } from "../types";
-import { downloadXlsx, closeBrowser } from "../../lib/xlsx-downloader";
+import { downloadXlsxFiles } from "../../lib/xlsx-downloader";
 import { parseExchangeRates } from "./exchange-rates";
 import { parseOCR } from "./ocr";
 import { parseMortgageRates } from "./mortgage-rates";
@@ -10,84 +10,73 @@ const URLS = {
   b20: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/b/b20/hb20.xlsx",
 } as const;
 
+type ParseResult = {
+  name: string;
+  results: CollectorResult[];
+  error?: string;
+};
+
+function tryParse(
+  name: string,
+  buffer: Buffer | undefined,
+  downloadError: string | undefined,
+  parser: (buf: Buffer) => CollectorResult[]
+): ParseResult {
+  if (!buffer) {
+    return { name, results: [], error: downloadError ?? "Download failed" };
+  }
+  try {
+    const results = parser(buffer);
+    console.log(`[rbnz] ${name}: ${results.length} data points`);
+    return { name, results };
+  } catch (e) {
+    const msg = `Failed to parse ${name}: ${e}`;
+    console.error(`[rbnz] ${msg}`);
+    return { name, results: [], error: msg };
+  }
+}
+
 /**
  * RBNZ collector: downloads exchange rates (B1), OCR (B2), and mortgage rates (B20)
  * from the Reserve Bank of New Zealand website.
+ * Uses a single browser session for all downloads, cleaned up automatically.
  */
 export default async function collectRBNZ(): Promise<CollectorResult[]> {
-  const results: CollectorResult[] = [];
-  const errors: string[] = [];
+  const allUrls = [URLS.b1, URLS.b2, URLS.b20];
+  const fileMap = await downloadXlsxFiles(allUrls);
 
-  try {
-    // Download all 3 files using a shared browser instance
-    const downloads = await Promise.allSettled([
-      downloadXlsx(URLS.b1),
-      downloadXlsx(URLS.b2),
-      downloadXlsx(URLS.b20),
-    ]);
+  const parses = [
+    tryParse(
+      "B1 exchange rates",
+      fileMap.get(URLS.b1),
+      fileMap.has(URLS.b1) ? undefined : "Download failed",
+      parseExchangeRates
+    ),
+    tryParse(
+      "B2 OCR",
+      fileMap.get(URLS.b2),
+      fileMap.has(URLS.b2) ? undefined : "Download failed",
+      parseOCR
+    ),
+    tryParse(
+      "B20 mortgage rates",
+      fileMap.get(URLS.b20),
+      fileMap.has(URLS.b20) ? undefined : "Download failed",
+      parseMortgageRates
+    ),
+  ];
 
-    // B1 — Exchange Rates
-    if (downloads[0].status === "fulfilled") {
-      try {
-        const exchangeResults = parseExchangeRates(downloads[0].value);
-        results.push(...exchangeResults);
-        console.log(`[rbnz] B1 exchange rates: ${exchangeResults.length} data points`);
-      } catch (e) {
-        const msg = `[rbnz] Failed to parse B1 exchange rates: ${e}`;
-        console.error(msg);
-        errors.push(msg);
-      }
-    } else {
-      const msg = `[rbnz] Failed to download B1: ${downloads[0].reason}`;
-      console.error(msg);
-      errors.push(msg);
-    }
+  const results = parses.flatMap((p) => p.results);
+  const errors = parses.filter((p) => p.error).map((p) => p.error);
 
-    // B2 — OCR
-    if (downloads[1].status === "fulfilled") {
-      try {
-        const ocrResults = parseOCR(downloads[1].value);
-        results.push(...ocrResults);
-        console.log(`[rbnz] B2 OCR: ${ocrResults.length} data points`);
-      } catch (e) {
-        const msg = `[rbnz] Failed to parse B2 OCR: ${e}`;
-        console.error(msg);
-        errors.push(msg);
-      }
-    } else {
-      const msg = `[rbnz] Failed to download B2: ${downloads[1].reason}`;
-      console.error(msg);
-      errors.push(msg);
-    }
-
-    // B20 — Mortgage Rates
-    if (downloads[2].status === "fulfilled") {
-      try {
-        const mortgageResults = parseMortgageRates(downloads[2].value);
-        results.push(...mortgageResults);
-        console.log(`[rbnz] B20 mortgage rates: ${mortgageResults.length} data points`);
-      } catch (e) {
-        const msg = `[rbnz] Failed to parse B20 mortgage rates: ${e}`;
-        console.error(msg);
-        errors.push(msg);
-      }
-    } else {
-      const msg = `[rbnz] Failed to download B20: ${downloads[2].reason}`;
-      console.error(msg);
-      errors.push(msg);
-    }
-
-    if (errors.length > 0 && results.length === 0) {
-      throw new Error(`All RBNZ collectors failed:\n${errors.join("\n")}`);
-    }
-
-    if (errors.length > 0) {
-      console.warn(`[rbnz] Partial success. Errors:\n${errors.join("\n")}`);
-    }
-
-    console.log(`[rbnz] Total: ${results.length} data points collected`);
-    return results;
-  } finally {
-    await closeBrowser();
+  if (errors.length > 0 && results.length === 0) {
+    throw new Error(`All RBNZ collectors failed:\n${errors.join("\n")}`);
   }
+
+  if (errors.length > 0) {
+    console.warn(`[rbnz] Partial success. Errors:\n${errors.join("\n")}`);
+  }
+
+  console.log(`[rbnz] Total: ${results.length} data points collected`);
+  return results;
 }

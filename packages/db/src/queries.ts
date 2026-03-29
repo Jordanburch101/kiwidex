@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { metrics } from "./schema";
 import { METRIC_META, type MetricKey, type MetricCategory } from "./metrics";
@@ -49,39 +49,54 @@ export async function getLatestByCategory(db: Db, category: MetricCategory) {
     .filter(([, meta]) => meta.category === category)
     .map(([key]) => key);
 
-  const results: (typeof metrics.$inferSelect)[] = [];
+  if (categoryMetrics.length === 0) return [];
 
-  for (const metricKey of categoryMetrics) {
-    const row = await getLatestValue(db, metricKey as MetricKey);
-    if (row) results.push(row);
+  const rows = await db
+    .select()
+    .from(metrics)
+    .where(inArray(metrics.metric, categoryMetrics))
+    .orderBy(desc(metrics.date));
+
+  const latest = new Map<string, typeof metrics.$inferSelect>();
+  for (const row of rows) {
+    if (!latest.has(row.metric)) {
+      latest.set(row.metric, row);
+    }
   }
 
-  return results;
+  return Array.from(latest.values());
 }
+
+const CHUNK_SIZE = 500;
 
 export async function bulkInsert(db: Db, dataPoints: DataPoint[]) {
   if (dataPoints.length === 0) return;
 
-  for (const point of dataPoints) {
-    await db
-      .insert(metrics)
-      .values({
-        metric: point.metric,
-        value: point.value,
-        unit: point.unit,
-        date: point.date,
-        source: point.source ?? null,
-        metadata: point.metadata ?? null,
-      })
-      .onConflictDoUpdate({
-        target: [metrics.metric, metrics.date],
-        set: {
-          value: sql`excluded.value`,
-          unit: sql`excluded.unit`,
-          source: sql`excluded.source`,
-          metadata: sql`excluded.metadata`,
-          createdAt: sql`datetime('now')`,
-        },
-      });
+  for (let i = 0; i < dataPoints.length; i += CHUNK_SIZE) {
+    const chunk = dataPoints.slice(i, i + CHUNK_SIZE);
+    await db.transaction(async (tx) => {
+      for (const point of chunk) {
+        await tx
+          .insert(metrics)
+          .values({
+            metric: point.metric,
+            value: point.value,
+            unit: point.unit,
+            date: point.date,
+            source: point.source ?? null,
+            metadata: point.metadata ?? null,
+          })
+          .onConflictDoUpdate({
+            target: [metrics.metric, metrics.date],
+            set: {
+              value: sql`excluded.value`,
+              unit: sql`excluded.unit`,
+              source: sql`excluded.source`,
+              metadata: sql`excluded.metadata`,
+              createdAt: new Date().toISOString(),
+            },
+          });
+      }
+    });
   }
 }

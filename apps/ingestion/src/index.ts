@@ -4,6 +4,25 @@ import { bulkInsert, db } from "@workspace/db";
 
 const app = new Elysia()
   .get("/health", () => ({ status: "ok", collectors: Object.keys(registry) }))
+  .post("/collect/all", async () => {
+    const summary: Record<string, { collected: number; error?: string }> = {};
+
+    for (const [name, collector] of Object.entries(registry)) {
+      try {
+        const results = await collector();
+        await bulkInsert(db, results);
+        summary[name] = { collected: results.length };
+      } catch (e) {
+        console.error(`[collect/all] ${name} failed:`, e);
+        summary[name] = {
+          collected: 0,
+          error: e instanceof Error ? e.message : "Unknown error",
+        };
+      }
+    }
+
+    return { summary };
+  })
   .post("/collect/:source", async ({ params }) => {
     const collector = registry[params.source];
     if (!collector) {
@@ -13,21 +32,23 @@ const app = new Elysia()
       );
     }
 
-    const results = await collector();
-    await bulkInsert(db, results);
-    return { source: params.source, collected: results.length };
-  })
-  .post("/collect/all", async () => {
-    const summary: Record<string, number> = {};
-
-    for (const [name, collector] of Object.entries(registry)) {
+    try {
       const results = await collector();
       await bulkInsert(db, results);
-      summary[name] = results.length;
+      return { source: params.source, collected: results.length };
+    } catch (e) {
+      console.error(`[collect] ${params.source} failed:`, e);
+      return new Response(
+        JSON.stringify({
+          error: "Collection failed",
+          source: params.source,
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
-
-    return { summary };
   })
   .listen(Number(process.env.PORT) || 3001);
 
-console.log(`Ingestion service running at http://localhost:${app.server?.port}`);
+console.log(
+  `Ingestion service running at http://localhost:${app.server?.port}`
+);

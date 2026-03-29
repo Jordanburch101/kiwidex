@@ -1,35 +1,15 @@
 import * as XLSX from "xlsx";
 import type { CollectorResult } from "../types";
+import { parseDateCell } from "../../lib/date-utils";
 
 const SOURCE_URL =
   "https://www.rbnz.govt.nz/statistics/series/exchange-and-interest-rates/exchange-rates-and-the-trade-weighted-index";
 
-/**
- * Map column header patterns to metric keys.
- * The B1 XLSX has headers like "NZD/USD", "NZD/GBP", "NZD/AUD", etc.
- */
 const COLUMN_MAP: Record<string, CollectorResult["metric"]> = {
   "NZD/USD": "nzd_usd",
   "NZD/AUD": "nzd_aud",
   "NZD/EUR": "nzd_eur",
 };
-
-function parseDateCell(cell: unknown): string | null {
-  if (cell instanceof Date) {
-    return cell.toISOString().split("T")[0]!;
-  }
-  if (typeof cell === "number") {
-    const date = new Date((cell - 25569) * 86400 * 1000);
-    return date.toISOString().split("T")[0]!;
-  }
-  if (typeof cell === "string") {
-    const d = new Date(cell);
-    if (!isNaN(d.getTime())) {
-      return d.toISOString().split("T")[0]!;
-    }
-  }
-  return null;
-}
 
 /**
  * Parse B1 XLSX for exchange rates.
