@@ -45,6 +45,16 @@ const FILE_CONFIGS = [
         metric: "wage_growth" as const,
         unit: "percent",
       },
+      {
+        seriesId: "QESS21.Q.E03S0.na",
+        metric: "median_income" as const,
+        unit: "nzd",
+        // Average hourly earnings (NZD) → approximate annual: hourly * 40hrs * 52wks
+        // NOTE: This is AVERAGE (not median) hourly earnings × 2080. It will be
+        // ~$90–100k, higher than the true NZ median income (~$65k). Used as a
+        // programmatic proxy until Stats NZ HES annual survey data is available.
+        transform: (hourly: number) => Number((hourly * 40 * 52).toFixed(0)),
+      },
     ],
   },
 ];

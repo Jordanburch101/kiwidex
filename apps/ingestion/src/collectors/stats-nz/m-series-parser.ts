@@ -8,6 +8,8 @@ const DATE_COLUMN = 0;
 interface MSeriesColumn {
   metric: CollectorResult["metric"];
   seriesId: string;
+  /** Optional transform applied to each raw numeric value before storing. */
+  transform?: (value: number) => number;
   unit: string;
 }
 
@@ -78,9 +80,11 @@ function parseMSeriesColumn(
       continue;
     }
 
+    const value = column.transform ? column.transform(num) : num;
+
     results.push({
       metric: column.metric,
-      value: num,
+      value,
       unit: column.unit,
       date: isoDate,
       source,
