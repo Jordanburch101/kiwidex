@@ -9,6 +9,7 @@ export {
 } from "./metrics";
 export {
   bulkInsert,
+  getLastSuccessDate,
   getLatestByCategory,
   getLatestRuns,
   getLatestValue,

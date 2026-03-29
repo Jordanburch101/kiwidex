@@ -1,16 +1,27 @@
 import {
   db,
+  getLastSuccessDate,
   getLatestRuns,
   getStaleCollectors,
-  type ScraperRun,
 } from "@workspace/db";
 import { Resend } from "resend";
 
 const STALE_THRESHOLD_DAYS = 3;
 const DEGRADED_PRODUCT_THRESHOLD = 25;
+const ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// Track which issues we've already alerted on to avoid spam
-const alertedIssues = new Set<string>();
+// Track alerted issues with timestamps for TTL-based dedup
+const alertedIssues = new Map<string, number>();
+
+function shouldAlert(issueKey: string): boolean {
+  const lastAlerted = alertedIssues.get(issueKey);
+  if (!lastAlerted) return true;
+  return Date.now() - lastAlerted > ALERT_COOLDOWN_MS;
+}
+
+function markAlerted(issueKey: string): void {
+  alertedIssues.set(issueKey, Date.now());
+}
 
 export async function sendAlert(
   subject: string,
@@ -64,6 +75,7 @@ function buildAlertHtml(
   return lines.join("\n");
 }
 
+
 export async function checkAndAlert(): Promise<void> {
   const latestRuns = await getLatestRuns(db);
   const staleCollectors = await getStaleCollectors(db, STALE_THRESHOLD_DAYS);
@@ -74,13 +86,15 @@ export async function checkAndAlert(): Promise<void> {
 
     if (run.status === "failed") {
       const issueKey = `failed:${key}`;
-      if (!alertedIssues.has(issueKey)) {
-        alertedIssues.add(issueKey);
+      if (shouldAlert(issueKey)) {
+        markAlerted(issueKey);
         await sendAlert(
           `Scraper Failed: ${key}`,
           buildAlertHtml(`${key} scraper failed`, {
             error: run.error ?? "Unknown error",
-            lastSuccess: findLastSuccess(latestRuns, run.collector, run.store),
+            lastSuccess:
+              (await getLastSuccessDate(db, run.collector, run.store)) ??
+              "Never",
             action: `Check if ${run.collector} data source changed or is unavailable`,
           })
         );
@@ -95,8 +109,8 @@ export async function checkAndAlert(): Promise<void> {
       run.totalProducts < DEGRADED_PRODUCT_THRESHOLD
     ) {
       const issueKey = `degraded:${key}`;
-      if (!alertedIssues.has(issueKey)) {
-        alertedIssues.add(issueKey);
+      if (shouldAlert(issueKey)) {
+        markAlerted(issueKey);
         await sendAlert(
           `Degraded Results: ${key}`,
           buildAlertHtml(
@@ -114,8 +128,8 @@ export async function checkAndAlert(): Promise<void> {
   // Check for stale collectors
   for (const collector of staleCollectors) {
     const issueKey = `stale:${collector}`;
-    if (!alertedIssues.has(issueKey)) {
-      alertedIssues.add(issueKey);
+    if (shouldAlert(issueKey)) {
+      markAlerted(issueKey);
       await sendAlert(
         `Stale Data: ${collector}`,
         buildAlertHtml(
@@ -127,22 +141,4 @@ export async function checkAndAlert(): Promise<void> {
       );
     }
   }
-}
-
-function findLastSuccess(
-  runs: ScraperRun[],
-  collector: string,
-  store: string | null
-): string {
-  const match = runs.find(
-    (r) =>
-      r.collector === collector && r.store === store && r.status === "success"
-  );
-  if (match) {
-    const days = Math.floor(
-      (Date.now() - new Date(match.createdAt).getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return `${match.createdAt} (${days} day${days === 1 ? "" : "s"} ago)`;
-  }
-  return "Never";
 }

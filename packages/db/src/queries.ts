@@ -182,6 +182,35 @@ export async function getLatestRuns(db: Db): Promise<ScraperRun[]> {
   return Array.from(latest.values());
 }
 
+export async function getLastSuccessDate(
+  db: Db,
+  collector: string,
+  store?: string | null
+): Promise<string | null> {
+  const conditions = [
+    eq(scraperRuns.collector, collector),
+    eq(scraperRuns.status, "success"),
+  ];
+  if (store) {
+    conditions.push(eq(scraperRuns.store, store));
+  }
+
+  const rows = await db
+    .select({ date: scraperRuns.date, createdAt: scraperRuns.createdAt })
+    .from(scraperRuns)
+    .where(and(...conditions))
+    .orderBy(desc(scraperRuns.createdAt))
+    .limit(1);
+
+  const match = rows[0];
+  if (!match) return null;
+
+  const days = Math.floor(
+    (Date.now() - new Date(match.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+  );
+  return `${match.date} (${days} day${days === 1 ? "" : "s"} ago)`;
+}
+
 export async function getStaleCollectors(
   db: Db,
   maxAgeDays: number

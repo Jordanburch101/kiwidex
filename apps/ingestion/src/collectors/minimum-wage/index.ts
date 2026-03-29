@@ -27,6 +27,16 @@ export default async function collectMinimumWage(): Promise<CollectorResult[]> {
     source: "https://www.employment.govt.nz/hours-and-wages/pay/minimum-wage/",
   }));
 
+  // Warn if data may be stale (latest entry > 13 months old)
+  const latestDate = new Date(WAGE_HISTORY[0]!.date);
+  const monthsSince =
+    (Date.now() - latestDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
+  if (monthsSince > 13) {
+    console.warn(
+      `[minimum-wage] Data may be stale — latest entry is ${WAGE_HISTORY[0]!.date}. Check if a new minimum wage has been announced.`
+    );
+  }
+
   console.log(`[minimum-wage] ${results.length} data points collected`);
   return results;
 }
