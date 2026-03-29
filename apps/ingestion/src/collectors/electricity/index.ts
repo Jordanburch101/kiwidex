@@ -1,5 +1,8 @@
 import type { CollectorResult } from "../types";
 
+// EA publishes date-stamped CSV files. When a new file is published,
+// this URL must be updated. Check: https://www.ea.govt.nz/data-and-insights/datasets/retail/regional-power-prices/
+// TODO: Automate discovery of latest file URL from the dataset listing page
 const CSV_URL =
   "https://emidatasets.blob.core.windows.net/publicdata/Datasets/Retail/RegionalPowerPrices/20250731_AveragePowerUseAndCosts.csv";
 

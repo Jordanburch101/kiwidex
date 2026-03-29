@@ -112,10 +112,10 @@ export const METRIC_META = {
     description: "Unemployment rate",
   },
   median_income: {
-    label: "Median Income",
+    label: "Avg. Income",
     unit: "nzd",
     category: "employment_income",
-    description: "Median annual income",
+    description: "Average annual income (derived from QES avg hourly earnings × 2080hrs)",
   },
   wage_growth: {
     label: "Wage Growth",

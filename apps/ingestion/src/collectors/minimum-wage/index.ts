@@ -5,6 +5,7 @@ import type { CollectorResult } from "../types";
  * Updated annually (effective April 1). Add new entries at the top.
  */
 const WAGE_HISTORY: Array<{ date: string; value: number }> = [
+  { date: "2025-04-01", value: 23.5 },
   { date: "2024-04-01", value: 23.15 },
   { date: "2023-04-01", value: 22.7 },
   { date: "2022-04-01", value: 21.2 },
