@@ -1,5 +1,6 @@
 import type { Collector } from "./types";
+import collectRBNZ from "./rbnz/index";
 
 export const registry: Record<string, Collector> = {
-  // Collectors are registered here as they're built
+  rbnz: collectRBNZ,
 };
