@@ -5,17 +5,24 @@ export function formatValue(metric: MetricKey, value: number): string {
   const meta = METRIC_META[metric];
   switch (meta.unit) {
     case "nzd":
-      return `$${value.toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      // Smart formatting: $795K for large values, $4.91 for small
+      if (value >= 1_000_000) {
+        return `$${(value / 1_000_000).toFixed(1)}M`;
+      }
+      if (value >= 10_000) {
+        return `$${Math.round(value / 1000)}K`;
+      }
+      return `$${value.toFixed(2)}`;
     case "nzd_per_litre":
-      return `$${value.toFixed(3)}/L`;
+      return `$${value.toFixed(2)}/L`;
     case "nzd_per_kwh":
-      return `$${value.toFixed(4)}/kWh`;
+      return `$${value.toFixed(2)}/kWh`;
     case "nzd_per_week":
       return `$${value.toFixed(0)}/wk`;
     case "nzd_per_hour":
       return `$${value.toFixed(2)}/hr`;
     case "percent":
-      return `${value.toFixed(2)}%`;
+      return `${value.toFixed(1)}%`;
     case "ratio":
       return value.toFixed(4);
     default:
@@ -28,20 +35,44 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatPercent(value: number): string {
-  return `${value.toFixed(2)}%`;
+  return `${value.toFixed(1)}%`;
 }
 
 export function computeChange(
-  current: number,
-  previous: number
+  series: { date: string; value: number }[],
+  periodDays: number
 ): { label: string; type: "up" | "down" | "neutral" } {
-  if (previous === 0) {
-    return { label: "—", type: "neutral" };
+  if (series.length < 2) {
+    return { label: "\u2014", type: "neutral" };
   }
-  const pctChange = ((current - previous) / Math.abs(previous)) * 100;
-  if (Math.abs(pctChange) < 0.01) {
+
+  const current = series[series.length - 1]!;
+  const cutoffDate = new Date(
+    new Date(current.date).getTime() - periodDays * 86_400_000
+  )
+    .toISOString()
+    .split("T")[0]!;
+
+  // Find the closest data point to the comparison date
+  const previous = series.reduce((closest, point) => {
+    if (!closest) {
+      return point;
+    }
+    const closestDiff = Math.abs(
+      new Date(closest.date).getTime() - new Date(cutoffDate).getTime()
+    );
+    const pointDiff = Math.abs(
+      new Date(point.date).getTime() - new Date(cutoffDate).getTime()
+    );
+    return pointDiff < closestDiff ? point : closest;
+  }, series[0]!);
+
+  const pctChange =
+    ((current.value - previous.value) / Math.abs(previous.value)) * 100;
+  if (Math.abs(pctChange) < 0.05) {
     return { label: "0.0%", type: "neutral" };
   }
+
   const arrow = pctChange > 0 ? "\u25B2" : "\u25BC";
   return {
     label: `${arrow} ${Math.abs(pctChange).toFixed(1)}%`,

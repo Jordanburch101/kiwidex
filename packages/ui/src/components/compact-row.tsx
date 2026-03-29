@@ -1,11 +1,11 @@
-import { Sparkline } from "./sparkline";
+import { Sparkline } from "@workspace/ui/components/sparkline";
 
 interface CompactRowProps {
-  label: string;
-  value: string;
-  sparklineData: number[];
   change: string;
   changeType: "up" | "down" | "neutral";
+  label: string;
+  sparklineData: number[];
+  value: string;
 }
 
 export function CompactRow({
@@ -24,20 +24,22 @@ export function CompactRow({
 
   return (
     <div className="flex items-center gap-3 py-2.5">
-      <span className="w-28 shrink-0 text-sm text-[#555]">{label}</span>
-      <span className="w-24 shrink-0 text-right font-mono text-sm font-medium text-[#2a2520]">
+      <span className="w-28 shrink-0 text-[#555] text-sm">{label}</span>
+      <span className="w-24 shrink-0 text-right font-medium font-mono text-[#2a2520] text-sm">
         {value}
       </span>
       <div className="flex-1">
         <Sparkline
-          data={sparklineData}
           color="#888"
-          width={80}
+          data={sparklineData}
           height={24}
           strokeWidth={1.2}
+          width={80}
         />
       </div>
-      <span className={`w-16 shrink-0 text-right text-xs font-medium ${changeColor}`}>
+      <span
+        className={`w-16 shrink-0 text-right font-medium text-xs ${changeColor}`}
+      >
         {change}
       </span>
     </div>

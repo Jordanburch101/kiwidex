@@ -1,18 +1,6 @@
-import { SectionHeader } from "./section-header";
-import { AreaChartSection } from "./deep-dive-chart";
-
-interface TimeSeriesPoint {
-  date: string;
-  value: number;
-}
-
-interface GrocerySectionProps {
-  milk: TimeSeriesPoint[];
-  eggs: TimeSeriesPoint[];
-  bread: TimeSeriesPoint[];
-  butter: TimeSeriesPoint[];
-  cheese: TimeSeriesPoint[];
-}
+import { SectionHeader } from "@workspace/ui/components/section-header";
+import { AreaChartSection } from "@/components/charts/area-chart";
+import { getGroceryChartData } from "@/lib/queries";
 
 const GROCERY_COLORS = {
   milk: "oklch(0.845 0.143 164.978)",
@@ -22,13 +10,9 @@ const GROCERY_COLORS = {
   cheese: "oklch(0.432 0.095 166.913)",
 };
 
-export function GrocerySection({
-  milk,
-  eggs,
-  bread,
-  butter,
-  cheese,
-}: GrocerySectionProps) {
+export async function GroceryDeepDive() {
+  const { milk, eggs, bread, butter, cheese } = await getGroceryChartData();
+
   const items = [
     { label: "Milk (2L)", data: milk, color: GROCERY_COLORS.milk },
     { label: "Eggs (Dozen)", data: eggs, color: GROCERY_COLORS.eggs },
@@ -38,20 +22,20 @@ export function GrocerySection({
   ];
 
   return (
-    <section className="py-10">
+    <section className="px-6 py-10">
       <SectionHeader
-        title="Grocery Prices"
         subtitle="Daily averages across supermarkets"
+        title="Grocery Prices"
       />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <div key={item.label}>
-            <h4 className="mb-2 text-sm font-medium text-[#555]">
+            <h4 className="mb-2 font-medium text-[#555] text-sm">
               {item.label}
             </h4>
             <AreaChartSection
-              data={item.data}
               color={item.color}
+              data={item.data}
               height={160}
               valueFormat="currency"
             />

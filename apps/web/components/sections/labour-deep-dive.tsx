@@ -1,24 +1,12 @@
-import { SectionHeader } from "./section-header";
-import { AreaChartSection, MultiLineChart } from "./deep-dive-chart";
+import { SectionHeader } from "@workspace/ui/components/section-header";
+import { AreaChartSection } from "@/components/charts/area-chart";
+import { MultiLineChart } from "@/components/charts/multi-line-chart";
+import { getLabourChartData } from "@/lib/queries";
 
-interface TimeSeriesPoint {
-  date: string;
-  value: number;
-}
+export async function LabourDeepDive() {
+  const { unemployment, wageGrowth, cpi, medianIncome } =
+    await getLabourChartData();
 
-interface LabourSectionProps {
-  unemployment: TimeSeriesPoint[];
-  wageGrowth: TimeSeriesPoint[];
-  cpi: TimeSeriesPoint[];
-  medianIncome: TimeSeriesPoint[];
-}
-
-export function LabourSection({
-  unemployment,
-  wageGrowth,
-  cpi,
-  medianIncome,
-}: LabourSectionProps) {
   // Merge wage growth and CPI for comparison
   const dateMap = new Map<
     string,
@@ -41,44 +29,44 @@ export function LabourSection({
   );
 
   return (
-    <section className="py-10">
+    <section className="px-6 py-10">
       <SectionHeader
-        title="Labour & Income"
         subtitle="Employment and wage trends"
+        title="Labour & Income"
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div>
-          <h4 className="mb-2 text-sm font-medium text-[#555]">
+          <h4 className="mb-2 font-medium text-[#555] text-sm">
             Wage Growth vs CPI
           </h4>
           <MultiLineChart
             data={wageVsCpi}
+            height={180}
             lines={[
               { key: "wages", color: "#3a8a3a", label: "Wage Growth" },
               { key: "cpi", color: "#c44", label: "CPI" },
             ]}
-            height={180}
             valueFormat="percent"
           />
         </div>
         <div>
-          <h4 className="mb-2 text-sm font-medium text-[#555]">
+          <h4 className="mb-2 font-medium text-[#555] text-sm">
             Unemployment Rate
           </h4>
           <AreaChartSection
-            data={unemployment}
             color="#e68a00"
+            data={unemployment}
             height={180}
             valueFormat="percent"
           />
         </div>
         <div>
-          <h4 className="mb-2 text-sm font-medium text-[#555]">
+          <h4 className="mb-2 font-medium text-[#555] text-sm">
             Average Income
           </h4>
           <AreaChartSection
-            data={medianIncome}
             color="oklch(0.596 0.145 163.225)"
+            data={medianIncome}
             height={180}
             valueFormat="currency_k"
           />

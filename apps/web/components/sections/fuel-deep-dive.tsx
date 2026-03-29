@@ -1,22 +1,10 @@
-import { SectionHeader } from "./section-header";
-import { MultiLineChart } from "./deep-dive-chart";
+import { SectionHeader } from "@workspace/ui/components/section-header";
+import { MultiLineChart } from "@/components/charts/multi-line-chart";
+import { getFuelChartData } from "@/lib/queries";
 
-interface TimeSeriesPoint {
-  date: string;
-  value: number;
-}
+export async function FuelDeepDive() {
+  const { petrol91, petrol95, diesel } = await getFuelChartData();
 
-interface FuelSectionProps {
-  petrol91: TimeSeriesPoint[];
-  petrol95: TimeSeriesPoint[];
-  diesel: TimeSeriesPoint[];
-}
-
-export function FuelSection({
-  petrol91,
-  petrol95,
-  diesel,
-}: FuelSectionProps) {
   // Merge time series into multi-line format
   const dateMap = new Map<
     string,
@@ -44,16 +32,16 @@ export function FuelSection({
   );
 
   return (
-    <section className="py-10">
-      <SectionHeader title="Fuel" subtitle="NZ retail fuel prices per litre" />
+    <section className="px-6 py-10">
+      <SectionHeader subtitle="NZ retail fuel prices per litre" title="Fuel" />
       <MultiLineChart
         data={combinedData}
+        height={240}
         lines={[
           { key: "petrol91", color: "#c44", label: "91 Octane" },
           { key: "petrol95", color: "#e68a00", label: "95 Octane" },
           { key: "diesel", color: "#3a8a3a", label: "Diesel" },
         ]}
-        height={240}
         valueFormat="currency"
       />
     </section>

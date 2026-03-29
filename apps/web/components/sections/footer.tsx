@@ -1,9 +1,9 @@
-export function DashboardFooter() {
+export function Footer() {
   return (
-    <footer className="border-t border-[#e5e0d5] py-8">
-      <div className="grid grid-cols-1 gap-6 text-xs text-[#998] sm:grid-cols-2">
+    <footer className="border-[#e5e0d5] border-t px-6 py-8">
+      <div className="grid grid-cols-1 gap-6 text-[#998] text-xs sm:grid-cols-2">
         <div>
-          <h4 className="mb-2 font-medium uppercase tracking-wider text-[#777]">
+          <h4 className="mb-2 font-medium text-[#777] uppercase tracking-wider">
             Data Sources
           </h4>
           <ul className="space-y-1">
@@ -16,7 +16,7 @@ export function DashboardFooter() {
           </ul>
         </div>
         <div>
-          <h4 className="mb-2 font-medium uppercase tracking-wider text-[#777]">
+          <h4 className="mb-2 font-medium text-[#777] uppercase tracking-wider">
             Update Frequency
           </h4>
           <ul className="space-y-1">
@@ -28,7 +28,7 @@ export function DashboardFooter() {
           </ul>
         </div>
       </div>
-      <p className="mt-6 text-center text-[10px] text-[#bbb]">
+      <p className="mt-6 text-center text-[#bbb] text-[10px]">
         NZ Economy Dashboard. Data is collected from public sources and may not
         reflect real-time values.
       </p>

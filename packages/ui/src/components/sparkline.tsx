@@ -1,31 +1,31 @@
 interface SparklineProps {
-  data: number[];
   color?: string;
-  width?: number;
-  height?: number;
+  data: number[];
   fill?: boolean;
+  height?: number;
   strokeWidth?: number;
+  width?: number;
 }
 
 export function Sparkline({
   data,
   color = "#888",
   width = 100,
-  height = 32,
+  height = 64,
   fill = false,
   strokeWidth = 1.5,
 }: SparklineProps) {
   if (data.length < 2) {
     return (
-      <svg width={width} height={height} aria-hidden="true">
+      <svg aria-hidden="true" height={height} width={width}>
         <line
-          x1={0}
-          y1={height / 2}
-          x2={width}
-          y2={height / 2}
+          opacity={0.3}
           stroke={color}
           strokeWidth={1}
-          opacity={0.3}
+          x1={0}
+          x2={width}
+          y1={height / 2}
+          y2={height / 2}
         />
       </svg>
     );
@@ -52,29 +52,28 @@ export function Sparkline({
 
   return (
     <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
       aria-hidden="true"
+      height={height}
+      preserveAspectRatio="none"
+      viewBox={`0 0 ${width} ${height}`}
+      width="100%"
     >
       {fill && (
         <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.2} />
             <stop offset="100%" stopColor={color} stopOpacity={0.02} />
           </linearGradient>
         </defs>
       )}
-      {fill && (
-        <path d={fillPath} fill={`url(#${gradientId})`} />
-      )}
+      {fill && <path d={fillPath} fill={`url(#${gradientId})`} />}
       <path
         d={linePath}
         fill="none"
         stroke={color}
-        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
+        strokeWidth={strokeWidth}
       />
     </svg>
   );

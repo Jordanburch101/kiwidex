@@ -43,3 +43,4 @@ npm-debug.log*
 
 # Superpowers brainstorming
 .superpowers/
+.playwright-mcp/
