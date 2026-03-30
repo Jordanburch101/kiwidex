@@ -469,5 +469,5 @@ export async function getCurrencyChartData() {
 }
 
 export async function getNewsData() {
-  return getLatestArticles(db, 4);
+  return getLatestArticles(db, 2);
 }

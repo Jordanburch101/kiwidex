@@ -269,10 +269,22 @@ export async function insertArticles(db: Db, items: NewArticle[]) {
   }
 }
 
-export async function getLatestArticles(db: Db, limit: number) {
-  return db
+export async function getLatestArticles(db: Db, perSource: number) {
+  const rnz = await db
     .select()
     .from(articles)
+    .where(eq(articles.source, "rnz"))
     .orderBy(desc(articles.publishedAt))
-    .limit(limit);
+    .limit(perSource);
+
+  const stuff = await db
+    .select()
+    .from(articles)
+    .where(eq(articles.source, "stuff"))
+    .orderBy(desc(articles.publishedAt))
+    .limit(perSource);
+
+  return [...rnz, ...stuff].sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  );
 }
