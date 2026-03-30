@@ -9,16 +9,16 @@ export async function Overview() {
   ]);
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.8fr_1fr]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.8fr_1fr] lg:items-stretch">
       {/* Left column: Interactive cost of living chart */}
       <CostOfLivingChart items={costOfLivingItems} />
 
       {/* Right column: Key indicators (housing + economy) */}
-      <div>
+      <div className="flex flex-col">
         <h3 className="mb-4 border-[#e5e0d5] border-b pb-2 font-heading font-semibold text-[#2a2520] text-sm">
           Key Indicators
         </h3>
-        <div className="rounded-lg border border-[#e8e4dc] bg-white p-4">
+        <div className="flex flex-1 flex-col justify-between rounded-lg border border-[#e8e4dc] bg-white p-4">
           {economyRows.map((item, i) => (
             <div key={item.metric}>
               {i > 0 && <div className="border-[#e8e4dc] border-t" />}
