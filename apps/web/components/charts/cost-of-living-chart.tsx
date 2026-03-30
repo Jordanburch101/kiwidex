@@ -14,6 +14,7 @@ import {
   ChartContainer,
   type ChartConfig,
 } from "@workspace/ui/components/chart";
+import { GROCERY_COLORS } from "@/lib/colors";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -54,7 +55,7 @@ type RangeLabel = (typeof TIME_RANGES)[number]["label"];
 const GROCERY_META = {
   combinedKey: "grocery_combined",
   label: "Groceries",
-  color: "#5a8a5a",
+  color: GROCERY_COLORS.combined,
 } as const;
 
 /* Theme tokens — single source for all chart chrome colours */
