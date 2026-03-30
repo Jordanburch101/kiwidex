@@ -2,7 +2,7 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { METRIC_META, type MetricCategory, type MetricKey } from "./metrics";
 import type * as schema from "./schema";
-import { metrics, products, scraperRuns } from "./schema";
+import { articles, metrics, products, scraperRuns } from "./schema";
 
 type Db = LibSQLDatabase<typeof schema>;
 
@@ -240,4 +240,39 @@ export async function getStaleCollectors(
   }
 
   return stale;
+}
+
+// --- Article queries ---
+
+export type NewArticle = typeof articles.$inferInsert;
+
+export async function insertArticles(db: Db, items: NewArticle[]) {
+  if (items.length === 0) {
+    return;
+  }
+
+  for (const item of items) {
+    await db
+      .insert(articles)
+      .values(item)
+      .onConflictDoUpdate({
+        target: [articles.url],
+        set: {
+          title: sql`excluded.title`,
+          excerpt: sql`excluded.excerpt`,
+          imageUrl: sql`excluded.image_url`,
+          source: sql`excluded.source`,
+          publishedAt: sql`excluded.published_at`,
+          createdAt: new Date().toISOString(),
+        },
+      });
+  }
+}
+
+export async function getLatestArticles(db: Db, limit: number) {
+  return db
+    .select()
+    .from(articles)
+    .orderBy(desc(articles.publishedAt))
+    .limit(limit);
 }
