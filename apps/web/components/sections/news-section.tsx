@@ -47,13 +47,13 @@ export async function NewsSection() {
         rel="noopener noreferrer"
         target="_blank"
       >
-        <div className="relative w-[280px] flex-shrink-0 overflow-hidden">
+        <div className="relative min-h-[160px] w-[420px] flex-shrink-0 overflow-hidden">
           {lead!.imageUrl ? (
             <Image
               alt={lead!.title}
               className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               fill
-              sizes="280px"
+              sizes="420px"
               src={lead!.imageUrl}
             />
           ) : (
@@ -66,7 +66,7 @@ export async function NewsSection() {
             />
           )}
         </div>
-        <div className="flex flex-col justify-center px-5 py-4">
+        <div className="flex flex-col justify-center px-6 py-5">
           <div className="mb-1.5 flex items-center gap-2">
             <SourceBadge source={lead!.source} variant="dark" />
             <span className="font-sans text-[10px] text-[#998]">
@@ -77,7 +77,7 @@ export async function NewsSection() {
             {lead!.title}
           </h3>
           {lead!.excerpt && (
-            <p className="mt-1.5 text-[12px] text-[#5a5550] leading-relaxed">
+            <p className="mt-2 text-[13px] text-[#5a5550] leading-relaxed">
               {lead!.excerpt}
             </p>
           )}

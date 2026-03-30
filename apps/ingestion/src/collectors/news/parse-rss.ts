@@ -35,7 +35,7 @@ export function parseRnzRss(xml: string): ParsedArticle[] {
       url: link,
       title: stripCdata(title).trim(),
       excerpt: stripHtml(stripCdata(description ?? ""))
-        .slice(0, 200)
+        .slice(0, 400)
         .trim(),
       imageUrl: null,
       publishedAt: pubDate

@@ -27,7 +27,7 @@ export function parseStuffAtom(xml: string): ParsedArticle[] {
     articles.push({
       url: link,
       title: title.trim(),
-      excerpt: (summary ?? "").slice(0, 200).trim(),
+      excerpt: (summary ?? "").slice(0, 400).trim(),
       imageUrl,
       publishedAt: published
         ? new Date(published).toISOString()
