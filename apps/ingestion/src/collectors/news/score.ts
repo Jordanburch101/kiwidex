@@ -1,5 +1,5 @@
-import type { ParsedArticle } from "./parse-rss";
 import { getKeywordTier } from "./keywords";
+import type { ParsedArticle } from "./parse-rss";
 
 export interface ScoredArticle extends ParsedArticle {
   score: number;
@@ -30,9 +30,15 @@ export function scoreArticles(articles: ParsedArticle[]): ScoredArticle[] {
 
 function getKeywordTierScore(article: ParsedArticle): number {
   const tier = getKeywordTier(article.title, article.excerpt);
-  if (tier === 1) return 30;
-  if (tier === 2) return 20;
-  if (tier === 3) return 10;
+  if (tier === 1) {
+    return 30;
+  }
+  if (tier === 2) {
+    return 20;
+  }
+  if (tier === 3) {
+    return 10;
+  }
   return 0;
 }
 
@@ -40,10 +46,18 @@ function getRecencyScore(article: ParsedArticle): number {
   const ageMs = Date.now() - new Date(article.publishedAt).getTime();
   const ageHours = ageMs / (1000 * 60 * 60);
 
-  if (ageHours <= 6) return 25;
-  if (ageHours <= 12) return 20;
-  if (ageHours <= 24) return 15;
-  if (ageHours <= 48) return 10;
+  if (ageHours <= 6) {
+    return 25;
+  }
+  if (ageHours <= 12) {
+    return 20;
+  }
+  if (ageHours <= 24) {
+    return 15;
+  }
+  if (ageHours <= 48) {
+    return 10;
+  }
   return 5;
 }
 
@@ -51,9 +65,7 @@ function getRecencyScore(article: ParsedArticle): number {
  * Detect cross-source coverage by extracting key terms from titles
  * and checking if multiple sources share them.
  */
-function buildTopicCounts(
-  articles: ParsedArticle[]
-): Map<string, Set<string>> {
+function buildTopicCounts(articles: ParsedArticle[]): Map<string, Set<string>> {
   const topicSources = new Map<string, Set<string>>();
 
   for (const article of articles) {
@@ -94,10 +106,26 @@ function getCoverageScore(
 function extractTopicTerms(title: string): string[] {
   const text = title.toLowerCase();
   const TOPIC_TERMS = [
-    "ocr", "rbnz", "reserve bank", "gdp", "cpi", "recession",
-    "interest rate", "inflation", "mortgage", "house price", "housing",
-    "unemployment", "petrol", "fuel", "grocery", "exchange rate",
-    "budget", "fiscal", "trade", "employment",
+    "ocr",
+    "rbnz",
+    "reserve bank",
+    "gdp",
+    "cpi",
+    "recession",
+    "interest rate",
+    "inflation",
+    "mortgage",
+    "house price",
+    "housing",
+    "unemployment",
+    "petrol",
+    "fuel",
+    "grocery",
+    "exchange rate",
+    "budget",
+    "fiscal",
+    "trade",
+    "employment",
   ];
   return TOPIC_TERMS.filter((term) => text.includes(term));
 }

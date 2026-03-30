@@ -10,7 +10,8 @@ import { scoreArticles } from "./score";
 const FEEDS = {
   rnz: "https://www.rnz.co.nz/rss/business.xml",
   stuff: "https://www.stuff.co.nz/rss?section=/business",
-  herald: "https://www.nzherald.co.nz/arc/outboundfeeds/rss/section/business/?outputType=xml",
+  herald:
+    "https://www.nzherald.co.nz/arc/outboundfeeds/rss/section/business/?outputType=xml",
   newsroom: "https://newsroom.co.nz/category/economy/feed/",
 } as const;
 
@@ -21,7 +22,7 @@ async function fetchOgImage(url: string): Promise<string | null> {
   try {
     const response = await fetch(url, {
       headers: { "User-Agent": USER_AGENT },
-      signal: AbortSignal.timeout(5_000),
+      signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) {
       return null;
@@ -125,7 +126,9 @@ export default async function collectNews(): Promise<CollectorResult[]> {
       })
     );
     const enriched = toEnrich.filter((a) => a.imageUrl).length;
-    console.log(`[news] Got images for ${enriched}/${toEnrich.length} articles`);
+    console.log(
+      `[news] Got images for ${enriched}/${toEnrich.length} articles`
+    );
   }
 
   // Insert into articles table

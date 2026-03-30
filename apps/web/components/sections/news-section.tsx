@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { SectionHeader } from "@workspace/ui/components/section-header";
+import Image from "next/image";
 import { timeAgo } from "@/lib/data";
 import { getNewsData } from "@/lib/queries";
 import { pickLeadAndRest } from "@/lib/score-articles";
@@ -15,7 +15,7 @@ function SourceBadge({ source }: { source: string }) {
   const config = BADGE_COLORS[source] ?? { bg: "#666", label: source };
   return (
     <span
-      className="rounded px-1.5 py-0.5 font-sans font-semibold text-white text-[9px] tracking-wide"
+      className="rounded px-1.5 py-0.5 font-sans font-semibold text-[9px] text-white tracking-wide"
       style={{ backgroundColor: config.bg }}
     >
       {config.label}
@@ -70,15 +70,15 @@ export async function NewsSection() {
         <div className="flex flex-col justify-center px-7 py-6">
           <div className="mb-2 flex items-center gap-2">
             <SourceBadge source={lead.source} />
-            <span className="font-sans text-[11px] text-[#998]">
+            <span className="font-sans text-[#998] text-[11px]">
               {timeAgo(lead.publishedAt)}
             </span>
           </div>
-          <h3 className="font-bold font-heading text-[#2a2520] text-xl leading-tight text-balance">
+          <h3 className="text-balance font-bold font-heading text-[#2a2520] text-xl leading-tight">
             {lead.title}
           </h3>
           {lead.excerpt && (
-            <p className="mt-3 text-[13.5px] text-[#5a5550] leading-[1.7]">
+            <p className="mt-3 text-[#5a5550] text-[13.5px] leading-[1.7]">
               {lead.excerpt}
             </p>
           )}
@@ -122,7 +122,7 @@ export async function NewsSection() {
                     {timeAgo(article.publishedAt)}
                   </span>
                 </div>
-                <h4 className="font-heading font-semibold text-[#2a2520] text-[15px] leading-snug text-balance">
+                <h4 className="text-balance font-heading font-semibold text-[#2a2520] text-[15px] leading-snug">
                   {article.title}
                 </h4>
               </div>
