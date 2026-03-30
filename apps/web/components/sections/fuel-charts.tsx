@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MultiLineChart } from "@/components/charts/multi-line-chart";
 import { TimeRangeSelector } from "@/components/time-range-selector";
 import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
+import { FUEL_COLORS } from "@/lib/colors";
 
 interface FuelPoint {
   date: string;
@@ -28,9 +29,9 @@ export function FuelCharts({ data }: FuelChartsProps) {
         data={filterByRange(data, range)}
         height={240}
         lines={[
-          { key: "petrol91", color: "#c44", label: "91 Octane" },
-          { key: "petrol95", color: "#e68a00", label: "95 Octane" },
-          { key: "diesel", color: "#3a8a3a", label: "Diesel" },
+          { key: "petrol91", color: FUEL_COLORS.petrol_91, label: "91 Octane" },
+          { key: "petrol95", color: FUEL_COLORS.petrol_95, label: "95 Octane" },
+          { key: "diesel", color: FUEL_COLORS.petrol_diesel, label: "Diesel" },
         ]}
         valueFormat="currency"
       />

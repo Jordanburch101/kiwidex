@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MultiLineChart } from "@/components/charts/multi-line-chart";
 import { TimeRangeSelector } from "@/components/time-range-selector";
 import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
+import { CURRENCY_COLORS } from "@/lib/colors";
 
 interface FxPoint {
   aud?: number;
@@ -28,9 +29,9 @@ export function CurrencyCharts({ data }: CurrencyChartsProps) {
         data={filterByRange(data, range)}
         height={240}
         lines={[
-          { key: "usd", color: "#c44", label: "NZD/USD" },
-          { key: "aud", color: "#3a8a3a", label: "NZD/AUD" },
-          { key: "eur", color: "#e68a00", label: "NZD/EUR" },
+          { key: "usd", color: CURRENCY_COLORS.nzd_usd, label: "NZD/USD" },
+          { key: "aud", color: CURRENCY_COLORS.nzd_aud, label: "NZD/AUD" },
+          { key: "eur", color: CURRENCY_COLORS.nzd_eur, label: "NZD/EUR" },
         ]}
         valueFormat="ratio"
       />
