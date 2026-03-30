@@ -73,7 +73,7 @@ export async function NewsSection() {
               {timeAgo(lead!.publishedAt)}
             </span>
           </div>
-          <h3 className="font-bold font-heading text-[#2a2520] text-xl leading-tight">
+          <h3 className="font-bold font-heading text-[#2a2520] text-xl leading-tight text-balance">
             {lead!.title}
           </h3>
           {lead!.excerpt && (
