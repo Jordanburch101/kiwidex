@@ -1,10 +1,10 @@
 export interface ParsedArticle {
-  url: string;
-  title: string;
   excerpt: string;
   imageUrl: string | null;
   publishedAt: string;
   source?: string;
+  title: string;
+  url: string;
 }
 
 /**
@@ -15,9 +15,11 @@ export interface ParsedArticle {
 export function parseRnzRss(xml: string): ParsedArticle[] {
   const articles: ParsedArticle[] = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = itemRegex.exec(xml)) !== null) {
+  for (
+    let match = itemRegex.exec(xml);
+    match !== null;
+    match = itemRegex.exec(xml)
+  ) {
     const item = match[1]!;
 
     const title = extractTag(item, "title");
@@ -25,7 +27,9 @@ export function parseRnzRss(xml: string): ParsedArticle[] {
     const description = extractTag(item, "description");
     const pubDate = extractTag(item, "pubDate");
 
-    if (!title || !link) continue;
+    if (!(title && link)) {
+      continue;
+    }
 
     articles.push({
       url: link,
@@ -50,7 +54,9 @@ function extractTag(xml: string, tag: string): string | null {
     "i"
   );
   const match = xml.match(regex);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   return match[1] ?? match[2] ?? null;
 }
 

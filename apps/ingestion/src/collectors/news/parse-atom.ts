@@ -7,9 +7,11 @@ import type { ParsedArticle } from "./parse-rss";
 export function parseStuffAtom(xml: string): ParsedArticle[] {
   const articles: ParsedArticle[] = [];
   const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = entryRegex.exec(xml)) !== null) {
+  for (
+    let match = entryRegex.exec(xml);
+    match !== null;
+    match = entryRegex.exec(xml)
+  ) {
     const entry = match[1]!;
 
     const title = extractAtomTag(entry, "title");
@@ -18,7 +20,9 @@ export function parseStuffAtom(xml: string): ParsedArticle[] {
     const published = extractAtomTag(entry, "published");
     const imageUrl = extractMediaContent(entry);
 
-    if (!title || !link) continue;
+    if (!(title && link)) {
+      continue;
+    }
 
     articles.push({
       url: link,
