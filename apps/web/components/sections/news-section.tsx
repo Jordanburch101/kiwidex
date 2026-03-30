@@ -121,7 +121,7 @@ export async function NewsSection() {
                     {timeAgo(article.publishedAt)}
                   </span>
                 </div>
-                <h4 className="font-heading font-semibold text-[#2a2520] text-[15px] leading-snug">
+                <h4 className="font-heading font-semibold text-[#2a2520] text-[15px] leading-snug text-balance">
                   {article.title}
                 </h4>
               </div>
