@@ -42,18 +42,18 @@ export async function NewsSection() {
 
       {/* Lead story — horizontal card (image left, text right) */}
       <a
-        className="group flex overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
+        className="group grid grid-cols-2 overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
         href={lead!.url}
         rel="noopener noreferrer"
         target="_blank"
       >
-        <div className="relative min-h-[160px] w-[420px] flex-shrink-0 overflow-hidden">
+        <div className="relative h-[240px] overflow-hidden">
           {lead!.imageUrl ? (
             <Image
               alt={lead!.title}
               className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               fill
-              sizes="420px"
+              sizes="(max-width: 1200px) 50vw, 576px"
               src={lead!.imageUrl}
             />
           ) : (
@@ -66,18 +66,18 @@ export async function NewsSection() {
             />
           )}
         </div>
-        <div className="flex flex-col justify-center px-6 py-5">
-          <div className="mb-1.5 flex items-center gap-2">
+        <div className="flex flex-col justify-center px-7 py-6">
+          <div className="mb-2 flex items-center gap-2">
             <SourceBadge source={lead!.source} variant="dark" />
-            <span className="font-sans text-[10px] text-[#998]">
+            <span className="font-sans text-[11px] text-[#998]">
               {timeAgo(lead!.publishedAt)}
             </span>
           </div>
-          <h3 className="font-bold font-heading text-[#2a2520] text-lg leading-tight">
+          <h3 className="font-bold font-heading text-[#2a2520] text-xl leading-tight">
             {lead!.title}
           </h3>
           {lead!.excerpt && (
-            <p className="mt-2 text-[13px] text-[#5a5550] leading-relaxed">
+            <p className="mt-3 text-[13.5px] text-[#5a5550] leading-[1.7]">
               {lead!.excerpt}
             </p>
           )}
