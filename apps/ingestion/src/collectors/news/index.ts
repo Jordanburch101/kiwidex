@@ -2,25 +2,30 @@ import { db, insertArticles, type NewArticle } from "@workspace/db";
 import type { CollectorResult } from "../types";
 import { matchesEconomyKeywords } from "./keywords";
 import { parseStuffAtom } from "./parse-atom";
-import { parseRnzRss, type ParsedArticle } from "./parse-rss";
+import { parseHeraldRss } from "./parse-herald";
+import { parseNewsroomRss } from "./parse-newsroom";
+import { type ParsedArticle, parseRnzRss } from "./parse-rss";
+import { scoreArticles } from "./score";
 
-const RNZ_FEED = "https://www.rnz.co.nz/rss/business.xml";
-const STUFF_FEED = "https://www.stuff.co.nz/rss?section=/business";
+const FEEDS = {
+  rnz: "https://www.rnz.co.nz/rss/business.xml",
+  stuff: "https://www.stuff.co.nz/rss?section=/business",
+  herald: "https://www.nzherald.co.nz/arc/outboundfeeds/rss/section/business/?outputType=xml",
+  newsroom: "https://newsroom.co.nz/category/economy/feed/",
+} as const;
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
-/**
- * Fetch og:image from an article page via plain HTTP.
- * RNZ pages are server-rendered — no JS needed.
- */
 async function fetchOgImage(url: string): Promise<string | null> {
   try {
     const response = await fetch(url, {
       headers: { "User-Agent": USER_AGENT },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(5_000),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return null;
+    }
 
     const html = await response.text();
     const match = html.match(
@@ -42,7 +47,7 @@ async function fetchFeed(url: string): Promise<string | null> {
   try {
     const response = await fetch(url, {
       headers: { "User-Agent": USER_AGENT },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) {
       console.warn(`[news] Feed ${url}: HTTP ${response.status}`);
@@ -56,25 +61,39 @@ async function fetchFeed(url: string): Promise<string | null> {
 }
 
 export default async function collectNews(): Promise<CollectorResult[]> {
-  console.log("[news] Fetching RSS feeds...");
+  console.log("[news] Fetching RSS feeds from 4 sources...");
 
-  const [rnzXml, stuffXml] = await Promise.all([
-    fetchFeed(RNZ_FEED),
-    fetchFeed(STUFF_FEED),
+  const [rnzXml, stuffXml, heraldXml, newsroomXml] = await Promise.all([
+    fetchFeed(FEEDS.rnz),
+    fetchFeed(FEEDS.stuff),
+    fetchFeed(FEEDS.herald),
+    fetchFeed(FEEDS.newsroom),
   ]);
 
   const allArticles: ParsedArticle[] = [];
 
   if (rnzXml) {
-    const rnzArticles = parseRnzRss(rnzXml);
-    console.log(`[news] RNZ: ${rnzArticles.length} items parsed`);
-    allArticles.push(...rnzArticles.map((a) => ({ ...a, source: "rnz" })));
+    const items = parseRnzRss(rnzXml);
+    console.log(`[news] RNZ: ${items.length} items parsed`);
+    allArticles.push(...items.map((a) => ({ ...a, source: "rnz" })));
   }
 
   if (stuffXml) {
-    const stuffArticles = parseStuffAtom(stuffXml);
-    console.log(`[news] Stuff: ${stuffArticles.length} items parsed`);
-    allArticles.push(...stuffArticles.map((a) => ({ ...a, source: "stuff" })));
+    const items = parseStuffAtom(stuffXml);
+    console.log(`[news] Stuff: ${items.length} items parsed`);
+    allArticles.push(...items.map((a) => ({ ...a, source: "stuff" })));
+  }
+
+  if (heraldXml) {
+    const items = parseHeraldRss(heraldXml);
+    console.log(`[news] Herald: ${items.length} items parsed`);
+    allArticles.push(...items.map((a) => ({ ...a, source: "herald" })));
+  }
+
+  if (newsroomXml) {
+    const items = parseNewsroomRss(newsroomXml);
+    console.log(`[news] Newsroom: ${items.length} items parsed`);
+    allArticles.push(...items.map((a) => ({ ...a, source: "newsroom" })));
   }
 
   // Keyword filter
@@ -85,19 +104,28 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     `[news] ${filtered.length}/${allArticles.length} articles match economy keywords`
   );
 
-  // Enrich RNZ articles with og:image (Stuff already has images from feed)
-  const rnzToEnrich = filtered.filter(
-    (a) => a.source === "rnz" && !a.imageUrl
-  );
-  if (rnzToEnrich.length > 0) {
-    console.log(`[news] Fetching og:image for ${rnzToEnrich.length} RNZ articles...`);
+  // Score articles
+  const scored = scoreArticles(filtered);
+  const topScored = scored.sort((a, b) => b.score - a.score).slice(0, 5);
+  if (topScored.length > 0) {
+    console.log(
+      `[news] Top scored: "${topScored[0]!.title}" (score: ${topScored[0]!.score})`
+    );
+  }
+
+  // Enrich articles without images via og:image fetch
+  const toEnrich = filtered.filter((a) => !a.imageUrl);
+  if (toEnrich.length > 0) {
+    console.log(
+      `[news] Fetching og:image for ${toEnrich.length} articles without images...`
+    );
     await Promise.all(
-      rnzToEnrich.map(async (article) => {
+      toEnrich.map(async (article) => {
         article.imageUrl = await fetchOgImage(article.url);
       })
     );
-    const enriched = rnzToEnrich.filter((a) => a.imageUrl).length;
-    console.log(`[news] Got images for ${enriched}/${rnzToEnrich.length} RNZ articles`);
+    const enriched = toEnrich.filter((a) => a.imageUrl).length;
+    console.log(`[news] Got images for ${enriched}/${toEnrich.length} articles`);
   }
 
   // Insert into articles table
@@ -113,6 +141,5 @@ export default async function collectNews(): Promise<CollectorResult[]> {
   await insertArticles(db, rows);
   console.log(`[news] Inserted/updated ${rows.length} articles`);
 
-  // Return empty — news doesn't produce metric data points
   return [];
 }
