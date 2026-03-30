@@ -281,12 +281,13 @@ export async function getGroceryChartData() {
   const from = getOneYearAgo();
   const to = getToday();
 
-  const [milk, eggs, bread, butter, cheese] = await Promise.all([
+  const [milk, eggs, bread, butter, cheese, bananas] = await Promise.all([
     getTimeSeries(db, "milk", from, to),
     getTimeSeries(db, "eggs", from, to),
     getTimeSeries(db, "bread", from, to),
     getTimeSeries(db, "butter", from, to),
     getTimeSeries(db, "cheese", from, to),
+    getTimeSeries(db, "bananas", from, to),
   ]);
 
   return {
@@ -295,6 +296,7 @@ export async function getGroceryChartData() {
     bread: toChartPoints(bread),
     butter: toChartPoints(butter),
     cheese: toChartPoints(cheese),
+    bananas: toChartPoints(bananas),
   };
 }
 

@@ -121,18 +121,19 @@ export const BASKET: BasketItem[] = [
     priceRange: { min: 8, max: 20 },
   },
   {
-    // Stats NZ: "Bananas" CPIM.SAP0101 — per kg
-    // Bananas are sold loose by weight, so we search for per-kg price
+    // Stats NZ: "Bananas" CPIM.SAP0101 — per kg, fresh loose bananas
+    // Only match fresh fruit bananas — exclude all banana-flavoured products
     category: "bananas",
     label: "Bananas (per kg)",
     standardUnit: "1kg",
     searchQueries: {
-      woolworths: "bananas",
-      paknsave: "bananas",
-      newworld: "bananas",
+      woolworths: "bananas fresh fruit",
+      paknsave: "bananas loose",
+      newworld: "bananas loose",
     },
     sizePatterns: [/banana/i],
-    excludePatterns: [/chip|dried|organic|baby|smoothie|cake|bread|muffin|plant/i],
+    includePatterns: [/fresh|loose|yellow/i],
+    excludePatterns: [/chip|dried|organic|baby|smoothie|cake|bread|muffin|plant|bar|cookie|biscuit|yoghurt|milk|protein|sweet|candy|lolly|ice.?cream|flavour|brine|blossom|powder|cereal|slice|pouch|cooking|green|snack.?pack|lady.?finger|plantain/i],
     priceRange: { min: 1, max: 8 },
   },
 ];

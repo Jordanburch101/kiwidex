@@ -8,10 +8,12 @@ const GROCERY_COLORS = {
   bread: "oklch(0.596 0.145 163.225)",
   butter: "oklch(0.508 0.118 165.612)",
   cheese: "oklch(0.432 0.095 166.913)",
+  bananas: "#d4a017",
 };
 
 export async function GroceryDeepDive() {
-  const { milk, eggs, bread, butter, cheese } = await getGroceryChartData();
+  const { milk, eggs, bread, butter, cheese, bananas } =
+    await getGroceryChartData();
 
   const items = [
     { label: "Milk (2L)", data: milk, color: GROCERY_COLORS.milk },
@@ -19,6 +21,7 @@ export async function GroceryDeepDive() {
     { label: "Bread (Loaf)", data: bread, color: GROCERY_COLORS.bread },
     { label: "Butter (500g)", data: butter, color: GROCERY_COLORS.butter },
     { label: "Cheese (1kg)", data: cheese, color: GROCERY_COLORS.cheese },
+    { label: "Bananas (kg)", data: bananas, color: GROCERY_COLORS.bananas },
   ];
 
   return (
