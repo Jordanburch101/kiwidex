@@ -95,7 +95,7 @@ export async function NewsSection() {
               rel="noopener noreferrer"
               target="_blank"
             >
-              <div className="relative h-[100px] w-full overflow-hidden">
+              <div className="relative h-[120px] w-full overflow-hidden">
                 {article.imageUrl ? (
                   <Image
                     alt={article.title}
@@ -121,7 +121,7 @@ export async function NewsSection() {
                     {timeAgo(article.publishedAt)}
                   </span>
                 </div>
-                <h4 className="font-heading font-semibold text-[#2a2520] text-[13px] leading-snug">
+                <h4 className="font-heading font-semibold text-[#2a2520] text-[15px] leading-snug">
                   {article.title}
                 </h4>
               </div>
