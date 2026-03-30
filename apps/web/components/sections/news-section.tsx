@@ -8,7 +8,7 @@ const BADGE_COLORS: Record<string, { bg: string; label: string }> = {
   rnz: { bg: "#D42C21", label: "RNZ" },
   stuff: { bg: "#0054A6", label: "Stuff" },
   herald: { bg: "#0D0D0D", label: "Herald" },
-  interest: { bg: "#1a6b3c", label: "Interest" },
+  "1news": { bg: "#00274e", label: "1News" },
 };
 
 function SourceBadge({ source }: { source: string }) {
@@ -37,7 +37,7 @@ export async function NewsSection() {
   return (
     <section className="px-6 py-10">
       <SectionHeader
-        subtitle="Economy reporting from RNZ, Stuff, Herald &amp; Interest"
+        subtitle="Economy reporting from RNZ, Stuff, Herald &amp; 1News"
         title="In the News"
       />
 
