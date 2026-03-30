@@ -5,6 +5,8 @@ const nextConfig = {
     remotePatterns: [
       { hostname: "www.rnz.co.nz" },
       { hostname: "media.rnz.co.nz" },
+      { hostname: "media.rnztools.nz" },
+      { hostname: "www.stuff.co.nz" },
       { hostname: "resources.stuff.co.nz" },
     ],
   },
