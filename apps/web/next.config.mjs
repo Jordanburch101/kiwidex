@@ -10,11 +10,7 @@ const nextConfig = {
       { hostname: "resources.stuff.co.nz" },
       { hostname: "media.nzherald.co.nz" },
       { hostname: "www.nzherald.co.nz" },
-      { hostname: "newsroom.co.nz" },
-      { hostname: "www.newsroom.co.nz" },
-      { hostname: "i0.wp.com" },
-      { hostname: "i1.wp.com" },
-      { hostname: "i2.wp.com" },
+      { hostname: "www.interest.co.nz" },
     ],
   },
 }

@@ -3,7 +3,7 @@ import type { CollectorResult } from "../types";
 import { matchesEconomyKeywords } from "./keywords";
 import { parseStuffAtom } from "./parse-atom";
 import { parseHeraldRss } from "./parse-herald";
-import { parseNewsroomRss } from "./parse-newsroom";
+import { parseInterestRss } from "./parse-interest";
 import { type ParsedArticle, parseRnzRss } from "./parse-rss";
 import { scoreArticles } from "./score";
 
@@ -12,7 +12,7 @@ const FEEDS = {
   stuff: "https://www.stuff.co.nz/rss?section=/business",
   herald:
     "https://www.nzherald.co.nz/arc/outboundfeeds/rss/section/business/?outputType=xml",
-  newsroom: "https://newsroom.co.nz/category/economy/feed/",
+  interest: "https://www.interest.co.nz/rss",
 } as const;
 
 const USER_AGENT =
@@ -64,11 +64,11 @@ async function fetchFeed(url: string): Promise<string | null> {
 export default async function collectNews(): Promise<CollectorResult[]> {
   console.log("[news] Fetching RSS feeds from 4 sources...");
 
-  const [rnzXml, stuffXml, heraldXml, newsroomXml] = await Promise.all([
+  const [rnzXml, stuffXml, heraldXml, interestXml] = await Promise.all([
     fetchFeed(FEEDS.rnz),
     fetchFeed(FEEDS.stuff),
     fetchFeed(FEEDS.herald),
-    fetchFeed(FEEDS.newsroom),
+    fetchFeed(FEEDS.interest),
   ]);
 
   const allArticles: ParsedArticle[] = [];
@@ -91,10 +91,10 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     allArticles.push(...items.map((a) => ({ ...a, source: "herald" })));
   }
 
-  if (newsroomXml) {
-    const items = parseNewsroomRss(newsroomXml);
-    console.log(`[news] Newsroom: ${items.length} items parsed`);
-    allArticles.push(...items.map((a) => ({ ...a, source: "newsroom" })));
+  if (interestXml) {
+    const items = parseInterestRss(interestXml);
+    console.log(`[news] Interest: ${items.length} items parsed`);
+    allArticles.push(...items.map((a) => ({ ...a, source: "interest" })));
   }
 
   // Keyword filter

@@ -270,7 +270,7 @@ export async function insertArticles(db: Db, items: NewArticle[]) {
 }
 
 export async function getLatestArticles(db: Db, perSource: number) {
-  const sources = ["rnz", "stuff", "herald", "newsroom"];
+  const sources = ["rnz", "stuff", "herald", "interest"];
 
   const results = await Promise.all(
     sources.map((source) =>
