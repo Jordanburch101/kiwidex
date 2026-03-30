@@ -107,12 +107,10 @@ export default async function collectNews(): Promise<CollectorResult[]> {
 
   // Score articles
   const scored = scoreArticles(filtered);
-  const topScored = scored.sort((a, b) => b.score - a.score).slice(0, 5);
-  if (topScored.length > 0) {
-    console.log(
-      `[news] Top scored: "${topScored[0]!.title}" (score: ${topScored[0]!.score})`
-    );
-  }
+  scored.sort((a, b) => b.score - a.score);
+  const top5 = scored.slice(0, 5);
+  console.log(`[news] Top ${top5.length} scored:`);
+  top5.forEach((a) => console.log(`  [${a.score}] [${a.source}] ${a.title}`));
 
   // Enrich articles without images via og:image fetch
   const toEnrich = filtered.filter((a) => !a.imageUrl);
