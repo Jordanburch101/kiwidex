@@ -64,3 +64,15 @@ export const products = sqliteTable(
     ),
   ]
 );
+
+export const articles = sqliteTable("articles", {
+  url: text("url").primaryKey(),
+  title: text("title").notNull(),
+  excerpt: text("excerpt").notNull(),
+  imageUrl: text("image_url"),
+  source: text("source").notNull(),
+  publishedAt: text("published_at").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});

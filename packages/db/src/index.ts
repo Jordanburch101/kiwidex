@@ -22,4 +22,4 @@ export {
   type NewScraperRun,
   type ScraperRun,
 } from "./queries";
-export { metrics, products, scraperRuns } from "./schema";
+export { articles, metrics, products, scraperRuns } from "./schema";
