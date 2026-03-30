@@ -1,4 +1,5 @@
 import {
+  getLatestArticles,
   getLatestValue,
   getTimeSeries,
   METRIC_META,
@@ -109,22 +110,59 @@ function buildRowData(
 
 // ---------- Public query functions ----------
 
+// Whether "up" is good or bad — used for sparkline/pill colouring
+const TICKER_SENTIMENT: Partial<
+  Record<MetricKey, "up_is_good" | "down_is_good">
+> = {
+  petrol_91: "down_is_good",
+  petrol_95: "down_is_good",
+  petrol_diesel: "down_is_good",
+  milk: "down_is_good",
+  eggs: "down_is_good",
+  bread: "down_is_good",
+  butter: "down_is_good",
+  cheese: "down_is_good",
+  nzd_usd: "up_is_good",
+  nzd_aud: "up_is_good",
+  nzd_eur: "up_is_good",
+};
+
+function getTrendColor(
+  sparklineData: number[],
+  metric: MetricKey
+): string {
+  if (sparklineData.length < 2) return "#998";
+  const recent = sparklineData.slice(-30);
+  const first = recent[0]!;
+  const last = recent[recent.length - 1]!;
+  if (Math.abs(last - first) / Math.abs(first) < 0.005) return "#998";
+
+  const isUp = last > first;
+  const sentiment = TICKER_SENTIMENT[metric];
+  if (!sentiment) return "#998";
+
+  const isGood =
+    sentiment === "up_is_good" ? isUp : !isUp;
+
+  return isGood ? "#3a8a3a" : "#c44";
+}
+
 export async function getTickerData() {
   const from = getOneYearAgo();
   const to = getToday();
 
   const tickerMetrics = [
-    { metric: "petrol_91" as MetricKey, label: "91", color: "#c44" },
-    { metric: "petrol_95" as MetricKey, label: "95", color: "#e68a00" },
-    { metric: "petrol_diesel" as MetricKey, label: "Diesel", color: "#3a8a3a" },
+    { metric: "petrol_91" as MetricKey, label: "91" },
+    { metric: "petrol_95" as MetricKey, label: "95" },
+    { metric: "petrol_diesel" as MetricKey, label: "Diesel" },
     { metric: "milk" as MetricKey, label: "Milk" },
     { metric: "eggs" as MetricKey, label: "Eggs" },
     { metric: "bread" as MetricKey, label: "Bread" },
     { metric: "butter" as MetricKey, label: "Butter" },
     { metric: "cheese" as MetricKey, label: "Cheese" },
-    { metric: "nzd_usd" as MetricKey, label: "NZD/USD", color: "#c44" },
-    { metric: "nzd_aud" as MetricKey, label: "NZD/AUD", color: "#3a8a3a" },
-    { metric: "nzd_eur" as MetricKey, label: "NZD/EUR", color: "#e68a00" },
+    { metric: "nzd_usd" as MetricKey, label: "NZD/USD" },
+    { metric: "nzd_aud" as MetricKey, label: "NZD/AUD" },
+    { metric: "nzd_eur" as MetricKey, label: "NZD/EUR" },
   ] as const;
 
   const results = await Promise.all(
@@ -133,12 +171,13 @@ export async function getTickerData() {
         getLatestValue(db, item.metric),
         getTimeSeries(db, item.metric, from, to),
       ]);
+      const sparklineData = toValues(series);
       return {
         metric: item.metric,
         label: item.label,
         value: latest?.value ?? null,
-        sparklineData: toValues(series),
-        color: "color" in item ? item.color : undefined,
+        sparklineData,
+        color: getTrendColor(sparklineData, item.metric),
       };
     })
   );
@@ -162,6 +201,8 @@ export async function getOverviewData() {
     gdpLatest,
     wageGrowthLatest,
     minimumWageLatest,
+    nzdUsdLatest,
+    medianIncomeLatest,
     petrol91Series,
     milkSeries,
     housePriceSeries,
@@ -172,6 +213,8 @@ export async function getOverviewData() {
     gdpSeries,
     wageGrowthSeries,
     minimumWageSeries,
+    nzdUsdSeries,
+    medianIncomeSeries,
   ] = await Promise.all([
     getLatestValue(db, "petrol_91"),
     getLatestValue(db, "milk"),
@@ -183,6 +226,8 @@ export async function getOverviewData() {
     getLatestValue(db, "gdp_growth"),
     getLatestValue(db, "wage_growth"),
     getLatestValue(db, "minimum_wage"),
+    getLatestValue(db, "nzd_usd"),
+    getLatestValue(db, "median_income"),
     getTimeSeries(db, "petrol_91", from, to),
     getTimeSeries(db, "milk", from, to),
     getTimeSeries(db, "house_price_median", from, to),
@@ -193,6 +238,8 @@ export async function getOverviewData() {
     getTimeSeries(db, "gdp_growth", from, to),
     getTimeSeries(db, "wage_growth", from, to),
     getTimeSeries(db, "minimum_wage", from, to),
+    getTimeSeries(db, "nzd_usd", from, to),
+    getTimeSeries(db, "median_income", from, to),
   ]);
 
   const fuelGroceries = [
@@ -230,16 +277,15 @@ export async function getOverviewData() {
   ];
 
   const economyRows = [
-    buildRowData(
-      "house_price_median",
-      housePriceLatest,
-      housePriceSeries
-    ),
+    buildRowData("house_price_median", housePriceLatest, housePriceSeries),
     buildRowData("mortgage_1yr", mortgage1yrLatest, mortgage1yrSeries),
+    buildRowData("ocr", ocrLatest, ocrSeries),
     buildRowData("cpi", cpiLatest, cpiSeries),
     buildRowData("unemployment", unemploymentLatest, unemploymentSeries),
     buildRowData("gdp_growth", gdpLatest, gdpSeries),
     buildRowData("wage_growth", wageGrowthLatest, wageGrowthSeries),
+    buildRowData("nzd_usd", nzdUsdLatest, nzdUsdSeries),
+    buildRowData("median_income", medianIncomeLatest, medianIncomeSeries),
   ];
 
   return { fuelGroceries, housingRates, economyRows };
@@ -279,6 +325,51 @@ export async function getCostOfLivingData() {
   );
 
   return seriesList;
+}
+
+export async function getIntroData() {
+  const from = getOneYearAgo();
+  const to = getToday();
+
+  const metrics: MetricKey[] = [
+    "cpi",
+    "unemployment",
+    "petrol_91",
+    "nzd_usd",
+    "wage_growth",
+  ];
+
+  const [latests, allSeries] = await Promise.all([
+    Promise.all(metrics.map((m) => getLatestValue(db, m))),
+    Promise.all(metrics.map((m) => getTimeSeries(db, m, from, to))),
+  ]);
+
+  const result: Record<
+    string,
+    { value: string; change: string; changeType: "up" | "down" | "neutral" }
+  > = {};
+
+  for (let i = 0; i < metrics.length; i++) {
+    const metric = metrics[i]!;
+    const latest = latests[i];
+    const series = allSeries[i]!;
+    const chartPoints = toChartPoints(series);
+    const change =
+      chartPoints.length >= 2
+        ? computeChange(chartPoints, getPeriodDays(metric))
+        : { label: "\u2014", type: "neutral" as const };
+
+    result[metric] = {
+      value:
+        latest?.value === undefined || latest?.value === null
+          ? "\u2014"
+          : formatValue(metric, latest.value),
+      change: change.label,
+      changeType: change.type,
+    };
+  }
+
+  return result;
 }
 
 export async function getGroceryChartData() {
@@ -375,4 +466,8 @@ export async function getCurrencyChartData() {
     nzdAud: toChartPoints(nzdAud),
     nzdEur: toChartPoints(nzdEur),
   };
+}
+
+export async function getNewsData() {
+  return getLatestArticles(db, 4);
 }
