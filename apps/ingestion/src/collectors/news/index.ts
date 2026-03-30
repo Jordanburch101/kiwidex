@@ -97,9 +97,9 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     allArticles.push(...items.map((a) => ({ ...a, source: "1news" })));
   }
 
-  // Keyword filter
+  // Keyword filter — strict mode for 1News (firehose, needs tighter filtering)
   const filtered = allArticles.filter((a) =>
-    matchesEconomyKeywords(a.title, a.excerpt)
+    matchesEconomyKeywords(a.title, a.excerpt, a.source === "1news")
   );
   console.log(
     `[news] ${filtered.length}/${allArticles.length} articles match economy keywords`

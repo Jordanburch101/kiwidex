@@ -60,12 +60,38 @@ const WEIGHTED_KEYWORDS: WeightedKeyword[] = [
   { keyword: "rent", tier: 3 },
 ];
 
+/**
+ * Check if article matches economy keywords.
+ * For firehose sources (like 1News), use strict mode which requires
+ * a tier 1/2 keyword OR at least 2 tier 3 keywords.
+ * This prevents generic words like "job", "price", "growth" from
+ * matching crime/sport/lifestyle articles.
+ */
 export function matchesEconomyKeywords(
   title: string,
-  excerpt: string
+  excerpt: string,
+  strict = false
 ): boolean {
   const text = `${title} ${excerpt}`.toLowerCase();
-  return WEIGHTED_KEYWORDS.some((wk) => text.includes(wk.keyword));
+
+  if (!strict) {
+    return WEIGHTED_KEYWORDS.some((wk) => text.includes(wk.keyword));
+  }
+
+  // Strict mode: require tier 1/2 match, or 2+ tier 3 matches
+  let tier3Count = 0;
+  for (const wk of WEIGHTED_KEYWORDS) {
+    if (text.includes(wk.keyword)) {
+      if (wk.tier <= 2) {
+        return true;
+      }
+      tier3Count++;
+      if (tier3Count >= 2) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /**
