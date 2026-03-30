@@ -230,12 +230,16 @@ export async function getOverviewData() {
   ];
 
   const economyRows = [
-    buildRowData("ocr", ocrLatest, ocrSeries),
+    buildRowData(
+      "house_price_median",
+      housePriceLatest,
+      housePriceSeries
+    ),
+    buildRowData("mortgage_1yr", mortgage1yrLatest, mortgage1yrSeries),
     buildRowData("cpi", cpiLatest, cpiSeries),
     buildRowData("unemployment", unemploymentLatest, unemploymentSeries),
     buildRowData("gdp_growth", gdpLatest, gdpSeries),
     buildRowData("wage_growth", wageGrowthLatest, wageGrowthSeries),
-    buildRowData("minimum_wage", minimumWageLatest, minimumWageSeries),
   ];
 
   return { fuelGroceries, housingRates, economyRows };
