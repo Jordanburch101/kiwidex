@@ -12,6 +12,7 @@ const GROCERY_METRICS: MetricKey[] = [
   "bread",
   "butter",
   "cheese",
+  "bananas",
 ];
 
 const STORES = ["woolworths", "paknsave", "newworld"] as const;

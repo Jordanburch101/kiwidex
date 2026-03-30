@@ -19,6 +19,7 @@ const SERIES_MAP: Record<string, { metric: MetricKey; label: string }> = {
   "CPIM.SAP0149": { metric: "bread", label: "Bread white loaf" },
   "CPIM.SAP0131": { metric: "butter", label: "Butter 500g" },
   "CPIM.SAP0129": { metric: "cheese", label: "Cheese mild" },
+  "CPIM.SAP0101": { metric: "bananas", label: "Bananas per kg" },
 };
 
 function parseStatsNzPeriod(period: string): string | null {

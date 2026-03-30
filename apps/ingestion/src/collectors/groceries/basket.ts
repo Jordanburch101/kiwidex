@@ -120,4 +120,19 @@ export const BASKET: BasketItem[] = [
     excludePatterns: [SPECIALTY_CHEESE],
     priceRange: { min: 8, max: 20 },
   },
+  {
+    // Stats NZ: "Bananas" CPIM.SAP0101 — per kg
+    // Bananas are sold loose by weight, so we search for per-kg price
+    category: "bananas",
+    label: "Bananas (per kg)",
+    standardUnit: "1kg",
+    searchQueries: {
+      woolworths: "bananas",
+      paknsave: "bananas",
+      newworld: "bananas",
+    },
+    sizePatterns: [/banana/i],
+    excludePatterns: [/chip|dried|organic|baby|smoothie|cake|bread|muffin|plant/i],
+    priceRange: { min: 1, max: 8 },
+  },
 ];

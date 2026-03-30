@@ -63,6 +63,12 @@ export const METRIC_META = {
     category: "everyday_costs",
     description: "1kg mild cheese",
   },
+  bananas: {
+    label: "Bananas",
+    unit: "nzd",
+    category: "everyday_costs",
+    description: "Bananas per kg",
+  },
   rent_national: {
     label: "Rent",
     unit: "nzd_per_week",

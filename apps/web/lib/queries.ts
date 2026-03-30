@@ -254,6 +254,7 @@ const COST_OF_LIVING_ITEMS: {
   { metric: "bread", label: "Bread", color: "#3a8a3a" },
   { metric: "butter", label: "Butter", color: "#aa8855" },
   { metric: "cheese", label: "Cheese", color: "#8855aa" },
+  { metric: "bananas", label: "Bananas", color: "#d4a017" },
 ];
 
 export async function getCostOfLivingData() {
