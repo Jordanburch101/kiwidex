@@ -48,7 +48,8 @@ export function parseNewsroomRss(xml: string): ParsedArticle[] {
  */
 function extractImageFromHtml(html: string): string | null {
   const match = html.match(/<img[^>]+src="([^"]+)"/i);
-  return match?.[1] ?? null;
+  const url = match?.[1] ?? null;
+  return url?.replaceAll("&amp;", "&") ?? null;
 }
 
 function extractTag(xml: string, tag: string): string | null {

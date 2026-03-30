@@ -60,8 +60,9 @@ function extractMediaContent(xml: string): string | null {
   if (matches.length === 0) {
     return null;
   }
-  // Return the last match (typically the largest resolution)
-  return matches.at(-1)?.[1] ?? null;
+  // Return the last match (typically the largest resolution), decode HTML entities
+  const url = matches.at(-1)?.[1] ?? null;
+  return url?.replaceAll("&amp;", "&") ?? null;
 }
 
 function stripCdata(text: string): string {
