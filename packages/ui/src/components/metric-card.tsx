@@ -1,5 +1,14 @@
 import { Sparkline } from "@workspace/ui/components/sparkline";
 
+const INDICATOR = {
+  up: "#2ea85a",
+  down: "#e24b35",
+  neutral: "#888888",
+  upBg: "#f0fdf4",
+  downBg: "#fef2f2",
+  neutralBg: "#f4f2ed",
+} as const;
+
 interface MetricCardProps {
   change: string;
   changeType: "up" | "down" | "neutral";
@@ -19,12 +28,15 @@ export function MetricCard({
   color,
   dateRange,
 }: MetricCardProps) {
-  const trendColor =
-    changeType === "up"
-      ? "bg-[#c44]/10 text-[#c44]"
-      : changeType === "down"
-        ? "bg-[#3a8a3a]/10 text-[#3a8a3a]"
-        : "bg-[#998]/10 text-[#998]";
+  let trendFg = INDICATOR.neutral;
+  let trendBg = INDICATOR.neutralBg;
+  if (changeType === "up") {
+    trendFg = INDICATOR.down;
+    trendBg = INDICATOR.downBg;
+  } else if (changeType === "down") {
+    trendFg = INDICATOR.up;
+    trendBg = INDICATOR.upBg;
+  }
 
   return (
     <div className="rounded-lg border border-[#e8e4dc] bg-white p-5">
@@ -33,7 +45,8 @@ export function MetricCard({
           {label}
         </span>
         <span
-          className={`rounded-full px-2 py-0.5 font-medium text-xs ${trendColor}`}
+          className="rounded-full px-2 py-0.5 font-medium text-xs"
+          style={{ backgroundColor: trendBg, color: trendFg }}
         >
           {change}
         </span>

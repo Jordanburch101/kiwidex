@@ -7,6 +7,15 @@ import {
 } from "@workspace/ui/components/hover-card";
 import { Sparkline } from "@workspace/ui/components/sparkline";
 
+const INDICATOR = {
+  up: "#2ea85a",
+  down: "#e24b35",
+  neutral: "#888888",
+  upBg: "#f0fdf4",
+  downBg: "#fef2f2",
+  neutralBg: "#f4f2ed",
+} as const;
+
 interface CompactRowProps {
   change: string;
   changeType: "up" | "down" | "neutral";
@@ -17,32 +26,32 @@ interface CompactRowProps {
   value: string;
 }
 
-function getPillClass(
+function getPillStyle(
   changeType: "up" | "down" | "neutral",
   sentiment?: "up_is_good" | "down_is_good"
-): string {
+): { backgroundColor: string; color: string } {
   if (changeType === "neutral") {
-    return "bg-[#f4f2ed] text-[#998]";
+    return { backgroundColor: INDICATOR.neutralBg, color: INDICATOR.neutral };
   }
 
   // Determine if this direction is good or bad
-  const isGood =
-    sentiment === "up_is_good"
-      ? changeType === "up"
-      : sentiment === "down_is_good"
-        ? changeType === "down"
-        : false;
+  let isGood = false;
+  if (sentiment === "up_is_good") {
+    isGood = changeType === "up";
+  } else if (sentiment === "down_is_good") {
+    isGood = changeType === "down";
+  }
 
-  // No sentiment defined — fall back to neutral styling
+  // No sentiment defined — up arrow shown as red (warning), down as green
   if (!sentiment) {
     return changeType === "up"
-      ? "bg-[#fef2f2] text-[#c44]"
-      : "bg-[#f0fdf4] text-[#3a8a3a]";
+      ? { backgroundColor: INDICATOR.downBg, color: INDICATOR.down }
+      : { backgroundColor: INDICATOR.upBg, color: INDICATOR.up };
   }
 
   return isGood
-    ? "bg-[#f0fdf4] text-[#3a8a3a]"
-    : "bg-[#fef2f2] text-[#c44]";
+    ? { backgroundColor: INDICATOR.upBg, color: INDICATOR.up }
+    : { backgroundColor: INDICATOR.downBg, color: INDICATOR.down };
 }
 
 export function CompactRow({
@@ -54,7 +63,7 @@ export function CompactRow({
   sentiment,
   sparklineData,
 }: CompactRowProps) {
-  const pillClass = getPillClass(changeType, sentiment);
+  const pillStyle = getPillStyle(changeType, sentiment);
 
   return (
     <HoverCard>
@@ -64,7 +73,8 @@ export function CompactRow({
           {value}
         </span>
         <span
-          className={`min-w-[56px] rounded-full px-2 py-0.5 text-center font-medium text-[10px] ${pillClass}`}
+          className="min-w-[56px] rounded-full px-2 py-0.5 text-center font-medium text-[10px]"
+          style={pillStyle}
         >
           {change}
         </span>
@@ -82,7 +92,8 @@ export function CompactRow({
             {value}
           </span>
           <span
-            className={`rounded-full px-1.5 py-0.5 font-medium text-[10px] ${pillClass}`}
+            className="rounded-full px-1.5 py-0.5 font-medium text-[10px]"
+            style={pillStyle}
           >
             {change}
           </span>
