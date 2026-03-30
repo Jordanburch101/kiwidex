@@ -31,7 +31,9 @@ const WEIGHTED_KEYWORDS: WeightedKeyword[] = [
   { keyword: "unemployment", tier: 2 },
   { keyword: "employment", tier: 2 },
   { keyword: "labour market", tier: 2 },
-  { keyword: "property", tier: 2 },
+  { keyword: "property market", tier: 2 },
+  { keyword: "property price", tier: 2 },
+  { keyword: "property value", tier: 2 },
   { keyword: "reinz", tier: 2 },
   { keyword: "cost of living", tier: 2 },
   { keyword: "exchange rate", tier: 2 },
@@ -60,8 +62,22 @@ const WEIGHTED_KEYWORDS: WeightedKeyword[] = [
   { keyword: "rent", tier: 3 },
 ];
 
+/** Pre-compiled word-boundary regexes for each keyword */
+const KEYWORD_REGEXES = new Map<string, RegExp>(
+  WEIGHTED_KEYWORDS.map((wk) => [
+    wk.keyword,
+    new RegExp(`\\b${wk.keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`),
+  ])
+);
+
+function matchKeyword(text: string, keyword: string): boolean {
+  return KEYWORD_REGEXES.get(keyword)?.test(text) ?? false;
+}
+
 /**
  * Check if article matches economy keywords.
+ * Uses word-boundary matching to prevent false positives
+ * (e.g. "rural property" matching the "property" real-estate keyword).
  * For firehose sources (like 1News), use strict mode which requires
  * a tier 1/2 keyword OR at least 2 tier 3 keywords.
  * This prevents generic words like "job", "price", "growth" from
@@ -75,13 +91,13 @@ export function matchesEconomyKeywords(
   const text = `${title} ${excerpt}`.toLowerCase();
 
   if (!strict) {
-    return WEIGHTED_KEYWORDS.some((wk) => text.includes(wk.keyword));
+    return WEIGHTED_KEYWORDS.some((wk) => matchKeyword(text, wk.keyword));
   }
 
   // Strict mode: require tier 1/2 match, or 2+ tier 3 matches
   let tier3Count = 0;
   for (const wk of WEIGHTED_KEYWORDS) {
-    if (text.includes(wk.keyword)) {
+    if (matchKeyword(text, wk.keyword)) {
       if (wk.tier <= 2) {
         return true;
       }
@@ -102,7 +118,7 @@ export function getKeywordTier(title: string, excerpt: string): number {
   const text = `${title} ${excerpt}`.toLowerCase();
   let bestTier = 0;
   for (const wk of WEIGHTED_KEYWORDS) {
-    if (text.includes(wk.keyword)) {
+    if (matchKeyword(text, wk.keyword)) {
       if (bestTier === 0 || wk.tier < bestTier) {
         bestTier = wk.tier;
       }

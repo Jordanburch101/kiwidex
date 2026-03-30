@@ -297,14 +297,17 @@ const COST_OF_LIVING_ITEMS: {
   metric: MetricKey;
   label: string;
   color: string;
+  group: "fuel" | "grocery";
 }[] = [
-  { metric: "petrol_91", label: "Petrol 91", color: "#cc4444" },
-  { metric: "milk", label: "Milk 2L", color: "#5599aa" },
-  { metric: "eggs", label: "Eggs", color: "#e68a00" },
-  { metric: "bread", label: "Bread", color: "#3a8a3a" },
-  { metric: "butter", label: "Butter", color: "#aa8855" },
-  { metric: "cheese", label: "Cheese", color: "#8855aa" },
-  { metric: "bananas", label: "Bananas", color: "#d4a017" },
+  { metric: "petrol_91", label: "Petrol 91", color: "#cc4444", group: "fuel" },
+  { metric: "petrol_95", label: "Petrol 95", color: "#e06030", group: "fuel" },
+  { metric: "petrol_diesel", label: "Diesel", color: "#996633", group: "fuel" },
+  { metric: "milk", label: "Milk 2L", color: "#5599aa", group: "grocery" },
+  { metric: "eggs", label: "Eggs", color: "#e68a00", group: "grocery" },
+  { metric: "bread", label: "Bread", color: "#3a8a3a", group: "grocery" },
+  { metric: "butter", label: "Butter", color: "#aa8855", group: "grocery" },
+  { metric: "cheese", label: "Cheese", color: "#8855aa", group: "grocery" },
+  { metric: "bananas", label: "Bananas", color: "#d4a017", group: "grocery" },
 ];
 
 export async function getCostOfLivingData() {
@@ -319,6 +322,7 @@ export async function getCostOfLivingData() {
         label: item.label,
         unit: METRIC_META[item.metric].unit,
         color: item.color,
+        group: item.group,
         data: toChartPoints(series),
       };
     })

@@ -18,6 +18,13 @@ if (skipList.size > 0) {
 }
 console.log("");
 
+const RECENT_DAYS = 90;
+const cutoffDate = new Date(
+  Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000
+)
+  .toISOString()
+  .split("T")[0]!;
+
 let totalCollected = 0;
 const summary: Record<string, { collected: number; error?: string }> = {};
 
@@ -31,12 +38,17 @@ for (const [name, collector] of Object.entries(registry)) {
   const start = Date.now();
   try {
     const results = await collector();
-    await bulkInsert(db, results);
+    const recent = results.filter((r) => r.date >= cutoffDate);
+    await bulkInsert(db, recent);
     const durationMs = Date.now() - start;
     const elapsed = (durationMs / 1000).toFixed(1);
-    console.log(`  ${results.length} data points collected (${elapsed}s)\n`);
-    summary[name] = { collected: results.length };
-    totalCollected += results.length;
+    const skipped = results.length - recent.length;
+    const suffix = skipped > 0 ? `, ${skipped} old skipped` : "";
+    console.log(
+      `  ${recent.length} data points collected (${elapsed}s)${suffix}\n`
+    );
+    summary[name] = { collected: recent.length };
+    totalCollected += recent.length;
 
     await recordRun(name, results.length > 0 ? "success" : "partial", {
       totalProducts: results.length,

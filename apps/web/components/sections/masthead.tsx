@@ -12,7 +12,7 @@ export function Masthead() {
         The New Zealand Economy
       </p>
       <h1 className="mt-1 font-bold font-heading text-5xl text-[#2a2520]">
-        Economic Pulse
+        The Kiwidex
       </h1>
       <div className="mt-2 flex items-center justify-center gap-4 text-[#998] text-xs">
         <span>{today}</span>

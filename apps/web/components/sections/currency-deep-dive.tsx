@@ -1,5 +1,5 @@
 import { SectionHeader } from "@workspace/ui/components/section-header";
-import { MultiLineChart } from "@/components/charts/multi-line-chart";
+import { CurrencyCharts } from "@/components/sections/currency-charts";
 import { getCurrencyChartData } from "@/lib/queries";
 
 export async function CurrencyDeepDive() {
@@ -34,19 +34,10 @@ export async function CurrencyDeepDive() {
   return (
     <section className="px-6 py-10">
       <SectionHeader
-        subtitle="NZD exchange rates (12-month daily)"
+        subtitle="NZD exchange rates (daily)"
         title="Currency & Trade"
       />
-      <MultiLineChart
-        data={fxData}
-        height={240}
-        lines={[
-          { key: "usd", color: "#c44", label: "NZD/USD" },
-          { key: "aud", color: "#3a8a3a", label: "NZD/AUD" },
-          { key: "eur", color: "#e68a00", label: "NZD/EUR" },
-        ]}
-        valueFormat="ratio"
-      />
+      <CurrencyCharts data={fxData} />
     </section>
   );
 }

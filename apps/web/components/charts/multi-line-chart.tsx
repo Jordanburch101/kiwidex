@@ -4,10 +4,15 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  ResponsiveContainer,
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@workspace/ui/components/chart";
 
 type ValueFormat = "currency" | "percent" | "ratio" | "currency_k";
 
@@ -31,6 +36,15 @@ function formatDate(d: string): string {
   return date.toLocaleDateString("en-NZ", {
     month: "short",
     year: "2-digit",
+  });
+}
+
+function formatDateLong(d: string): string {
+  const date = new Date(d);
+  return date.toLocaleDateString("en-NZ", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   });
 }
 
@@ -63,9 +77,14 @@ export function MultiLineChart({
     );
   }
 
+  const chartConfig: ChartConfig = {};
+  for (const line of lines) {
+    chartConfig[line.key] = { label: line.label, color: line.color };
+  }
+
   return (
     <div>
-      <ResponsiveContainer height={height} width="100%">
+      <ChartContainer config={chartConfig} className="w-full" style={{ height }}>
         <LineChart
           data={data}
           margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
@@ -90,6 +109,36 @@ export function MultiLineChart({
             tickLine={false}
             width={50}
           />
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                labelFormatter={(_, payload) => {
+                  const d = payload?.[0]?.payload?.date;
+                  return d ? formatDateLong(d) : "";
+                }}
+                formatter={(value, name) => {
+                  const line = lines.find((l) => l.key === name);
+                  return (
+                    <>
+                      <span
+                        className="inline-block h-2 w-2 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: line?.color,
+                        }}
+                      />
+                      <span className="text-muted-foreground">
+                        {line?.label ?? name}
+                      </span>
+                      <span className="ml-auto font-medium font-mono tabular-nums">
+                        {formatTick(value as number, valueFormat)}
+                      </span>
+                    </>
+                  );
+                }}
+                hideIndicator
+              />
+            }
+          />
           {lines.map((line) => (
             <Line
               dataKey={line.key}
@@ -101,7 +150,7 @@ export function MultiLineChart({
             />
           ))}
         </LineChart>
-      </ResponsiveContainer>
+      </ChartContainer>
       <div className="mt-2 flex items-center gap-4">
         {lines.map((line) => (
           <div

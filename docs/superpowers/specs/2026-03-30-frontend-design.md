@@ -6,7 +6,7 @@
 ## Layout Structure
 
 ### Masthead
-- Centered: "The New Zealand Economy" subtitle, "Economic Pulse" title (Playfair Display serif), date + last updated
+- Centered: "The New Zealand Economy" subtitle, "The Kiwidex" title (Playfair Display serif), date + last updated
 - Bottom border: 2px solid dark
 
 ### Scrolling Marquee Ticker

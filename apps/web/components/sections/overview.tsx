@@ -1,6 +1,39 @@
+import type { MetricKey } from "@workspace/db";
 import { CompactRow } from "@workspace/ui/components/compact-row";
 import { CostOfLivingChart } from "@/components/charts/cost-of-living-chart";
 import { getCostOfLivingData, getOverviewData } from "@/lib/queries";
+
+const METRIC_DESCRIPTIONS: Partial<Record<MetricKey, string>> = {
+  house_price_median:
+    "National median house price from REINZ. Published monthly, covering all residential property sales across New Zealand.",
+  mortgage_1yr:
+    "Average 1-year fixed mortgage rate across major NZ banks. Published weekly by the RBNZ.",
+  cpi: "Consumer Price Index — measures the annual change in prices paid for a basket of goods and services. Published quarterly by Stats NZ.",
+  unemployment:
+    "Percentage of the labour force actively seeking work. Published quarterly by Stats NZ from the Household Labour Force Survey.",
+  gdp_growth:
+    "Quarterly GDP growth rate. Measures the change in total economic output. Published by Stats NZ.",
+  wage_growth:
+    "Annual wage growth from the Labour Cost Index. Tracks changes in salary and wage rates for the same job. Published quarterly by Stats NZ.",
+  ocr: "The Official Cash Rate set by the RBNZ. The primary tool for controlling inflation — influences mortgage rates, savings rates, and the cost of borrowing.",
+  nzd_usd:
+    "New Zealand dollar against the US dollar. A weaker Kiwi makes imports more expensive, pushing up consumer prices.",
+  median_income:
+    "Average annual income derived from Stats NZ Quarterly Employment Survey hourly earnings. Provides context for cost of living relative to what people earn.",
+};
+
+// Whether "up" is good or bad for each metric — drives pill colour
+const METRIC_SENTIMENT: Partial<Record<MetricKey, "up_is_good" | "down_is_good">> = {
+  house_price_median: "down_is_good",
+  mortgage_1yr: "down_is_good",
+  ocr: "down_is_good",
+  cpi: "down_is_good",
+  unemployment: "down_is_good",
+  gdp_growth: "up_is_good",
+  wage_growth: "up_is_good",
+  nzd_usd: "up_is_good",
+  median_income: "up_is_good",
+};
 
 export async function Overview() {
   const [costOfLivingItems, { economyRows }] = await Promise.all([
@@ -18,14 +51,18 @@ export async function Overview() {
         <h3 className="mb-4 border-[#e5e0d5] border-b pb-2 font-heading font-semibold text-[#2a2520] text-sm">
           Key Indicators
         </h3>
-        <div className="flex flex-1 flex-col justify-between rounded-lg border border-[#e8e4dc] bg-white p-4">
+        <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-[#e8e4dc]">
           {economyRows.map((item, i) => (
-            <div key={item.metric}>
-              {i > 0 && <div className="border-[#e8e4dc] border-t" />}
+            <div
+              className={`flex flex-1 items-center ${i % 2 === 1 ? "bg-[#faf8f4]" : "bg-white"} ${i < economyRows.length - 1 ? "border-[#f0ece4] border-b" : ""}`}
+              key={item.metric}
+            >
               <CompactRow
                 change={item.change}
                 changeType={item.changeType}
+                description={METRIC_DESCRIPTIONS[item.metric as MetricKey]}
                 label={item.label}
+                sentiment={METRIC_SENTIMENT[item.metric as MetricKey]}
                 sparklineData={item.sparklineData}
                 value={item.value}
               />

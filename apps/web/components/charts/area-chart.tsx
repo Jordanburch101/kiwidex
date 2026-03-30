@@ -4,10 +4,15 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  ResponsiveContainer,
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@workspace/ui/components/chart";
 
 type ValueFormat = "currency" | "percent" | "ratio" | "currency_k";
 
@@ -34,6 +39,15 @@ function formatDate(d: string): string {
   });
 }
 
+function formatDateLong(d: string): string {
+  const date = new Date(d);
+  return date.toLocaleDateString("en-NZ", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 interface TimeSeriesPoint {
   date: string;
   value: number;
@@ -43,6 +57,7 @@ interface AreaChartSectionProps {
   color: string;
   data: TimeSeriesPoint[];
   height?: number;
+  label?: string;
   valueFormat?: ValueFormat;
 }
 
@@ -50,6 +65,7 @@ export function AreaChartSection({
   data,
   color,
   height = 200,
+  label = "Value",
   valueFormat,
 }: AreaChartSectionProps) {
   if (data.length === 0) {
@@ -65,8 +81,12 @@ export function AreaChartSection({
 
   const gradientId = `area-fill-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
 
+  const chartConfig: ChartConfig = {
+    value: { label, color },
+  };
+
   return (
-    <ResponsiveContainer height={height} width="100%">
+    <ChartContainer config={chartConfig} className="w-full" style={{ height }}>
       <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
@@ -94,6 +114,22 @@ export function AreaChartSection({
           tickLine={false}
           width={50}
         />
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              labelFormatter={(_, payload) => {
+                const d = payload?.[0]?.payload?.date;
+                return d ? formatDateLong(d) : "";
+              }}
+              formatter={(value) => (
+                <span className="font-medium font-mono">
+                  {formatTick(value as number, valueFormat)}
+                </span>
+              )}
+              hideIndicator
+            />
+          }
+        />
         <Area
           dataKey="value"
           fill={`url(#${gradientId})`}
@@ -102,6 +138,6 @@ export function AreaChartSection({
           type="monotone"
         />
       </AreaChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   );
 }

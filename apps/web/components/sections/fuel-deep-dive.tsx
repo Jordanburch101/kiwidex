@@ -1,5 +1,5 @@
 import { SectionHeader } from "@workspace/ui/components/section-header";
-import { MultiLineChart } from "@/components/charts/multi-line-chart";
+import { FuelCharts } from "@/components/sections/fuel-charts";
 import { getFuelChartData } from "@/lib/queries";
 
 export async function FuelDeepDive() {
@@ -34,16 +34,7 @@ export async function FuelDeepDive() {
   return (
     <section className="px-6 py-10">
       <SectionHeader subtitle="NZ retail fuel prices per litre" title="Fuel" />
-      <MultiLineChart
-        data={combinedData}
-        height={240}
-        lines={[
-          { key: "petrol91", color: "#c44", label: "91 Octane" },
-          { key: "petrol95", color: "#e68a00", label: "95 Octane" },
-          { key: "diesel", color: "#3a8a3a", label: "Diesel" },
-        ]}
-        valueFormat="currency"
-      />
+      <FuelCharts data={combinedData} />
     </section>
   );
 }

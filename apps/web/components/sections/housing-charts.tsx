@@ -1,0 +1,67 @@
+"use client";
+
+import { useState } from "react";
+import { AreaChartSection } from "@/components/charts/area-chart";
+import { MultiLineChart } from "@/components/charts/multi-line-chart";
+import { TimeRangeSelector } from "@/components/time-range-selector";
+import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
+
+interface TimeSeriesPoint {
+  date: string;
+  value: number;
+}
+
+interface MortgagePoint {
+  date: string;
+  floating?: number;
+  oneYear?: number;
+  twoYear?: number;
+}
+
+interface HousingChartsProps {
+  housePrice: TimeSeriesPoint[];
+  mortgageData: MortgagePoint[];
+}
+
+export function HousingCharts({
+  housePrice,
+  mortgageData,
+}: HousingChartsProps) {
+  const [range, setRange] = useState<TimeRange>("1y");
+
+  return (
+    <>
+      <div className="mb-6 flex justify-end">
+        <TimeRangeSelector onChange={setRange} value={range} />
+      </div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <div>
+          <h4 className="mb-2 font-medium text-[#555] text-sm">
+            Median House Price
+          </h4>
+          <AreaChartSection
+            color="oklch(0.508 0.118 165.612)"
+            data={filterByRange(housePrice, range)}
+            height={200}
+            valueFormat="currency_k"
+          />
+        </div>
+        <div>
+          <h4 className="mb-2 font-medium text-[#555] text-sm">
+            Mortgage Rates
+          </h4>
+          <MultiLineChart
+            data={filterByRange(mortgageData, range)}
+            height={200}
+            lines={[
+              { key: "floating", color: "#c44", label: "Floating" },
+              { key: "oneYear", color: "#e68a00", label: "1yr Fixed" },
+              { key: "twoYear", color: "#3a8a3a", label: "2yr Fixed" },
+            ]}
+            valueFormat="percent"
+          />
+        </div>
+      </div>
+    </>
+  );
+}

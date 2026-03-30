@@ -28,7 +28,30 @@ async function fetchOgImage(url: string): Promise<string | null> {
       return null;
     }
 
-    const html = await response.text();
+    // Only read first 100KB — og:image is in <head> but RNZ pages have ~68KB of inline CSS/JS before it
+    const reader = response.body?.getReader();
+    if (!reader) return null;
+
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+    const MAX_BYTES = 102_400;
+
+    while (totalBytes < MAX_BYTES) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      chunks.push(value);
+      totalBytes += value.byteLength;
+    }
+    reader.cancel();
+
+    const merged = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      merged.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    const html = new TextDecoder().decode(merged);
+
     const match = html.match(
       /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
     );
@@ -112,17 +135,21 @@ export default async function collectNews(): Promise<CollectorResult[]> {
   console.log(`[news] Top ${top5.length} scored:`);
   top5.forEach((a) => console.log(`  [${a.score}] [${a.source}] ${a.title}`));
 
-  // Enrich articles without images via og:image fetch
+  // Enrich articles without images via og:image fetch (batched to avoid OOM)
   const toEnrich = filtered.filter((a) => !a.imageUrl);
   if (toEnrich.length > 0) {
     console.log(
       `[news] Fetching og:image for ${toEnrich.length} articles without images...`
     );
-    await Promise.all(
-      toEnrich.map(async (article) => {
-        article.imageUrl = await fetchOgImage(article.url);
-      })
-    );
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < toEnrich.length; i += BATCH_SIZE) {
+      const batch = toEnrich.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map(async (article) => {
+          article.imageUrl = await fetchOgImage(article.url);
+        })
+      );
+    }
     const enriched = toEnrich.filter((a) => a.imageUrl).length;
     console.log(
       `[news] Got images for ${enriched}/${toEnrich.length} articles`
