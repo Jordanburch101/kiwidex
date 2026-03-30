@@ -8,6 +8,10 @@ const nextConfig = {
       { hostname: "media.rnztools.nz" },
       { hostname: "www.stuff.co.nz" },
       { hostname: "resources.stuff.co.nz" },
+      { hostname: "media.nzherald.co.nz" },
+      { hostname: "www.nzherald.co.nz" },
+      { hostname: "newsroom.co.nz" },
+      { hostname: "www.newsroom.co.nz" },
     ],
   },
 }
