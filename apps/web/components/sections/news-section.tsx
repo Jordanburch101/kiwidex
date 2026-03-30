@@ -2,53 +2,60 @@ import Image from "next/image";
 import { SectionHeader } from "@workspace/ui/components/section-header";
 import { timeAgo } from "@/lib/data";
 import { getNewsData } from "@/lib/queries";
+import { pickLeadAndRest } from "@/lib/score-articles";
+
+const BADGE_COLORS: Record<string, { bg: string; label: string }> = {
+  rnz: { bg: "#D42C21", label: "RNZ" },
+  stuff: { bg: "#0054A6", label: "Stuff" },
+  herald: { bg: "#0D0D0D", label: "Herald" },
+  newsroom: { bg: "#1a6b3c", label: "Newsroom" },
+};
 
 function SourceBadge({ source }: { source: string }) {
-  if (source === "rnz") {
-    return (
-      <span className="rounded bg-[#D42C21] px-1.5 py-0.5 font-sans font-semibold text-white text-[9px] tracking-wide">
-        RNZ
-      </span>
-    );
-  }
+  const config = BADGE_COLORS[source] ?? { bg: "#666", label: source };
   return (
-    <span className="rounded bg-[#0054A6] px-1.5 py-0.5 font-sans font-semibold text-white text-[9px] tracking-wide">
-      Stuff
+    <span
+      className="rounded px-1.5 py-0.5 font-sans font-semibold text-white text-[9px] tracking-wide"
+      style={{ backgroundColor: config.bg }}
+    >
+      {config.label}
     </span>
   );
 }
 
 export async function NewsSection() {
   const articles = await getNewsData();
+  const result = pickLeadAndRest(articles);
 
-  if (articles.length === 0) {
+  if (!result) {
     return null;
   }
 
-  const [lead, ...rest] = articles;
+  const { lead, rest } = result;
+  const displayRest = rest.slice(0, 6);
 
   return (
     <section className="px-6 py-10">
       <SectionHeader
-        subtitle="Economy reporting from RNZ &amp; Stuff"
+        subtitle="Economy reporting from RNZ, Stuff, Herald &amp; Newsroom"
         title="In the News"
       />
 
       {/* Lead story — horizontal card (image left, text right) */}
       <a
         className="group grid grid-cols-2 overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
-        href={lead!.url}
+        href={lead.url}
         rel="noopener noreferrer"
         target="_blank"
       >
         <div className="relative h-[240px] overflow-hidden">
-          {lead!.imageUrl ? (
+          {lead.imageUrl ? (
             <Image
-              alt={lead!.title}
+              alt={lead.title}
               className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               fill
               sizes="(max-width: 1200px) 50vw, 576px"
-              src={lead!.imageUrl}
+              src={lead.imageUrl}
             />
           ) : (
             <div
@@ -62,26 +69,26 @@ export async function NewsSection() {
         </div>
         <div className="flex flex-col justify-center px-7 py-6">
           <div className="mb-2 flex items-center gap-2">
-            <SourceBadge source={lead!.source} />
+            <SourceBadge source={lead.source} />
             <span className="font-sans text-[11px] text-[#998]">
-              {timeAgo(lead!.publishedAt)}
+              {timeAgo(lead.publishedAt)}
             </span>
           </div>
           <h3 className="font-bold font-heading text-[#2a2520] text-xl leading-tight text-balance">
-            {lead!.title}
+            {lead.title}
           </h3>
-          {lead!.excerpt && (
+          {lead.excerpt && (
             <p className="mt-3 text-[13.5px] text-[#5a5550] leading-[1.7]">
-              {lead!.excerpt}
+              {lead.excerpt}
             </p>
           )}
         </div>
       </a>
 
-      {/* 3 small image cards below */}
-      {rest.length > 0 && (
+      {/* 6 small image cards — 2 rows of 3 */}
+      {displayRest.length > 0 && (
         <div className="mt-3 grid grid-cols-3 gap-3">
-          {rest.map((article) => (
+          {displayRest.map((article) => (
             <a
               className="group/card block overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
               href={article.url}
