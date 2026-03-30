@@ -1,5 +1,4 @@
 import { SectionHeader } from "@workspace/ui/components/section-header";
-import Image from "next/image";
 import { timeAgo } from "@/lib/data";
 import { getNewsData } from "@/lib/queries";
 
@@ -8,8 +7,15 @@ function SourceBadge({
   variant,
 }: {
   source: string;
-  variant: "dark" | "light";
+  variant: "dark" | "light" | "overlay";
 }) {
+  if (variant === "overlay") {
+    return (
+      <span className="rounded bg-white/15 px-1.5 py-0.5 font-sans font-semibold text-white/80 text-[9px] tracking-wide">
+        {source === "rnz" ? "RNZ" : "Stuff"}
+      </span>
+    );
+  }
   if (variant === "dark") {
     return (
       <span className="rounded bg-[#2a2520] px-1.5 py-0.5 font-sans font-semibold text-[#faf9f6] text-[9px] tracking-wide">
@@ -31,7 +37,7 @@ export async function NewsSection() {
     return null;
   }
 
-  const [hero, ...rest] = articles;
+  const [lead, ...rest] = articles;
 
   return (
     <section className="px-6 py-10">
@@ -40,45 +46,32 @@ export async function NewsSection() {
         title="In the News"
       />
 
-      {/* Lead story — side-by-side */}
+      {/* Lead story — dark branded banner */}
       <a
-        className="group flex gap-5 py-3 transition-colors hover:bg-[#f0ecdf] rounded px-1 -mx-1"
-        href={hero!.url}
+        className="group block rounded bg-[#2a2520] px-7 py-6 transition-colors hover:bg-[#352f28]"
+        href={lead!.url}
         rel="noopener noreferrer"
         target="_blank"
       >
-        <div className="flex-1 min-w-0">
-          <div className="mb-2 flex items-center gap-2">
-            <SourceBadge source={hero!.source} variant="dark" />
-            <span className="font-sans text-[10px] text-[#998]">
-              {timeAgo(hero!.publishedAt)}
-            </span>
-          </div>
-          <h3 className="font-bold font-heading text-[#2a2520] text-lg leading-tight">
-            {hero!.title}
-          </h3>
-          {hero!.excerpt && (
-            <p className="mt-2 text-[13px] text-[#5a5550] leading-relaxed">
-              {hero!.excerpt}
-            </p>
-          )}
+        <div className="mb-2.5 flex items-center gap-2">
+          <SourceBadge source={lead!.source} variant="overlay" />
+          <span className="font-sans text-[10px] text-white/40">
+            {timeAgo(lead!.publishedAt)}
+          </span>
         </div>
-        {hero!.imageUrl && (
-          <div className="relative h-[120px] w-[160px] flex-shrink-0 overflow-hidden rounded">
-            <Image
-              alt={hero!.title}
-              className="object-cover"
-              fill
-              sizes="160px"
-              src={hero!.imageUrl}
-            />
-          </div>
+        <h3 className="font-bold font-heading text-[#faf9f6] text-xl leading-tight">
+          {lead!.title}
+        </h3>
+        {lead!.excerpt && (
+          <p className="mt-2 max-w-[600px] text-[13px] text-white/60 leading-relaxed">
+            {lead!.excerpt}
+          </p>
         )}
       </a>
 
       {/* Bottom row */}
       {rest.length > 0 && (
-        <div className="grid grid-cols-3 border-[#e5e0d5] border-t mt-3">
+        <div className="mt-4 grid grid-cols-3 border-[#e5e0d5] border-t">
           {rest.map((article, i) => (
             <a
               className={`block px-4 py-4 transition-colors hover:bg-[#f0ecdf] ${
