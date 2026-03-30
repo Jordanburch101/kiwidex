@@ -3,23 +3,17 @@ import { SectionHeader } from "@workspace/ui/components/section-header";
 import { timeAgo } from "@/lib/data";
 import { getNewsData } from "@/lib/queries";
 
-function SourceBadge({
-  source,
-  variant,
-}: {
-  source: string;
-  variant: "dark" | "light";
-}) {
-  if (variant === "dark") {
+function SourceBadge({ source }: { source: string }) {
+  if (source === "rnz") {
     return (
-      <span className="rounded bg-[#2a2520] px-1.5 py-0.5 font-sans font-semibold text-[#faf9f6] text-[9px] tracking-wide">
-        {source === "rnz" ? "RNZ" : "Stuff"}
+      <span className="rounded bg-[#D42C21] px-1.5 py-0.5 font-sans font-semibold text-white text-[9px] tracking-wide">
+        RNZ
       </span>
     );
   }
   return (
-    <span className="rounded bg-[#e8e3d8] px-1.5 py-0.5 font-medium font-sans text-[#5a5550] text-[9px]">
-      {source === "rnz" ? "RNZ" : "Stuff"}
+    <span className="rounded bg-[#0054A6] px-1.5 py-0.5 font-sans font-semibold text-white text-[9px] tracking-wide">
+      Stuff
     </span>
   );
 }
@@ -68,7 +62,7 @@ export async function NewsSection() {
         </div>
         <div className="flex flex-col justify-center px-7 py-6">
           <div className="mb-2 flex items-center gap-2">
-            <SourceBadge source={lead!.source} variant="dark" />
+            <SourceBadge source={lead!.source} />
             <span className="font-sans text-[11px] text-[#998]">
               {timeAgo(lead!.publishedAt)}
             </span>
@@ -116,7 +110,7 @@ export async function NewsSection() {
               </div>
               <div className="px-3 py-3">
                 <div className="mb-1 flex items-center gap-1.5">
-                  <SourceBadge source={article.source} variant="light" />
+                  <SourceBadge source={article.source} />
                   <span className="font-sans text-[#998] text-[9px]">
                     {timeAgo(article.publishedAt)}
                   </span>
