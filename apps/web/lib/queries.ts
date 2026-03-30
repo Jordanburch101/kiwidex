@@ -6,7 +6,12 @@ import {
   type MetricKey,
 } from "@workspace/db";
 import { db } from "@workspace/db/client";
-
+import {
+  FUEL_COLORS,
+  GROCERY_COLORS,
+  HOUSING_COLORS,
+  INDICATOR,
+} from "@/lib/colors";
 import {
   computeChange,
   formatValue,
@@ -127,24 +132,26 @@ const TICKER_SENTIMENT: Partial<
   nzd_eur: "up_is_good",
 };
 
-function getTrendColor(
-  sparklineData: number[],
-  metric: MetricKey
-): string {
-  if (sparklineData.length < 2) return "#998";
+function getTrendColor(sparklineData: number[], metric: MetricKey): string {
+  if (sparklineData.length < 2) {
+    return INDICATOR.neutral;
+  }
   const recent = sparklineData.slice(-30);
   const first = recent[0]!;
-  const last = recent[recent.length - 1]!;
-  if (Math.abs(last - first) / Math.abs(first) < 0.005) return "#998";
+  const last = recent.at(-1)!;
+  if (Math.abs(last - first) / Math.abs(first) < 0.005) {
+    return INDICATOR.neutral;
+  }
 
   const isUp = last > first;
   const sentiment = TICKER_SENTIMENT[metric];
-  if (!sentiment) return "#998";
+  if (!sentiment) {
+    return INDICATOR.neutral;
+  }
 
-  const isGood =
-    sentiment === "up_is_good" ? isUp : !isUp;
+  const isGood = sentiment === "up_is_good" ? isUp : !isUp;
 
-  return isGood ? "#3a8a3a" : "#c44";
+  return isGood ? INDICATOR.up : INDICATOR.down;
 }
 
 export async function getTickerData() {
@@ -200,7 +207,7 @@ export async function getOverviewData() {
     unemploymentLatest,
     gdpLatest,
     wageGrowthLatest,
-    minimumWageLatest,
+    _minimumWageLatest,
     nzdUsdLatest,
     medianIncomeLatest,
     petrol91Series,
@@ -212,7 +219,7 @@ export async function getOverviewData() {
     unemploymentSeries,
     gdpSeries,
     wageGrowthSeries,
-    minimumWageSeries,
+    _minimumWageSeries,
     nzdUsdSeries,
     medianIncomeSeries,
   ] = await Promise.all([
@@ -247,14 +254,14 @@ export async function getOverviewData() {
       "petrol_91",
       petrol91Latest,
       petrol91Series,
-      "#c44",
+      FUEL_COLORS.petrol_91,
       dateRange
     ),
     buildCardData(
       "milk",
       milkLatest,
       milkSeries,
-      "oklch(0.845 0.143 164.978)",
+      GROCERY_COLORS.milk,
       dateRange
     ),
   ];
@@ -264,14 +271,14 @@ export async function getOverviewData() {
       "house_price_median",
       housePriceLatest,
       housePriceSeries,
-      "oklch(0.508 0.118 165.612)",
+      HOUSING_COLORS.median,
       dateRange
     ),
     buildCardData(
       "mortgage_1yr",
       mortgage1yrLatest,
       mortgage1yrSeries,
-      "#e68a00",
+      HOUSING_COLORS.oneYear,
       dateRange
     ),
   ];
@@ -299,15 +306,60 @@ const COST_OF_LIVING_ITEMS: {
   color: string;
   group: "fuel" | "grocery";
 }[] = [
-  { metric: "petrol_91", label: "Petrol 91", color: "#cc4444", group: "fuel" },
-  { metric: "petrol_95", label: "Petrol 95", color: "#e06030", group: "fuel" },
-  { metric: "petrol_diesel", label: "Diesel", color: "#996633", group: "fuel" },
-  { metric: "milk", label: "Milk 2L", color: "#5599aa", group: "grocery" },
-  { metric: "eggs", label: "Eggs", color: "#e68a00", group: "grocery" },
-  { metric: "bread", label: "Bread", color: "#3a8a3a", group: "grocery" },
-  { metric: "butter", label: "Butter", color: "#aa8855", group: "grocery" },
-  { metric: "cheese", label: "Cheese", color: "#8855aa", group: "grocery" },
-  { metric: "bananas", label: "Bananas", color: "#d4a017", group: "grocery" },
+  {
+    metric: "petrol_91",
+    label: "Petrol 91",
+    color: FUEL_COLORS.petrol_91,
+    group: "fuel",
+  },
+  {
+    metric: "petrol_95",
+    label: "Petrol 95",
+    color: FUEL_COLORS.petrol_95,
+    group: "fuel",
+  },
+  {
+    metric: "petrol_diesel",
+    label: "Diesel",
+    color: FUEL_COLORS.petrol_diesel,
+    group: "fuel",
+  },
+  {
+    metric: "milk",
+    label: "Milk 2L",
+    color: GROCERY_COLORS.milk,
+    group: "grocery",
+  },
+  {
+    metric: "eggs",
+    label: "Eggs",
+    color: GROCERY_COLORS.eggs,
+    group: "grocery",
+  },
+  {
+    metric: "bread",
+    label: "Bread",
+    color: GROCERY_COLORS.bread,
+    group: "grocery",
+  },
+  {
+    metric: "butter",
+    label: "Butter",
+    color: GROCERY_COLORS.butter,
+    group: "grocery",
+  },
+  {
+    metric: "cheese",
+    label: "Cheese",
+    color: GROCERY_COLORS.cheese,
+    group: "grocery",
+  },
+  {
+    metric: "bananas",
+    label: "Bananas",
+    color: GROCERY_COLORS.bananas,
+    group: "grocery",
+  },
 ];
 
 export async function getCostOfLivingData() {
