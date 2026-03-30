@@ -1,6 +1,7 @@
 import collectElectricity from "./electricity/index";
 import collectGroceries from "./groceries/index";
 import collectMinimumWage from "./minimum-wage/index";
+import collectNews from "./news/index";
 import collectPetrol from "./petrol/index";
 import collectRBNZ from "./rbnz/index";
 import collectREINZ from "./reinz/index";
@@ -16,5 +17,6 @@ export const registry: Record<string, Collector> = {
   electricity: collectElectricity,
   "minimum-wage": collectMinimumWage,
   "rent-vs-buy": collectRentVsBuy,
+  news: collectNews,
   groceries: collectGroceries,
 };
