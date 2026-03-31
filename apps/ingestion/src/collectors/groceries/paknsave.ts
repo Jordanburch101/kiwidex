@@ -1,15 +1,15 @@
 import type { BasketItem } from "./basket";
-import { PAKNSAVE_CONFIG, scrapeFoodstuffs } from "./foodstuffs-scraper";
+import { PAKNSAVE_API_CONFIG, scrapeFoodstuffsApi } from "./foodstuffs-api";
 import type { ScrapedProduct } from "./types";
 
 /**
  * Scrape all matching products from Pak'nSave for the given basket items.
  *
- * Uses the shared Foodstuffs platform scraper since Pak'nSave and New World
- * share the same Next.js platform with identical data-testid selectors.
+ * Uses the direct Foodstuffs API (Algolia search + decorateProducts)
+ * instead of Playwright browser scraping to avoid Cloudflare blocking.
  */
 export async function scrapePakNSave(
   basket: BasketItem[]
 ): Promise<ScrapedProduct[]> {
-  return scrapeFoodstuffs(PAKNSAVE_CONFIG, basket);
+  return scrapeFoodstuffsApi(PAKNSAVE_API_CONFIG, basket);
 }
