@@ -32,7 +32,7 @@ export const metadata: Metadata = {
       "Live NZ economic indicators updated daily: CPI, fuel prices, groceries, housing, exchange rates, and employment.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/api/og",
         width: 1200,
         height: 630,
         alt: "The Kiwidex — New Zealand Economy Dashboard",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     title: "The Kiwidex — New Zealand Economy Dashboard",
     description:
       "Live NZ economic indicators updated daily: CPI, fuel, groceries, housing, FX, employment.",
-    images: ["/og-image.png"],
+    images: ["/api/og"],
   },
   alternates: {
     canonical: "https://kiwidex.co.nz",

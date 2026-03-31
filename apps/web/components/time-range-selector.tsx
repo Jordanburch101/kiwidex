@@ -11,6 +11,9 @@ const RANGES: { value: TimeRange; label: string }[] = [
   { value: "30d", label: "30D" },
   { value: "90d", label: "90D" },
   { value: "1y", label: "1Y" },
+  { value: "5y", label: "5Y" },
+  { value: "10y", label: "10Y" },
+  { value: "all", label: "All" },
 ];
 
 export function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {

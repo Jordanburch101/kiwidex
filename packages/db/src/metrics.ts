@@ -87,6 +87,12 @@ export const METRIC_META = {
     category: "housing",
     description: "National median house price",
   },
+  house_price_index: {
+    label: "House Price Index",
+    unit: "index",
+    category: "housing",
+    description: "CoreLogic House Price Index (quarterly, base 1990)",
+  },
   mortgage_floating: {
     label: "Mortgage (Floating)",
     unit: "percent",

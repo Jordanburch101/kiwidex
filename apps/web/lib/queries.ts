@@ -17,6 +17,7 @@ import {
 import {
   computeChange,
   formatValue,
+  getAllTimeStart,
   getOneYearAgo,
   getToday,
 } from "@/lib/data";
@@ -45,6 +46,7 @@ function getPeriodDays(metric: MetricKey): number {
     "gdp_growth",
     "unemployment",
     "wage_growth",
+    "house_price_index",
   ];
   const monthly: MetricKey[] = [
     "house_price_median",
@@ -483,7 +485,7 @@ async function _getGroceryChartData() {
 }
 
 async function _getFuelChartData() {
-  const from = getOneYearAgo();
+  const from = getAllTimeStart();
   const to = getToday();
 
   const [petrol91, petrol95, diesel] = await Promise.all([
@@ -500,19 +502,26 @@ async function _getFuelChartData() {
 }
 
 async function _getHousingChartData() {
-  const from = getOneYearAgo();
+  const from = getAllTimeStart();
   const to = getToday();
 
-  const [housePrice, mortgageFloating, mortgage1yr, mortgage2yr] =
-    await Promise.all([
-      getTimeSeries(db, "house_price_median", from, to),
-      getTimeSeries(db, "mortgage_floating", from, to),
-      getTimeSeries(db, "mortgage_1yr", from, to),
-      getTimeSeries(db, "mortgage_2yr", from, to),
-    ]);
+  const [
+    housePrice,
+    housePriceIndex,
+    mortgageFloating,
+    mortgage1yr,
+    mortgage2yr,
+  ] = await Promise.all([
+    getTimeSeries(db, "house_price_median", from, to),
+    getTimeSeries(db, "house_price_index", from, to),
+    getTimeSeries(db, "mortgage_floating", from, to),
+    getTimeSeries(db, "mortgage_1yr", from, to),
+    getTimeSeries(db, "mortgage_2yr", from, to),
+  ]);
 
   return {
     housePrice: toChartPoints(housePrice),
+    housePriceIndex: toChartPoints(housePriceIndex),
     mortgageFloating: toChartPoints(mortgageFloating),
     mortgage1yr: toChartPoints(mortgage1yr),
     mortgage2yr: toChartPoints(mortgage2yr),
@@ -520,7 +529,7 @@ async function _getHousingChartData() {
 }
 
 async function _getLabourChartData() {
-  const from = getOneYearAgo();
+  const from = getAllTimeStart();
   const to = getToday();
 
   const [unemployment, wageGrowth, cpi, medianIncome] = await Promise.all([
@@ -539,7 +548,7 @@ async function _getLabourChartData() {
 }
 
 async function _getCurrencyChartData() {
-  const from = getOneYearAgo();
+  const from = getAllTimeStart();
   const to = getToday();
 
   const [nzdUsd, nzdAud, nzdEur] = await Promise.all([

@@ -6,6 +6,7 @@ const URLS = {
   m1: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/m/m1/hm1.xlsx",
   m5: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/m/m5/hm5.xlsx",
   m9: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/m/m9/hm9.xlsx",
+  m10: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/m/m10/hm10.xlsx",
 } as const;
 
 const FILE_CONFIGS = [
@@ -54,6 +55,17 @@ const FILE_CONFIGS = [
         // ~$90–100k, higher than the true NZ median income (~$65k). Used as a
         // programmatic proxy until Stats NZ HES annual survey data is available.
         transform: (hourly: number) => Number((hourly * 40 * 52).toFixed(0)),
+      },
+    ],
+  },
+  {
+    name: "M10 Housing",
+    url: URLS.m10,
+    columns: [
+      {
+        seriesId: "HPI.Q.H01T0.ia",
+        metric: "house_price_index" as const,
+        unit: "index",
       },
     ],
   },

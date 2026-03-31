@@ -6,7 +6,11 @@ import { parseOCR } from "./ocr";
 
 const URLS = {
   b1: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/b/b1/hb1-daily.xlsx",
+  b1_archive:
+    "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/b/b1/hb1-daily-1999-2017.xlsx",
   b2: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/b/b2/hb2-daily-close.xlsx",
+  b2_archive:
+    "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/b/b2/hb2-daily-close-1985-2017.xlsx",
   b20: "https://www.rbnz.govt.nz/-/media/project/sites/rbnz/files/statistics/series/b/b20/hb20.xlsx",
 } as const;
 
@@ -42,7 +46,13 @@ function tryParse(
  * Uses a single browser session for all downloads, cleaned up automatically.
  */
 export default async function collectRBNZ(): Promise<CollectorResult[]> {
-  const allUrls = [URLS.b1, URLS.b2, URLS.b20];
+  const allUrls = [
+    URLS.b1,
+    URLS.b1_archive,
+    URLS.b2,
+    URLS.b2_archive,
+    URLS.b20,
+  ];
   const fileMap = await downloadXlsxFiles(allUrls);
 
   const parses = [
@@ -53,9 +63,21 @@ export default async function collectRBNZ(): Promise<CollectorResult[]> {
       parseExchangeRates
     ),
     tryParse(
+      "B1 exchange rates (1999-2017)",
+      fileMap.get(URLS.b1_archive),
+      fileMap.has(URLS.b1_archive) ? undefined : "Download failed",
+      parseExchangeRates
+    ),
+    tryParse(
       "B2 OCR",
       fileMap.get(URLS.b2),
       fileMap.has(URLS.b2) ? undefined : "Download failed",
+      parseOCR
+    ),
+    tryParse(
+      "B2 OCR (1985-2017)",
+      fileMap.get(URLS.b2_archive),
+      fileMap.has(URLS.b2_archive) ? undefined : "Download failed",
       parseOCR
     ),
     tryParse(

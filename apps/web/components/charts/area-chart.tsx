@@ -8,7 +8,7 @@ import {
 } from "@workspace/ui/components/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
-type ValueFormat = "currency" | "percent" | "ratio" | "currency_k";
+type ValueFormat = "currency" | "percent" | "ratio" | "currency_k" | "number";
 
 function formatTick(value: number, format?: ValueFormat): string {
   switch (format) {
@@ -20,6 +20,8 @@ function formatTick(value: number, format?: ValueFormat): string {
       return `${value.toFixed(1)}%`;
     case "ratio":
       return value.toFixed(4);
+    case "number":
+      return value.toLocaleString("en-NZ", { maximumFractionDigits: 0 });
     default:
       return value.toString();
   }

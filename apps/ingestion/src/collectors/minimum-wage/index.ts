@@ -12,6 +12,17 @@ const WAGE_HISTORY: Array<{ date: string; value: number }> = [
   { date: "2021-04-01", value: 20.0 },
   { date: "2020-04-01", value: 18.9 },
   { date: "2019-04-01", value: 17.7 },
+  { date: "2018-04-01", value: 16.5 },
+  { date: "2017-04-01", value: 15.75 },
+  { date: "2016-04-01", value: 15.25 },
+  { date: "2015-04-01", value: 14.75 },
+  { date: "2014-04-01", value: 14.25 },
+  { date: "2013-04-01", value: 13.75 },
+  { date: "2012-04-01", value: 13.5 },
+  { date: "2011-04-01", value: 13.0 },
+  { date: "2010-04-01", value: 12.75 },
+  { date: "2009-04-01", value: 12.5 },
+  { date: "2008-04-01", value: 12.0 },
 ];
 
 /**

@@ -4,6 +4,7 @@ import { checkAndAlert, recordRun } from "./monitoring";
 import { revalidateWeb } from "./revalidate";
 
 const skipList = new Set<string>();
+let backfillMode = false;
 for (const arg of process.argv.slice(2)) {
   const match = arg.match(/^--skip=(.+)$/);
   if (match) {
@@ -11,11 +12,17 @@ for (const arg of process.argv.slice(2)) {
       skipList.add(name.trim());
     }
   }
+  if (arg === "--backfill") {
+    backfillMode = true;
+  }
 }
 
 console.log(`\nCollectors available: ${Object.keys(registry).join(", ")}`);
 if (skipList.size > 0) {
   console.log(`Skipping: ${[...skipList].join(", ")}`);
+}
+if (backfillMode) {
+  console.log("Backfill mode: inserting ALL historical data (no date filter)");
 }
 console.log("");
 
@@ -37,17 +44,19 @@ for (const [name, collector] of Object.entries(registry)) {
   const start = Date.now();
   try {
     const results = await collector();
-    const recent = results.filter((r) => r.date >= cutoffDate);
-    await bulkInsert(db, recent);
+    const toInsert = backfillMode
+      ? results
+      : results.filter((r) => r.date >= cutoffDate);
+    await bulkInsert(db, toInsert);
     const durationMs = Date.now() - start;
     const elapsed = (durationMs / 1000).toFixed(1);
-    const skipped = results.length - recent.length;
+    const skipped = results.length - toInsert.length;
     const suffix = skipped > 0 ? `, ${skipped} old skipped` : "";
     console.log(
-      `  ${recent.length} data points collected (${elapsed}s)${suffix}\n`
+      `  ${toInsert.length} data points collected (${elapsed}s)${suffix}\n`
     );
-    summary[name] = { collected: recent.length };
-    totalCollected += recent.length;
+    summary[name] = { collected: toInsert.length };
+    totalCollected += toInsert.length;
 
     await recordRun(name, results.length > 0 ? "success" : "partial", {
       totalProducts: results.length,

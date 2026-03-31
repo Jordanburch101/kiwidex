@@ -3,8 +3,13 @@ import { HousingCharts } from "@/components/sections/housing-charts";
 import { getHousingChartData } from "@/lib/queries";
 
 export async function HousingDeepDive() {
-  const { housePrice, mortgageFloating, mortgage1yr, mortgage2yr } =
-    await getHousingChartData();
+  const {
+    housePrice,
+    housePriceIndex,
+    mortgageFloating,
+    mortgage1yr,
+    mortgage2yr,
+  } = await getHousingChartData();
 
   // Merge mortgage rates into multi-line format
   const dateMap = new Map<
@@ -38,7 +43,11 @@ export async function HousingDeepDive() {
         subtitle="Median house price and mortgage rate trends"
         title="Housing & Mortgages"
       />
-      <HousingCharts housePrice={housePrice} mortgageData={mortgageData} />
+      <HousingCharts
+        housePrice={housePrice}
+        housePriceIndex={housePriceIndex}
+        mortgageData={mortgageData}
+      />
     </section>
   );
 }

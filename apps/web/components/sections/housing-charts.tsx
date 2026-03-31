@@ -22,11 +22,13 @@ interface MortgagePoint {
 
 interface HousingChartsProps {
   housePrice: TimeSeriesPoint[];
+  housePriceIndex: TimeSeriesPoint[];
   mortgageData: MortgagePoint[];
 }
 
 export function HousingCharts({
   housePrice,
+  housePriceIndex,
   mortgageData,
 }: HousingChartsProps) {
   const [range, setRange] = useState<TimeRange>("1y");
@@ -36,13 +38,24 @@ export function HousingCharts({
       <div className="mb-6 flex justify-end">
         <TimeRangeSelector onChange={setRange} value={range} />
       </div>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div>
+          <h4 className="mb-2 font-medium text-[#555] text-sm">
+            House Price Index
+          </h4>
+          <AreaChartSection
+            color="oklch(0.508 0.118 165.612)"
+            data={filterByRange(housePriceIndex, range)}
+            height={200}
+            valueFormat="number"
+          />
+        </div>
         <div>
           <h4 className="mb-2 font-medium text-[#555] text-sm">
             Median House Price
           </h4>
           <AreaChartSection
-            color="oklch(0.508 0.118 165.612)"
+            color="oklch(0.588 0.138 165.612)"
             data={filterByRange(housePrice, range)}
             height={200}
             valueFormat="currency_k"

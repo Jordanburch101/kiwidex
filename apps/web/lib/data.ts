@@ -94,6 +94,11 @@ export function getOneYearAgo(): string {
     .split("T")[0]!;
 }
 
+/** Earliest possible date for chart queries — covers all backfilled data. */
+export function getAllTimeStart(): string {
+  return "1970-01-01";
+}
+
 export function getToday(): string {
   return new Date().toISOString().split("T")[0]!;
 }
