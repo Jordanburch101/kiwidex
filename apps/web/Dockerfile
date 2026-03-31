@@ -34,7 +34,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-RUN groupadd --system --gid 1001 app && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends fonts-liberation fontconfig && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    groupadd --system --gid 1001 app && \
     useradd --system --uid 1001 -g app app
 
 # Copy standalone server, static assets, and public folder
