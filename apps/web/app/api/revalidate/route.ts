@@ -1,17 +1,16 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const tag = request.nextUrl.searchParams.get("tag");
-
-  if (!tag) {
-    return NextResponse.json(
-      { error: "Missing ?tag= parameter" },
-      { status: 400 }
-    );
+  const secret = process.env.REVALIDATION_SECRET;
+  if (secret) {
+    const auth = request.headers.get("authorization");
+    if (auth !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
-  revalidateTag(tag, {});
+  revalidatePath("/");
 
-  return NextResponse.json({ revalidated: true, tag });
+  return NextResponse.json({ revalidated: true });
 }

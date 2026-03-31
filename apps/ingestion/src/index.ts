@@ -2,6 +2,7 @@ import { bulkInsert, db } from "@workspace/db";
 import { Elysia } from "elysia";
 import { registry } from "./collectors/registry";
 import { checkHealth } from "./monitoring";
+import { revalidateWeb } from "./revalidate";
 
 function requireApiKey({
   headers,
@@ -56,6 +57,7 @@ const app = new Elysia()
       }
     }
 
+    await revalidateWeb();
     return { summary };
   })
   .post("/collect/:source", async ({ params, headers }) => {
@@ -72,6 +74,7 @@ const app = new Elysia()
     try {
       const results = await collector();
       await bulkInsert(db, results);
+      await revalidateWeb();
       return { source: params.source, collected: results.length };
     } catch (e) {
       console.error(`[collect] ${params.source} failed:`, e);

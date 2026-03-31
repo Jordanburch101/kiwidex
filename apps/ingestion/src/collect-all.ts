@@ -1,6 +1,7 @@
 import { bulkInsert, db } from "@workspace/db";
 import { registry } from "./collectors/registry";
 import { checkAndAlert, recordRun } from "./monitoring";
+import { revalidateWeb } from "./revalidate";
 
 const skipList = new Set<string>();
 for (const arg of process.argv.slice(2)) {
@@ -64,6 +65,12 @@ for (const [name, collector] of Object.entries(registry)) {
       durationMs,
     });
   }
+}
+
+if (totalCollected > 0) {
+  console.log("=== Revalidating web ===");
+  await revalidateWeb();
+  console.log("");
 }
 
 console.log("=== Summary ===");

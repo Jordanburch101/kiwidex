@@ -1,0 +1,8 @@
+node_modules
+.next
+.turbo
+.git
+.env*
+*.md
+.vscode
+packages/db/local.db
