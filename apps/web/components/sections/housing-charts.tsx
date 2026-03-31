@@ -31,7 +31,7 @@ export function HousingCharts({
   housePriceIndex,
   mortgageData,
 }: HousingChartsProps) {
-  const [range, setRange] = useState<TimeRange>("1y");
+  const [range, setRange] = useState<TimeRange>("10y");
 
   return (
     <>

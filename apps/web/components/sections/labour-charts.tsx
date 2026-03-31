@@ -30,7 +30,7 @@ export function LabourCharts({
   unemployment,
   medianIncome,
 }: LabourChartsProps) {
-  const [range, setRange] = useState<TimeRange>("1y");
+  const [range, setRange] = useState<TimeRange>("10y");
 
   return (
     <>

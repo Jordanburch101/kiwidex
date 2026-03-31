@@ -46,7 +46,11 @@ export function GroceryCharts({ items }: GroceryChartsProps) {
     <>
       <div className="mb-6 flex items-center justify-between">
         <TrendLegend colors={TREND_COLORS} />
-        <TimeRangeSelector onChange={setRange} value={range} />
+        <TimeRangeSelector
+          onChange={setRange}
+          ranges={["30d", "90d", "1y"]}
+          value={range}
+        />
       </div>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {

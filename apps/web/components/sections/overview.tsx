@@ -15,7 +15,7 @@ const METRIC_DESCRIPTIONS: Partial<Record<MetricKey | "groceries", string>> = {
     "Quarterly GDP growth rate. Measures the change in total economic output. Published by Stats NZ.",
   groceries:
     "Average price across a basket of 6 grocery staples (milk, eggs, bread, butter, cheese, bananas). Collected daily from NZ supermarkets.",
-  ocr: "The Official Cash Rate set by the RBNZ. The primary tool for controlling inflation — influences mortgage rates, savings rates, and the cost of borrowing.",
+  ocr: "The Official Cash Rate set by the RBNZ. Reviewed ~7 times per year — influences mortgage rates, savings rates, and the cost of borrowing.",
   nzd_usd:
     "New Zealand dollar against the US dollar. A weaker Kiwi makes imports more expensive, pushing up consumer prices.",
   median_income:

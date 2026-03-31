@@ -55,6 +55,7 @@ function getPeriodDays(metric: MetricKey): number {
     "mortgage_2yr",
     "minimum_wage",
     "median_income",
+    "ocr",
   ];
   if (quarterly.includes(metric)) {
     return 365;
