@@ -58,10 +58,13 @@ for (const [name, collector] of Object.entries(registry)) {
     summary[name] = { collected: toInsert.length };
     totalCollected += toInsert.length;
 
-    await recordRun(name, results.length > 0 ? "success" : "partial", {
-      totalProducts: results.length,
-      durationMs,
-    });
+    // Groceries records its own per-store + aggregate runs in index.ts
+    if (name !== "groceries") {
+      await recordRun(name, results.length > 0 ? "success" : "partial", {
+        totalProducts: results.length,
+        durationMs,
+      });
+    }
   } catch (e) {
     const durationMs = Date.now() - start;
     const elapsed = (durationMs / 1000).toFixed(1);
@@ -69,10 +72,12 @@ for (const [name, collector] of Object.entries(registry)) {
     console.error(`  FAILED (${elapsed}s): ${msg}\n`);
     summary[name] = { collected: 0, error: msg };
 
-    await recordRun(name, "failed", {
-      error: msg,
-      durationMs,
-    });
+    if (name !== "groceries") {
+      await recordRun(name, "failed", {
+        error: msg,
+        durationMs,
+      });
+    }
   }
 }
 
