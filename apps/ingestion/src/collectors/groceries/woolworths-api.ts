@@ -1,9 +1,7 @@
 import type { BasketItem } from "./basket";
 import { extractBrand } from "./brands";
+import { USER_AGENT } from "./constants";
 import type { ScrapedProduct } from "./types";
-
-const USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 const SEARCH_URL = "https://www.woolworths.co.nz/api/v1/products";
 

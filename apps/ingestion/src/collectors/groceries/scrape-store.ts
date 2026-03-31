@@ -13,7 +13,6 @@ import type { ScrapedProduct } from "./types";
 import { scrapeWoolworthsApi } from "./woolworths-api";
 
 // Redirect console.log to stderr so stdout is clean JSON
-const origLog = console.log;
 console.log = (...args: unknown[]) => console.error(...args);
 
 const store = process.argv[2];

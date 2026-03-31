@@ -1,9 +1,9 @@
 import {
   db,
+  getLastSuccessDate,
   getLatestRuns,
   insertScraperRun,
   type NewScraperRun,
-  type ScraperRun,
 } from "@workspace/db";
 
 export interface RunDetails {
@@ -52,14 +52,26 @@ function daysSince(isoDate: string): number {
 export async function checkHealth(): Promise<CollectorHealth[]> {
   const latestRuns = await getLatestRuns(db);
 
-  return latestRuns.map((run: ScraperRun) => ({
-    collector: run.collector,
-    store: run.store,
-    status: run.status,
-    lastRun: run.createdAt,
-    daysSinceLastSuccess:
-      run.status === "success" ? daysSince(run.createdAt) : null,
-    totalProducts: run.totalProducts,
-    error: run.error,
-  }));
+  const results: CollectorHealth[] = [];
+  for (const run of latestRuns) {
+    let lastSuccessDate: string | null = null;
+    if (run.status === "success") {
+      lastSuccessDate = run.createdAt;
+    } else {
+      lastSuccessDate =
+        (await getLastSuccessDate(db, run.collector, run.store)) ?? null;
+    }
+
+    results.push({
+      collector: run.collector,
+      store: run.store,
+      status: run.status,
+      lastRun: run.createdAt,
+      daysSinceLastSuccess: lastSuccessDate ? daysSince(lastSuccessDate) : null,
+      totalProducts: run.totalProducts,
+      error: run.error,
+    });
+  }
+
+  return results;
 }

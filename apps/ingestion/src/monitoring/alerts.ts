@@ -42,11 +42,17 @@ export async function sendAlert(
     return;
   }
 
+  if (!process.env.ALERT_TO_EMAIL) {
+    console.warn("[alerts] ALERT_TO_EMAIL not set, skipping email alert");
+    console.warn(`[alerts] Would have sent: ${subject}`);
+    return;
+  }
+
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   await resend.emails.send({
     from: process.env.ALERT_FROM_EMAIL || "NZ Ecom <alerts@resend.dev>",
-    to: process.env.ALERT_TO_EMAIL || "admin@example.com",
+    to: process.env.ALERT_TO_EMAIL,
     subject,
     html: htmlBody,
   });

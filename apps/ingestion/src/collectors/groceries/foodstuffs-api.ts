@@ -1,4 +1,6 @@
 import type { BasketItem } from "./basket";
+import { extractBrand } from "./brands";
+import { USER_AGENT } from "./constants";
 import type { ScrapedProduct } from "./types";
 
 export interface FoodstuffsApiConfig {
@@ -27,9 +29,6 @@ export const NEWWORLD_API_CONFIG: FoodstuffsApiConfig = {
   storeName: "newworld.co.nz",
   geolocation: { latitude: -36.8485, longitude: 174.7633 },
 };
-
-const USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 interface AlgoliaHit {
   averagePrice: number;
@@ -113,7 +112,7 @@ async function searchProducts(
   query: string
 ): Promise<AlgoliaHit[]> {
   const res = await fetch(
-    `${config.apiDomain}/v1/edge/search/products/query/index/products-index-popularity-asc`,
+    `${config.apiDomain}/v1/edge/search/products/query/index/products-index-popularity-desc`,
     {
       method: "POST",
       signal: AbortSignal.timeout(15_000),
@@ -233,6 +232,7 @@ export async function scrapeFoodstuffsApi(
       let matched = 0;
       for (const hit of hits) {
         const dec = priceMap.get(hit.fan);
+        // decorateProducts returns price in cents; averagePrice is already in dollars
         const price = dec?.singlePrice
           ? dec.singlePrice.price / 100
           : hit.averagePrice;
@@ -274,7 +274,7 @@ export async function scrapeFoodstuffsApi(
           store: config.storeName,
           category: item.category,
           name: fullName,
-          brand: hit.brand || "",
+          brand: extractBrand(fullName) || hit.brand || "",
           size: item.standardUnit,
           price,
           unitPrice,

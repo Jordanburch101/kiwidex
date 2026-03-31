@@ -79,13 +79,25 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
     `[groceries] Scraping ${STORES.length} stores in separate processes...`
   );
 
-  // Run all stores sequentially (each in its own process)
-  const allProducts: ScrapedProduct[] = [];
+  // Run all stores in parallel (each in its own subprocess)
+  const storeStarts = new Map<string, number>();
   for (const store of STORES) {
     console.log(`[groceries] Starting ${store} (separate process)...`);
-    const storeStart = Date.now();
-    const products = await scrapeInProcess(store);
-    const storeDuration = Date.now() - storeStart;
+    storeStarts.set(store, Date.now());
+  }
+
+  const results = await Promise.allSettled(
+    STORES.map((store) => scrapeInProcess(store))
+  );
+
+  const allProducts: ScrapedProduct[] = [];
+  for (let i = 0; i < STORES.length; i++) {
+    const store = STORES[i]!;
+    const result = results[i]!;
+    const storeDuration = Date.now() - storeStarts.get(store)!;
+    const products =
+      result.status === "fulfilled" ? result.value : ([] as ScrapedProduct[]);
+
     console.log(`[groceries] ${store}: ${products.length} products`);
     allProducts.push(...products);
 
@@ -103,9 +115,13 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
         durationMs: storeDuration,
       });
     } else {
+      const error =
+        result.status === "rejected"
+          ? String(result.reason)
+          : `${store} returned 0 products`;
       await recordRun("groceries", "failed", {
         store: storeDomain,
-        error: `${store} returned 0 products`,
+        error,
         durationMs: storeDuration,
       });
     }
@@ -156,7 +172,7 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
   }
 
   // Compute headline averages for each basket category
-  const results: CollectorResult[] = [];
+  const metricResults: CollectorResult[] = [];
 
   for (const metric of GROCERY_METRICS) {
     const storeMap = byCategoryStore.get(metric);
@@ -193,7 +209,7 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
       product_count: totalCount,
     });
 
-    results.push({
+    metricResults.push({
       metric,
       value: overallAverage,
       unit: "nzd",
@@ -208,7 +224,7 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
   }
 
   console.log(
-    `[groceries] Total: ${results.length}/${GROCERY_METRICS.length} grocery prices collected, ${allProducts.length} products recorded`
+    `[groceries] Total: ${metricResults.length}/${GROCERY_METRICS.length} grocery prices collected, ${allProducts.length} products recorded`
   );
-  return results;
+  return metricResults;
 }

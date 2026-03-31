@@ -44,7 +44,6 @@ const KNOWN_BRANDS = [
   "Egg Producers",
   "Farmer Brown",
   "Henergy",
-  "Woodland",
   "Zeagold",
 ];
 
