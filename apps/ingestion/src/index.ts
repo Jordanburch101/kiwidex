@@ -64,7 +64,6 @@ const app = new Elysia()
     cron({
       name: "collect-all",
       pattern: "0 20,1 * * *",
-      runOnInit: true,
       run: runCollection,
     })
   )
@@ -117,4 +116,9 @@ const app = new Elysia()
 
 console.log(
   `Ingestion service running at http://localhost:${app.server?.port}`
+);
+
+// Run collection on startup (after deploy/restart)
+runCollection().catch((e) =>
+  console.error("[startup] Initial collection failed:", e)
 );
