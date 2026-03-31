@@ -123,25 +123,36 @@ function calculateLines(
       ? containerWidth - dropCapWidth - DROP_CAP_GAP
       : containerWidth;
 
-    // First pass — layout with base width
+    // Layout at full width, then adjust for badge padding.
+    // If re-layout pushes a badge off the line, re-try with the
+    // correct (smaller) compensation to fill the line properly.
     let line = layoutNextLine(prepared, cursor, baseWidth);
     if (line === null) {
       break;
     }
 
-    // Check if badges in this line cause overflow
-    const badgeCount = countBadges(line.text, badgeValues);
-    if (badgeCount > 0) {
-      const extraWidth = badgeCount * BADGE_EXTRA_PX;
+    const initialBadges = countBadges(line.text, badgeValues);
+    if (initialBadges > 0) {
+      const extraWidth = initialBadges * BADGE_EXTRA_PX;
       if (line.width + extraWidth > baseWidth) {
-        // Re-layout with reduced width to account for badge padding
         const adjusted = layoutNextLine(
           prepared,
           cursor,
           baseWidth - extraWidth
         );
         if (adjusted !== null) {
-          line = adjusted;
+          const newBadges = countBadges(adjusted.text, badgeValues);
+          if (newBadges < initialBadges) {
+            // Fewer badges after shortening — re-layout with correct compensation
+            const refined = layoutNextLine(
+              prepared,
+              cursor,
+              baseWidth - newBadges * BADGE_EXTRA_PX
+            );
+            line = refined ?? adjusted;
+          } else {
+            line = adjusted;
+          }
         }
       }
     }
@@ -259,7 +270,7 @@ export function IntroLayout({ summary, metrics }: IntroLayoutProps) {
     <section aria-label="Economic summary" className="px-6">
       <div className="border-[#e5e0d5] border-b pb-6">
         <div
-          className="relative"
+          className="relative text-[#444038] text-[13.5px] leading-[1.75]"
           ref={containerRef}
           style={{ visibility: ready ? "visible" : "hidden" }}
         >
@@ -273,7 +284,7 @@ export function IntroLayout({ summary, metrics }: IntroLayoutProps) {
           </span>
 
           {/* Lines laid out by pretext */}
-          <div className="text-[#444038] text-[13.5px] leading-[1.75]">
+          <div>
             {lines.map((line, i) => renderLine(line, i, dropCapWidthPx))}
           </div>
         </div>
