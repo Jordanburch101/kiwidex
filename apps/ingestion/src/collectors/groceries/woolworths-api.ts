@@ -33,44 +33,65 @@ interface WoolworthsSearchResponse {
  * Search Woolworths NZ products via their internal API.
  * No auth needed — just the x-requested-with header.
  */
-async function searchProducts(query: string): Promise<WoolworthsProduct[]> {
+const MAX_RETRIES = 3;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function searchProducts(
+  query: string,
+  attempt = 1
+): Promise<WoolworthsProduct[]> {
   const url = `${SEARCH_URL}?target=search&search=${encodeURIComponent(query)}&inStockProductsOnly=false&size=48`;
 
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": USER_AGENT,
-      "x-requested-with": "OnlineShopping.WebApp",
-      Accept: "application/json, text/plain, */*",
-      "Accept-Language": "en-NZ,en;q=0.9",
-      Origin: "https://www.woolworths.co.nz",
-      Referer: `https://www.woolworths.co.nz/shop/searchproducts?search=${encodeURIComponent(query)}`,
-      "sec-ch-ua":
-        '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-      "sec-ch-ua-mobile": "?0",
-      "sec-ch-ua-platform": '"macOS"',
-      "sec-fetch-dest": "empty",
-      "sec-fetch-mode": "cors",
-      "sec-fetch-site": "same-origin",
-    },
-    signal: AbortSignal.timeout(15_000),
-  });
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        "x-requested-with": "OnlineShopping.WebApp",
+        Accept: "application/json, text/plain, */*",
+        "Accept-Language": "en-NZ,en;q=0.9",
+        Origin: "https://www.woolworths.co.nz",
+        Referer: `https://www.woolworths.co.nz/shop/searchproducts?search=${encodeURIComponent(query)}`,
+        "sec-ch-ua":
+          '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"macOS"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
 
-  if (!res.ok) {
-    throw new Error(
-      `Woolworths search failed: ${res.status} ${res.statusText}`
-    );
+    if (!res.ok) {
+      throw new Error(
+        `Woolworths search failed: ${res.status} ${res.statusText}`
+      );
+    }
+
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const body = await res.text();
+      throw new Error(
+        `Woolworths returned non-JSON (${contentType}): ${body.slice(0, 200)}`
+      );
+    }
+
+    const data = (await res.json()) as WoolworthsSearchResponse;
+    return (data.products?.items || []).filter((p) => p.type === "Product");
+  } catch (e) {
+    if (attempt < MAX_RETRIES) {
+      const backoff = attempt * 5000;
+      console.warn(
+        `[woolworths] Retry ${attempt}/${MAX_RETRIES} for "${query}" in ${backoff / 1000}s: ${e instanceof Error ? e.message : e}`
+      );
+      await delay(backoff);
+      return searchProducts(query, attempt + 1);
+    }
+    throw e;
   }
-
-  const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    const body = await res.text();
-    throw new Error(
-      `Woolworths returned non-JSON (${contentType}): ${body.slice(0, 200)}`
-    );
-  }
-
-  const data = (await res.json()) as WoolworthsSearchResponse;
-  return (data.products?.items || []).filter((p) => p.type === "Product");
 }
 
 /**
