@@ -18,12 +18,11 @@ COPY --from=deps /app/ .
 COPY --from=pruner /app/out/full/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-# Build uses DATABASE_BUILD_URL (public) since private network is unreachable during build.
-# At runtime, DATABASE_URL (private) is set by Railway service variables.
-ARG DATABASE_BUILD_URL
+# Build prerendering uses the public libsql URL (private network unreachable during build).
+# At runtime, DATABASE_URL is set to the private URL by Railway service variables.
 ARG DATABASE_AUTH_TOKEN
-RUN echo "Build DB: ${DATABASE_BUILD_URL:-NOT SET}" && \
-    DATABASE_URL=$DATABASE_BUILD_URL DATABASE_AUTH_TOKEN=$DATABASE_AUTH_TOKEN \
+RUN DATABASE_URL=libsql://libsql-production-c788.up.railway.app \
+    DATABASE_AUTH_TOKEN=$DATABASE_AUTH_TOKEN \
     bun run build --filter=web
 
 # ── Stage 4: Production runner (Node.js for Next.js standalone) ──
