@@ -42,6 +42,12 @@ COPY --from=builder --chown=1001:1001 /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=1001:1001 /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=1001:1001 /app/apps/web/public ./apps/web/public
 
+# Native binaries + transitive deps the standalone tracer drops
+COPY --from=builder /app/node_modules/@libsql ./node_modules/@libsql
+COPY --from=builder /app/node_modules/libsql ./node_modules/libsql
+COPY --from=builder /app/node_modules/sharp ./node_modules/sharp
+COPY --from=builder /app/node_modules/@img ./node_modules/@img
+
 USER app
 EXPOSE 3000
 CMD ["bun", "apps/web/server.js"]
