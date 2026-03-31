@@ -2,7 +2,6 @@ import { SectionHeader } from "@workspace/ui/components/section-header";
 import Image from "next/image";
 import { timeAgo } from "@/lib/data";
 import { getNewsData } from "@/lib/queries";
-import { pickLeadAndRest } from "@/lib/score-articles";
 
 const BADGE_COLORS: Record<string, { bg: string; label: string }> = {
   rnz: { bg: "#D42C21", label: "RNZ" },
@@ -24,8 +23,7 @@ function SourceBadge({ source }: { source: string }) {
 }
 
 export async function NewsSection() {
-  const articles = await getNewsData();
-  const result = pickLeadAndRest(articles);
+  const result = await getNewsData();
 
   if (!result) {
     return null;

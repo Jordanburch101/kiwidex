@@ -18,6 +18,10 @@ COPY --from=deps /app/ .
 COPY --from=pruner /app/out/full/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ARG DATABASE_URL
+ARG DATABASE_AUTH_TOKEN
+ENV DATABASE_URL=$DATABASE_URL
+ENV DATABASE_AUTH_TOKEN=$DATABASE_AUTH_TOKEN
 RUN bun run build --filter=web
 
 # ── Stage 4: Production runner (Node.js for Next.js standalone) ──

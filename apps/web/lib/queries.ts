@@ -7,6 +7,7 @@ import {
   type MetricKey,
 } from "@workspace/db";
 import { db } from "@workspace/db/client";
+import { unstable_cache } from "next/cache";
 import {
   FUEL_COLORS,
   GROCERY_COLORS,
@@ -202,7 +203,7 @@ function getTrendColor(sparklineData: number[], metric: MetricKey): string {
   return isGood ? INDICATOR.up : INDICATOR.down;
 }
 
-export async function getTickerData() {
+async function _getTickerData() {
   const from = getOneYearAgo();
   const to = getToday();
 
@@ -240,7 +241,7 @@ export async function getTickerData() {
   return results;
 }
 
-export async function getOverviewData() {
+async function _getOverviewData() {
   const from = getOneYearAgo();
   const to = getToday();
   const dateRange = { from, to };
@@ -426,7 +427,7 @@ const COST_OF_LIVING_ITEMS: {
   },
 ];
 
-export async function getCostOfLivingData() {
+async function _getCostOfLivingData() {
   const from = getOneYearAgo();
   const to = getToday();
 
@@ -447,7 +448,7 @@ export async function getCostOfLivingData() {
   return seriesList;
 }
 
-export async function getIntroData() {
+async function _getIntroData() {
   const row = await getLatestSummary(db);
 
   if (!row) {
@@ -458,7 +459,7 @@ export async function getIntroData() {
   return { summary: row.content, metrics };
 }
 
-export async function getGroceryChartData() {
+async function _getGroceryChartData() {
   const from = getOneYearAgo();
   const to = getToday();
 
@@ -481,7 +482,7 @@ export async function getGroceryChartData() {
   };
 }
 
-export async function getFuelChartData() {
+async function _getFuelChartData() {
   const from = getOneYearAgo();
   const to = getToday();
 
@@ -498,7 +499,7 @@ export async function getFuelChartData() {
   };
 }
 
-export async function getHousingChartData() {
+async function _getHousingChartData() {
   const from = getOneYearAgo();
   const to = getToday();
 
@@ -518,7 +519,7 @@ export async function getHousingChartData() {
   };
 }
 
-export async function getLabourChartData() {
+async function _getLabourChartData() {
   const from = getOneYearAgo();
   const to = getToday();
 
@@ -537,7 +538,7 @@ export async function getLabourChartData() {
   };
 }
 
-export async function getCurrencyChartData() {
+async function _getCurrencyChartData() {
   const from = getOneYearAgo();
   const to = getToday();
 
@@ -554,6 +555,58 @@ export async function getCurrencyChartData() {
   };
 }
 
-export async function getNewsData() {
-  return getLatestArticles(db, 2);
+async function _getNewsData() {
+  const { pickLeadAndRest } = await import("@/lib/score-articles");
+  const articles = await getLatestArticles(db, 2);
+  return pickLeadAndRest(articles);
 }
+
+// Cached exports — data is cached indefinitely and invalidated via revalidateTag("metrics")
+const CACHE_OPTS = { tags: ["metrics"] };
+
+export const getTickerData = unstable_cache(
+  _getTickerData,
+  ["ticker"],
+  CACHE_OPTS
+);
+export const getOverviewData = unstable_cache(
+  _getOverviewData,
+  ["overview"],
+  CACHE_OPTS
+);
+export const getCostOfLivingData = unstable_cache(
+  _getCostOfLivingData,
+  ["cost-of-living"],
+  CACHE_OPTS
+);
+export const getIntroData = unstable_cache(
+  _getIntroData,
+  ["intro"],
+  CACHE_OPTS
+);
+export const getGroceryChartData = unstable_cache(
+  _getGroceryChartData,
+  ["grocery-chart"],
+  CACHE_OPTS
+);
+export const getFuelChartData = unstable_cache(
+  _getFuelChartData,
+  ["fuel-chart"],
+  CACHE_OPTS
+);
+export const getHousingChartData = unstable_cache(
+  _getHousingChartData,
+  ["housing-chart"],
+  CACHE_OPTS
+);
+export const getLabourChartData = unstable_cache(
+  _getLabourChartData,
+  ["labour-chart"],
+  CACHE_OPTS
+);
+export const getCurrencyChartData = unstable_cache(
+  _getCurrencyChartData,
+  ["currency-chart"],
+  CACHE_OPTS
+);
+export const getNewsData = unstable_cache(_getNewsData, ["news"], CACHE_OPTS);

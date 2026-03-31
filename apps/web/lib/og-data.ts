@@ -1,5 +1,6 @@
 import { getLatestValue, type MetricKey } from "@workspace/db";
 import { db } from "@workspace/db/client";
+import { unstable_cache } from "next/cache";
 import { formatValue } from "@/lib/data";
 
 const OG_METRICS: { key: MetricKey; label: string }[] = [
@@ -16,7 +17,7 @@ export interface OgMetric {
   value: string;
 }
 
-export async function getOgMetrics(): Promise<OgMetric[]> {
+async function _getOgMetrics(): Promise<OgMetric[]> {
   const results = await Promise.all(
     OG_METRICS.map(async ({ key, label }) => {
       const latest = await getLatestValue(db, key);
@@ -31,3 +32,7 @@ export async function getOgMetrics(): Promise<OgMetric[]> {
   );
   return results;
 }
+
+export const getOgMetrics = unstable_cache(_getOgMetrics, ["og-metrics"], {
+  tags: ["metrics"],
+});

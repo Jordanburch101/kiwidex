@@ -11,8 +11,6 @@ import { Overview } from "@/components/sections/overview";
 import { SponsorCTA } from "@/components/sections/sponsor-cta";
 import { Ticker } from "@/components/sections/ticker";
 
-export const dynamic = "force-dynamic";
-
 export default function Page() {
   return (
     <div className="min-h-screen bg-[#f4f2ed]">
