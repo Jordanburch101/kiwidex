@@ -80,32 +80,32 @@ export async function bulkInsert(db: Db, dataPoints: DataPoint[]) {
     return;
   }
 
+  const now = new Date().toISOString();
+
   for (let i = 0; i < dataPoints.length; i += CHUNK_SIZE) {
     const chunk = dataPoints.slice(i, i + CHUNK_SIZE);
-    await db.transaction(async (tx) => {
-      for (const point of chunk) {
-        await tx
-          .insert(metrics)
-          .values({
-            metric: point.metric,
-            value: point.value,
-            unit: point.unit,
-            date: point.date,
-            source: point.source ?? null,
-            metadata: point.metadata ?? null,
-          })
-          .onConflictDoUpdate({
-            target: [metrics.metric, metrics.date],
-            set: {
-              value: sql`excluded.value`,
-              unit: sql`excluded.unit`,
-              source: sql`excluded.source`,
-              metadata: sql`excluded.metadata`,
-              createdAt: new Date().toISOString(),
-            },
-          });
-      }
-    });
+    await db
+      .insert(metrics)
+      .values(
+        chunk.map((point) => ({
+          metric: point.metric,
+          value: point.value,
+          unit: point.unit,
+          date: point.date,
+          source: point.source ?? null,
+          metadata: point.metadata ?? null,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: [metrics.metric, metrics.date],
+        set: {
+          value: sql`excluded.value`,
+          unit: sql`excluded.unit`,
+          source: sql`excluded.source`,
+          metadata: sql`excluded.metadata`,
+          createdAt: now,
+        },
+      });
   }
 }
 
