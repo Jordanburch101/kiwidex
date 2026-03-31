@@ -42,6 +42,17 @@ async function searchProducts(query: string): Promise<WoolworthsProduct[]> {
     headers: {
       "User-Agent": USER_AGENT,
       "x-requested-with": "OnlineShopping.WebApp",
+      Accept: "application/json, text/plain, */*",
+      "Accept-Language": "en-NZ,en;q=0.9",
+      Origin: "https://www.woolworths.co.nz",
+      Referer: `https://www.woolworths.co.nz/shop/searchproducts?search=${encodeURIComponent(query)}`,
+      "sec-ch-ua":
+        '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"macOS"',
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-origin",
     },
     signal: AbortSignal.timeout(15_000),
   });
