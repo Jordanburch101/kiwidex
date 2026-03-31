@@ -1,5 +1,6 @@
 import {
   getLatestArticles,
+  getLatestSummary,
   getLatestValue,
   getTimeSeries,
   METRIC_META,
@@ -103,13 +104,60 @@ function buildRowData(
       ? computeChange(chartPoints, getPeriodDays(metric))
       : { label: "\u2014", type: "neutral" as const };
 
+  const periodDays = getPeriodDays(metric);
   return {
     metric,
     label: METRIC_META[metric].label,
     value: currentValue === null ? "\u2014" : formatValue(metric, currentValue),
     change: change.label,
+    changePeriod: periodDays <= 30 ? "30d" : periodDays <= 90 ? "90d" : "1yr",
     changeType: change.type,
     sparklineData: values,
+  };
+}
+
+/**
+ * Build a synthetic "Groceries" row by averaging all grocery time series
+ * by date, then computing a 30-day % change on that average.
+ */
+function buildGroceryRow(
+  allSeries: Awaited<ReturnType<typeof getTimeSeries>>[]
+) {
+  // Group values by date and average them
+  const byDate = new Map<string, number[]>();
+  for (const series of allSeries) {
+    for (const point of series) {
+      const existing = byDate.get(point.date);
+      if (existing) {
+        existing.push(point.value);
+      } else {
+        byDate.set(point.date, [point.value]);
+      }
+    }
+  }
+
+  const avgSeries = [...byDate.entries()]
+    .map(([date, vals]) => ({
+      date,
+      value: vals.reduce((a, b) => a + b, 0) / vals.length,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const currentValue =
+    avgSeries.length > 0 ? avgSeries[avgSeries.length - 1]!.value : null;
+  const change =
+    avgSeries.length >= 2
+      ? computeChange(avgSeries, 30)
+      : { label: "\u2014", type: "neutral" as const };
+
+  return {
+    metric: "groceries" as const,
+    label: "Groceries",
+    value: currentValue === null ? "\u2014" : `$${currentValue.toFixed(2)}`,
+    change: change.label,
+    changePeriod: "30d",
+    changeType: change.type,
+    sparklineData: avgSeries.map((p) => p.value),
   };
 }
 
@@ -206,10 +254,14 @@ export async function getOverviewData() {
     cpiLatest,
     unemploymentLatest,
     gdpLatest,
-    wageGrowthLatest,
     _minimumWageLatest,
     nzdUsdLatest,
     medianIncomeLatest,
+    eggsSeries,
+    breadSeries,
+    butterSeries,
+    cheeseSeries,
+    bananasSeries,
     petrol91Series,
     milkSeries,
     housePriceSeries,
@@ -218,7 +270,6 @@ export async function getOverviewData() {
     cpiSeries,
     unemploymentSeries,
     gdpSeries,
-    wageGrowthSeries,
     _minimumWageSeries,
     nzdUsdSeries,
     medianIncomeSeries,
@@ -231,10 +282,14 @@ export async function getOverviewData() {
     getLatestValue(db, "cpi"),
     getLatestValue(db, "unemployment"),
     getLatestValue(db, "gdp_growth"),
-    getLatestValue(db, "wage_growth"),
     getLatestValue(db, "minimum_wage"),
     getLatestValue(db, "nzd_usd"),
     getLatestValue(db, "median_income"),
+    getTimeSeries(db, "eggs", from, to),
+    getTimeSeries(db, "bread", from, to),
+    getTimeSeries(db, "butter", from, to),
+    getTimeSeries(db, "cheese", from, to),
+    getTimeSeries(db, "bananas", from, to),
     getTimeSeries(db, "petrol_91", from, to),
     getTimeSeries(db, "milk", from, to),
     getTimeSeries(db, "house_price_median", from, to),
@@ -243,7 +298,6 @@ export async function getOverviewData() {
     getTimeSeries(db, "cpi", from, to),
     getTimeSeries(db, "unemployment", from, to),
     getTimeSeries(db, "gdp_growth", from, to),
-    getTimeSeries(db, "wage_growth", from, to),
     getTimeSeries(db, "minimum_wage", from, to),
     getTimeSeries(db, "nzd_usd", from, to),
     getTimeSeries(db, "median_income", from, to),
@@ -284,14 +338,24 @@ export async function getOverviewData() {
   ];
 
   const economyRows = [
+    // 30-day comparison
+    buildRowData("ocr", ocrLatest, ocrSeries),
+    buildRowData("nzd_usd", nzdUsdLatest, nzdUsdSeries),
+    buildGroceryRow([
+      milkSeries,
+      eggsSeries,
+      breadSeries,
+      butterSeries,
+      cheeseSeries,
+      bananasSeries,
+    ]),
+    // 90-day comparison
     buildRowData("house_price_median", housePriceLatest, housePriceSeries),
     buildRowData("mortgage_1yr", mortgage1yrLatest, mortgage1yrSeries),
-    buildRowData("ocr", ocrLatest, ocrSeries),
+    // 365-day comparison
     buildRowData("cpi", cpiLatest, cpiSeries),
     buildRowData("unemployment", unemploymentLatest, unemploymentSeries),
     buildRowData("gdp_growth", gdpLatest, gdpSeries),
-    buildRowData("wage_growth", wageGrowthLatest, wageGrowthSeries),
-    buildRowData("nzd_usd", nzdUsdLatest, nzdUsdSeries),
     buildRowData("median_income", medianIncomeLatest, medianIncomeSeries),
   ];
 
@@ -384,48 +448,14 @@ export async function getCostOfLivingData() {
 }
 
 export async function getIntroData() {
-  const from = getOneYearAgo();
-  const to = getToday();
+  const row = await getLatestSummary(db);
 
-  const metrics: MetricKey[] = [
-    "cpi",
-    "unemployment",
-    "petrol_91",
-    "nzd_usd",
-    "wage_growth",
-  ];
-
-  const [latests, allSeries] = await Promise.all([
-    Promise.all(metrics.map((m) => getLatestValue(db, m))),
-    Promise.all(metrics.map((m) => getTimeSeries(db, m, from, to))),
-  ]);
-
-  const result: Record<
-    string,
-    { value: string; change: string; changeType: "up" | "down" | "neutral" }
-  > = {};
-
-  for (let i = 0; i < metrics.length; i++) {
-    const metric = metrics[i]!;
-    const latest = latests[i];
-    const series = allSeries[i]!;
-    const chartPoints = toChartPoints(series);
-    const change =
-      chartPoints.length >= 2
-        ? computeChange(chartPoints, getPeriodDays(metric))
-        : { label: "\u2014", type: "neutral" as const };
-
-    result[metric] = {
-      value:
-        latest?.value === undefined || latest?.value === null
-          ? "\u2014"
-          : formatValue(metric, latest.value),
-      change: change.label,
-      changeType: change.type,
-    };
+  if (!row) {
+    return { summary: null, metrics: {} as Record<string, string> };
   }
 
-  return result;
+  const metrics = JSON.parse(row.metrics) as Record<string, string>;
+  return { summary: row.content, metrics };
 }
 
 export async function getGroceryChartData() {

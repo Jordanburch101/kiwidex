@@ -1,18 +1,18 @@
 export interface BasketItem {
   category: string;
+  /** Product name matching any of these will be excluded (specialty, flavoured, etc.) */
+  excludePatterns: RegExp[];
+  /** Product name must match at least one of these to be included */
+  includePatterns?: RegExp[];
   label: string;
-  standardUnit: string;
+  priceRange: { min: number; max: number };
   searchQueries: {
     woolworths: string;
     paknsave: string;
     newworld: string;
   };
   sizePatterns: RegExp[];
-  /** Product name must match at least one of these to be included */
-  includePatterns?: RegExp[];
-  /** Product name matching any of these will be excluded (specialty, flavoured, etc.) */
-  excludePatterns: RegExp[];
-  priceRange: { min: number; max: number };
+  standardUnit: string;
 }
 
 /**
@@ -30,8 +30,7 @@ export interface BasketItem {
 // Common exclusions for non-standard/specialty products
 const SPECIALTY_MILK =
   /organic|flavour|chocolate|strawberry|banana|protein\+|calci|lacto.?free|zero.?lacto|a2\b|oat|soy|almond|coconut|rice|uht|long.?life|powder|lite\b|trim\b|light\b|fat.?free|slim|farmhouse/i;
-const SPECIALTY_EGGS =
-  /quail|duck|liquid|free.?flow|omega/i;
+const SPECIALTY_EGGS = /quail|duck|liquid|free.?flow|omega/i;
 const SPECIALTY_BREAD =
   /sourdough|ciabatta|brioche|gluten.?free|low.?carb|rye|wholemeal|wheatmeal|wholegrain|multigrain|grain|ancient|keto|protein|wrap|pita|english.?muffin|bun|roll|high.?fibre|sandwich/i;
 const SPECIALTY_BUTTER =
@@ -52,7 +51,9 @@ export const BASKET: BasketItem[] = [
       newworld: "standard milk 2l",
     },
     sizePatterns: [/\b2\s*l(itre)?s?\b/i, /\b2000\s*ml\b/i],
-    includePatterns: [/standard|blue.?top|full.?cream|original|whole|homogenised/i],
+    includePatterns: [
+      /standard|blue.?top|full.?cream|original|whole|homogenised/i,
+    ],
     excludePatterns: [SPECIALTY_MILK],
     priceRange: { min: 3, max: 8 },
   },
@@ -133,7 +134,9 @@ export const BASKET: BasketItem[] = [
     },
     sizePatterns: [/banana/i],
     includePatterns: [/fresh|loose|yellow/i],
-    excludePatterns: [/chip|dried|organic|baby|smoothie|cake|bread|muffin|plant|bar|cookie|biscuit|yoghurt|milk|protein|sweet|candy|lolly|ice.?cream|flavour|brine|blossom|powder|cereal|slice|pouch|cooking|green|snack.?pack|lady.?finger|plantain/i],
+    excludePatterns: [
+      /chip|dried|organic|baby|smoothie|cake|bread|muffin|plant|bar|cookie|biscuit|yoghurt|milk|protein|sweet|candy|lolly|ice.?cream|flavour|brine|blossom|powder|cereal|slice|pouch|cooking|green|snack.?pack|lady.?finger|plantain/i,
+    ],
     priceRange: { min: 1, max: 8 },
   },
 ];

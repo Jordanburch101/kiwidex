@@ -8,5 +8,5 @@ export async function Intro() {
     return null;
   }
 
-  return <IntroLayout summary={summary} metrics={metrics} />;
+  return <IntroLayout metrics={metrics} summary={summary} />;
 }

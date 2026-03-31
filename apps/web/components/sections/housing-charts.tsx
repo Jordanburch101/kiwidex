@@ -4,8 +4,8 @@ import { useState } from "react";
 import { AreaChartSection } from "@/components/charts/area-chart";
 import { MultiLineChart } from "@/components/charts/multi-line-chart";
 import { TimeRangeSelector } from "@/components/time-range-selector";
-import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
 import { HOUSING_COLORS } from "@/lib/colors";
+import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
 
 interface TimeSeriesPoint {
   date: string;
@@ -56,9 +56,21 @@ export function HousingCharts({
             data={filterByRange(mortgageData, range)}
             height={200}
             lines={[
-              { key: "floating", color: HOUSING_COLORS.floating, label: "Floating" },
-              { key: "oneYear", color: HOUSING_COLORS.oneYear, label: "1yr Fixed" },
-              { key: "twoYear", color: HOUSING_COLORS.twoYear, label: "2yr Fixed" },
+              {
+                key: "floating",
+                color: HOUSING_COLORS.floating,
+                label: "Floating",
+              },
+              {
+                key: "oneYear",
+                color: HOUSING_COLORS.oneYear,
+                label: "1yr Fixed",
+              },
+              {
+                key: "twoYear",
+                color: HOUSING_COLORS.twoYear,
+                label: "2yr Fixed",
+              },
             ]}
             valueFormat="percent"
           />

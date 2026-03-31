@@ -3,7 +3,7 @@ import { CompactRow } from "@workspace/ui/components/compact-row";
 import { CostOfLivingChart } from "@/components/charts/cost-of-living-chart";
 import { getCostOfLivingData, getOverviewData } from "@/lib/queries";
 
-const METRIC_DESCRIPTIONS: Partial<Record<MetricKey, string>> = {
+const METRIC_DESCRIPTIONS: Partial<Record<MetricKey | "groceries", string>> = {
   house_price_median:
     "National median house price from REINZ. Published monthly, covering all residential property sales across New Zealand.",
   mortgage_1yr:
@@ -13,8 +13,8 @@ const METRIC_DESCRIPTIONS: Partial<Record<MetricKey, string>> = {
     "Percentage of the labour force actively seeking work. Published quarterly by Stats NZ from the Household Labour Force Survey.",
   gdp_growth:
     "Quarterly GDP growth rate. Measures the change in total economic output. Published by Stats NZ.",
-  wage_growth:
-    "Annual wage growth from the Labour Cost Index. Tracks changes in salary and wage rates for the same job. Published quarterly by Stats NZ.",
+  groceries:
+    "Average price across a basket of 6 grocery staples (milk, eggs, bread, butter, cheese, bananas). Collected daily from NZ supermarkets.",
   ocr: "The Official Cash Rate set by the RBNZ. The primary tool for controlling inflation — influences mortgage rates, savings rates, and the cost of borrowing.",
   nzd_usd:
     "New Zealand dollar against the US dollar. A weaker Kiwi makes imports more expensive, pushing up consumer prices.",
@@ -23,14 +23,16 @@ const METRIC_DESCRIPTIONS: Partial<Record<MetricKey, string>> = {
 };
 
 // Whether "up" is good or bad for each metric — drives pill colour
-const METRIC_SENTIMENT: Partial<Record<MetricKey, "up_is_good" | "down_is_good">> = {
+const METRIC_SENTIMENT: Partial<
+  Record<MetricKey | "groceries", "up_is_good" | "down_is_good">
+> = {
   house_price_median: "down_is_good",
   mortgage_1yr: "down_is_good",
   ocr: "down_is_good",
   cpi: "down_is_good",
   unemployment: "down_is_good",
   gdp_growth: "up_is_good",
-  wage_growth: "up_is_good",
+  groceries: "down_is_good",
   nzd_usd: "up_is_good",
   median_income: "up_is_good",
 };
@@ -59,10 +61,17 @@ export async function Overview() {
             >
               <CompactRow
                 change={item.change}
+                changePeriod={item.changePeriod}
                 changeType={item.changeType}
-                description={METRIC_DESCRIPTIONS[item.metric as MetricKey]}
+                description={
+                  METRIC_DESCRIPTIONS[
+                    item.metric as keyof typeof METRIC_DESCRIPTIONS
+                  ]
+                }
                 label={item.label}
-                sentiment={METRIC_SENTIMENT[item.metric as MetricKey]}
+                sentiment={
+                  METRIC_SENTIMENT[item.metric as keyof typeof METRIC_SENTIMENT]
+                }
                 sparklineData={item.sparklineData}
                 value={item.value}
               />

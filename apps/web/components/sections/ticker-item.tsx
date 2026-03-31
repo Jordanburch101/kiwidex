@@ -6,10 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface TickerItemProps {
-  label: string;
-  value: string;
-  sparklineData: number[];
   color?: string;
+  label: string;
+  sparklineData: number[];
+  value: string;
 }
 
 function TooltipPortal({
@@ -29,7 +29,9 @@ function TooltipPortal({
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
-    if (!tooltipRef.current) return;
+    if (!tooltipRef.current) {
+      return;
+    }
     const tw = tooltipRef.current.offsetWidth;
     let left = anchor.left + anchor.width / 2 - tw / 2;
     left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
@@ -39,19 +41,19 @@ function TooltipPortal({
 
   return createPortal(
     <motion.div
-      ref={tooltipRef}
-      className="pointer-events-none fixed z-50 origin-bottom rounded-lg border border-[#e5e0d5] bg-[#faf8f4] p-3 shadow-lg"
-      style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
-      initial={{ opacity: 0, y: 6, scale: 0.9 }}
       animate={{ opacity: pos ? 1 : 0, y: 0, scale: 1 }}
+      className="pointer-events-none fixed z-50 origin-bottom rounded-lg border border-[#e5e0d5] bg-[#faf8f4] p-3 shadow-lg"
       exit={{ opacity: 0, y: 6, scale: 0.9 }}
+      initial={{ opacity: 0, y: 6, scale: 0.9 }}
+      ref={tooltipRef}
+      style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
       transition={{ type: "spring", stiffness: 500, damping: 30 }}
     >
-      <div className="flex items-center justify-between gap-4 mb-1.5">
+      <div className="mb-1.5 flex items-center justify-between gap-4">
         <span className="font-medium text-[#2a2520] text-xs">{label}</span>
         {change !== null && (
           <span
-            className={`text-[10px] font-mono font-semibold ${change >= 0 ? "text-emerald-600" : "text-red-500"}`}
+            className={`font-mono font-semibold text-[10px] ${change >= 0 ? "text-emerald-600" : "text-red-500"}`}
           >
             {change >= 0 ? "+" : ""}
             {change.toFixed(1)}%
@@ -66,7 +68,7 @@ function TooltipPortal({
         strokeWidth={1.5}
         width={140}
       />
-      <div className="mt-1 flex justify-between text-[9px] text-[#998]">
+      <div className="mt-1 flex justify-between text-[#998] text-[9px]">
         <span>30d ago</span>
         <span>now</span>
       </div>
@@ -96,13 +98,15 @@ export function TickerItem({
 
   return (
     <span
-      ref={itemRef}
       className="inline-flex items-center gap-2 whitespace-nowrap px-4"
       onPointerEnter={() => {
         setHovered(true);
-        if (itemRef.current) setRect(itemRef.current.getBoundingClientRect());
+        if (itemRef.current) {
+          setRect(itemRef.current.getBoundingClientRect());
+        }
       }}
       onPointerLeave={() => setHovered(false)}
+      ref={itemRef}
     >
       <span className="text-[#998] text-xs">{label}</span>
       <span className="font-semibold text-[#2a2520] text-sm">{value}</span>

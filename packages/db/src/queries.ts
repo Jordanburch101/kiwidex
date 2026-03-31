@@ -2,7 +2,7 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { METRIC_META, type MetricCategory, type MetricKey } from "./metrics";
 import type * as schema from "./schema";
-import { articles, metrics, products, scraperRuns } from "./schema";
+import { articles, metrics, products, scraperRuns, summaries } from "./schema";
 
 type Db = LibSQLDatabase<typeof schema>;
 
@@ -203,7 +203,9 @@ export async function getLastSuccessDate(
     .limit(1);
 
   const match = rows[0];
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
 
   const days = Math.floor(
     (Date.now() - new Date(match.createdAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -267,6 +269,27 @@ export async function insertArticles(db: Db, items: NewArticle[]) {
         },
       });
   }
+}
+
+// --- Summary queries ---
+
+export type NewSummary = typeof summaries.$inferInsert;
+
+export async function insertSummary(
+  db: Db,
+  content: string,
+  metricsJson: string
+) {
+  await db.insert(summaries).values({ content, metrics: metricsJson });
+}
+
+export async function getLatestSummary(db: Db) {
+  const rows = await db
+    .select()
+    .from(summaries)
+    .orderBy(desc(summaries.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
 }
 
 export async function getLatestArticles(db: Db, perSource: number) {

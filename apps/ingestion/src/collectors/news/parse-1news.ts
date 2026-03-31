@@ -56,9 +56,7 @@ function extractTag(xml: string, tag: string): string | null {
 }
 
 function extractMediaContent(xml: string): string | null {
-  const matches = [
-    ...xml.matchAll(/<media:content[^>]+url="([^"]+)"[^>]*>/gi),
-  ];
+  const matches = [...xml.matchAll(/<media:content[^>]+url="([^"]+)"[^>]*>/gi)];
   if (matches.length === 0) {
     return null;
   }
@@ -68,9 +66,7 @@ function extractMediaContent(xml: string): string | null {
 
 function decodeEntities(text: string): string {
   return text
-    .replace(/&#(\d+);/g, (_, code) =>
-      String.fromCharCode(Number(code))
-    )
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
     .replace(/&#x([0-9a-f]+);/gi, (_, hex) =>
       String.fromCharCode(Number.parseInt(hex, 16))
     )

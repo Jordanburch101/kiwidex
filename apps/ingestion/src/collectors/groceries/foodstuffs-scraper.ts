@@ -3,12 +3,12 @@ import { extractBrand } from "./brands";
 import type { ScrapedProduct } from "./types";
 
 export interface FoodstuffsConfig {
-  storeName: string;
-  storeKey: "paknsave" | "newworld";
-  domain: string;
-  searchUrl: (query: string) => string;
-  geolocation: { latitude: number; longitude: number };
   delayBetweenSearches: number;
+  domain: string;
+  geolocation: { latitude: number; longitude: number };
+  searchUrl: (query: string) => string;
+  storeKey: "paknsave" | "newworld";
+  storeName: string;
 }
 
 export const PAKNSAVE_CONFIG: FoodstuffsConfig = {
@@ -61,15 +61,11 @@ function extractProductsFromPage(): {
       const subtitle = subtitleEl?.textContent?.trim() || "";
       const name = subtitle ? `${title} ${subtitle}` : title;
       const dollars =
-        Number.parseInt(
-          dollarsEl.textContent?.replace(/\D/g, "") || "0",
-          10
-        ) || 0;
+        Number.parseInt(dollarsEl.textContent?.replace(/\D/g, "") || "0", 10) ||
+        0;
       const cents =
-        Number.parseInt(
-          centsEl?.textContent?.replace(/\D/g, "") || "0",
-          10
-        ) || 0;
+        Number.parseInt(centsEl?.textContent?.replace(/\D/g, "") || "0", 10) ||
+        0;
       if (dollars > 0 && name) {
         items.push({ name, price: dollars + cents / 100, subtitle });
       }
@@ -162,7 +158,7 @@ async function navigateWithRetry(
         } catch {
           // ignore
         }
-        await delay(5_000 * attempt);
+        await delay(5000 * attempt);
         return navigateWithRetry(page, url, tag, attempt + 1);
       }
       return false;
@@ -266,7 +262,9 @@ export async function scrapeFoodstuffs(
         const success = await navigateWithRetry(page, searchUrl, tag);
         if (!success) {
           console.warn(`${tag} Skipping ${item.category} — navigation failed`);
-          if (i < basket.length - 1) await delay(config.delayBetweenSearches);
+          if (i < basket.length - 1) {
+            await delay(config.delayBetweenSearches);
+          }
           continue;
         }
 
@@ -283,13 +281,18 @@ export async function scrapeFoodstuffs(
         for (const p of parsed) {
           const fullName = p.name;
 
-          if (!item.sizePatterns.some((re) => re.test(fullName))) continue;
-          if (item.excludePatterns.some((re) => re.test(fullName))) continue;
+          if (!item.sizePatterns.some((re) => re.test(fullName))) {
+            continue;
+          }
+          if (item.excludePatterns.some((re) => re.test(fullName))) {
+            continue;
+          }
           if (
             item.includePatterns &&
             !item.includePatterns.some((re) => re.test(fullName))
-          )
+          ) {
             continue;
+          }
 
           if (p.price < item.priceRange.min || p.price > item.priceRange.max) {
             console.warn(
@@ -344,8 +347,6 @@ export async function scrapeFoodstuffs(
     await browser.close();
   }
 
-  console.log(
-    `${tag} Completed: ${allProducts.length} total products scraped`
-  );
+  console.log(`${tag} Completed: ${allProducts.length} total products scraped`);
   return allProducts;
 }

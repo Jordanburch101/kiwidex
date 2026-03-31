@@ -1,18 +1,12 @@
 "use client";
 
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
+  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
 } from "@workspace/ui/components/chart";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 type ValueFormat = "currency" | "percent" | "ratio" | "currency_k";
 
@@ -84,7 +78,11 @@ export function MultiLineChart({
 
   return (
     <div>
-      <ChartContainer config={chartConfig} className="w-full" style={{ height }}>
+      <ChartContainer
+        className="w-full"
+        config={chartConfig}
+        style={{ height }}
+      >
         <LineChart
           data={data}
           margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
@@ -112,10 +110,6 @@ export function MultiLineChart({
           <ChartTooltip
             content={
               <ChartTooltipContent
-                labelFormatter={(_, payload) => {
-                  const d = payload?.[0]?.payload?.date;
-                  return d ? formatDateLong(d) : "";
-                }}
                 formatter={(value, name) => {
                   const line = lines.find((l) => l.key === name);
                   return (
@@ -136,6 +130,10 @@ export function MultiLineChart({
                   );
                 }}
                 hideIndicator
+                labelFormatter={(_, payload) => {
+                  const d = payload?.[0]?.payload?.date;
+                  return d ? formatDateLong(d) : "";
+                }}
               />
             }
           />

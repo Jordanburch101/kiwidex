@@ -26,7 +26,9 @@ function parseStatsNzPeriod(period: string): string | null {
   // Format: "YYYY.MM" but October is "YYYY.1" not "YYYY.10"
   // Actually the format is YYYY.MM where MM can be 1-12 (no leading zero)
   const match = period.match(/^(\d{4})\.(\d{1,2})$/);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   const year = match[1]!;
   const month = match[2]!.padStart(2, "0");
   // Use last day of month for consistency with other collectors
@@ -52,7 +54,9 @@ async function main() {
   console.log(`Downloaded ${lines.length} lines`);
 
   // Parse header
-  const header = lines[0]!.split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+  const header = lines[0]!
+    .split(",")
+    .map((h) => h.trim().replace(/^"|"$/g, ""));
   const refIdx = header.indexOf("Series_reference");
   const periodIdx = header.indexOf("Period");
   const valueIdx = header.indexOf("Data_value");
@@ -77,7 +81,9 @@ async function main() {
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i]!.trim();
-    if (!line) continue;
+    if (!line) {
+      continue;
+    }
 
     // Simple CSV parse (fields may be quoted)
     const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
@@ -88,16 +94,24 @@ async function main() {
     const units = cols[unitsIdx]?.trim();
 
     // Only want dollar prices, not index values
-    if (units !== "Dollars") continue;
+    if (units !== "Dollars") {
+      continue;
+    }
 
     const mapping = seriesRef ? SERIES_MAP[seriesRef] : undefined;
-    if (!mapping || !period || !rawValue) continue;
+    if (!(mapping && period && rawValue)) {
+      continue;
+    }
 
     const value = Number(rawValue);
-    if (Number.isNaN(value) || value <= 0) continue;
+    if (Number.isNaN(value) || value <= 0) {
+      continue;
+    }
 
     const date = parseStatsNzPeriod(period);
-    if (!date || date < cutoffStr) continue;
+    if (!date || date < cutoffStr) {
+      continue;
+    }
 
     results.push({
       metric: mapping.metric,
@@ -115,8 +129,12 @@ async function main() {
   }
   console.log(`\nFound ${results.length} data points:`);
   for (const [metric, count] of Object.entries(byCat)) {
-    const latest = results.filter((r) => r.metric === metric).sort((a, b) => b.date.localeCompare(a.date))[0];
-    console.log(`  ${metric}: ${count} months (latest: $${latest?.value} on ${latest?.date})`);
+    const latest = results
+      .filter((r) => r.metric === metric)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    console.log(
+      `  ${metric}: ${count} months (latest: $${latest?.value} on ${latest?.date})`
+    );
   }
 
   // Insert into DB

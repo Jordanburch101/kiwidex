@@ -5,9 +5,13 @@ import { checkHealth } from "./monitoring";
 
 function requireApiKey({
   headers,
-}: { headers: Record<string, string | undefined> }) {
+}: {
+  headers: Record<string, string | undefined>;
+}) {
   const key = process.env.INGESTION_API_KEY;
-  if (!key) return; // No key configured = auth disabled (local dev)
+  if (!key) {
+    return; // No key configured = auth disabled (local dev)
+  }
 
   const provided =
     headers["x-api-key"] || headers.authorization?.replace("Bearer ", "");

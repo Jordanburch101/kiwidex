@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { MultiLineChart } from "@/components/charts/multi-line-chart";
 import { TimeRangeSelector } from "@/components/time-range-selector";
-import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
 import { FUEL_COLORS } from "@/lib/colors";
+import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
 
 interface FuelPoint {
   date: string;

@@ -14,6 +14,6 @@ const nextConfig = {
       { hostname: "images.1news.co.nz" },
     ],
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

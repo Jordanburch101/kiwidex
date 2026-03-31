@@ -1,19 +1,19 @@
 "use client";
 
+import {
+  type ChartConfig,
+  ChartContainer,
+} from "@workspace/ui/components/chart";
 import { useCallback, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
   CartesianGrid,
   ComposedChart,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
 } from "recharts";
-import {
-  ChartContainer,
-  type ChartConfig,
-} from "@workspace/ui/components/chart";
 import { GROCERY_COLORS } from "@/lib/colors";
 
 // ---------------------------------------------------------------------------
@@ -28,12 +28,12 @@ interface DataPoint {
 type GroupKey = "fuel" | "grocery";
 
 interface CostOfLivingItem {
+  color: string;
+  data: DataPoint[];
+  group: GroupKey;
   key: string;
   label: string;
   unit: string;
-  color: string;
-  group: GroupKey;
-  data: DataPoint[];
 }
 
 export interface CostOfLivingChartProps {
@@ -88,7 +88,9 @@ function formatUnit(value: number, unit: string): string {
     case "nzd_per_litre":
       return `$${value.toFixed(2)}/L`;
     case "nzd":
-      if (value >= 10_000) return `$${Math.round(value / 1000)}K`;
+      if (value >= 10_000) {
+        return `$${Math.round(value / 1000)}K`;
+      }
       return `$${value.toFixed(2)}`;
     case "percent":
       return `${value.toFixed(1)}%`;
@@ -106,7 +108,9 @@ function getStartDate(days: number): string {
 function normalise(data: DataPoint[], startDate: string): DataPoint[] {
   const filtered = data.filter((d) => d.date >= startDate);
   const baseline = filtered[0]?.value;
-  if (!baseline) return [];
+  if (!baseline) {
+    return [];
+  }
   return filtered.map((d) => ({
     date: d.date,
     value: ((d.value - baseline) / baseline) * 100,
@@ -205,7 +209,11 @@ function buildChartData(
     }
   } else {
     const meta = GROCERY_META;
-    series.push({ key: meta.combinedKey, color: meta.color, label: meta.label });
+    series.push({
+      key: meta.combinedKey,
+      color: meta.color,
+      label: meta.label,
+    });
     dataSeries.push({ key: meta.combinedKey, data: groceryCombined });
   }
 
@@ -239,14 +247,17 @@ function ChartHeader({
     <>
       <div className="mb-1 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="font-heading font-semibold text-sm" style={{ color: T.heading }}>
+          <h3
+            className="font-heading font-semibold text-sm"
+            style={{ color: T.heading }}
+          >
             {title}
           </h3>
           {backButton && (
             <button
               className="rounded-md border px-2 py-0.5 text-xs transition-colors"
-              style={{ borderColor: T.btnBorder, color: T.text }}
               onClick={backButton.onClick}
+              style={{ borderColor: T.btnBorder, color: T.text }}
               type="button"
             >
               {backButton.label}
@@ -257,17 +268,15 @@ function ChartHeader({
           {TIME_RANGES.map((r) => (
             <button
               className={`rounded-md px-2 py-0.5 text-xs transition-colors ${
-                range === r.label
-                  ? "text-white"
-                  : "border"
+                range === r.label ? "text-white" : "border"
               }`}
+              key={r.label}
+              onClick={() => onRangeChange(r.label)}
               style={
                 range === r.label
                   ? { backgroundColor: T.heading }
                   : { borderColor: T.btnBorder, color: T.text }
               }
-              key={r.label}
-              onClick={() => onRangeChange(r.label)}
               type="button"
             >
               {r.label}
@@ -293,7 +302,9 @@ function NormalisedTooltip({
   label?: string;
   labelMap: Map<string, { label: string; color: string }>;
 }) {
-  if (!active || !payload?.length) return null;
+  if (!(active && payload?.length)) {
+    return null;
+  }
   const sorted = [...payload].sort((a, b) => b.value - a.value);
   return (
     <div className="rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
@@ -305,8 +316,8 @@ function NormalisedTooltip({
         const sign = entry.value >= 0 ? "+" : "";
         return (
           <div
-            key={String(entry.dataKey)}
             className="flex items-center gap-2 py-0.5"
+            key={String(entry.dataKey)}
           >
             <span
               className="inline-block h-2 w-2 shrink-0 rounded-full"
@@ -337,9 +348,13 @@ function SingleTooltip({
   label?: string;
   item: CostOfLivingItem;
 }) {
-  if (!active || !payload?.length) return null;
+  if (!(active && payload?.length)) {
+    return null;
+  }
   const entry = payload[0];
-  if (!entry) return null;
+  if (!entry) {
+    return null;
+  }
   return (
     <div className="rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
       <div className="mb-1 font-medium">
@@ -387,14 +402,17 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
   );
 
   const groupedItems = useMemo(() => {
-    const groups: Record<GroupKey, CostOfLivingItem[]> = { fuel: [], grocery: [] };
+    const groups: Record<GroupKey, CostOfLivingItem[]> = {
+      fuel: [],
+      grocery: [],
+    };
     for (const it of items) {
       groups[it.group].push(it);
     }
     return groups;
   }, [items]);
 
-  const selectedItem = selectedKey ? itemMap.get(selectedKey) ?? null : null;
+  const selectedItem = selectedKey ? (itemMap.get(selectedKey) ?? null) : null;
 
   const normalisedByKey = useMemo(() => {
     const map = new Map<string, DataPoint[]>();
@@ -413,7 +431,13 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
   );
 
   const { series: visibleSeries, merged: normalisedMerged } = useMemo(
-    () => buildChartData(groupedItems, normalisedByKey, groceryCombined, groceryExpanded),
+    () =>
+      buildChartData(
+        groupedItems,
+        normalisedByKey,
+        groceryCombined,
+        groceryExpanded
+      ),
     [groupedItems, normalisedByKey, groceryCombined, groceryExpanded]
   );
 
@@ -436,8 +460,12 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
       for (const s of visibleSeries) {
         const v = row[s.key];
         if (typeof v === "number") {
-          if (v < min) min = v;
-          if (v > max) max = v;
+          if (v < min) {
+            min = v;
+          }
+          if (v > max) {
+            max = v;
+          }
         }
       }
     }
@@ -445,12 +473,17 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
   }, [normalisedMerged, visibleSeries]);
 
   const tooltipLabelMap = useMemo(
-    () => new Map(visibleSeries.map((s) => [s.key, { label: s.label, color: s.color }])),
+    () =>
+      new Map(
+        visibleSeries.map((s) => [s.key, { label: s.label, color: s.color }])
+      ),
     [visibleSeries]
   );
 
   const singleData = useMemo(() => {
-    if (!selectedItem) return [];
+    if (!selectedItem) {
+      return [];
+    }
     return selectedItem.data.filter((d) => d.date >= startDate);
   }, [selectedItem, startDate]);
 
@@ -468,26 +501,52 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
   if (selectedItem && singleData.length > 0) {
     const gradientId = `area-single-${selectedItem.key}`;
     const singleConfig: ChartConfig = {
-      [selectedItem.key]: { label: selectedItem.label, color: selectedItem.color },
+      [selectedItem.key]: {
+        label: selectedItem.label,
+        color: selectedItem.color,
+      },
     };
     return (
-      <div className="rounded-lg border p-4" style={{ borderColor: T.border, backgroundColor: T.bg }}>
+      <div
+        className="rounded-lg border p-4"
+        style={{ borderColor: T.border, backgroundColor: T.bg }}
+      >
         <ChartHeader
-          title={selectedItem.label}
-          subtitle={selectedItem.unit === "nzd_per_litre" ? "Price per litre" : "Price"}
-          range={range}
+          backButton={{
+            label: "\u2190 All",
+            onClick: () => setSelectedKey(null),
+          }}
           onRangeChange={setRange}
-          backButton={{ label: "\u2190 All", onClick: () => setSelectedKey(null) }}
+          range={range}
+          subtitle={
+            selectedItem.unit === "nzd_per_litre" ? "Price per litre" : "Price"
+          }
+          title={selectedItem.label}
         />
-        <ChartContainer config={singleConfig} className="aspect-[2.2/1] w-full">
-          <AreaChart data={singleData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+        <ChartContainer className="aspect-[2.2/1] w-full" config={singleConfig}>
+          <AreaChart
+            data={singleData}
+            margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+          >
             <defs>
               <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor={selectedItem.color} stopOpacity={0.25} />
-                <stop offset="100%" stopColor={selectedItem.color} stopOpacity={0.03} />
+                <stop
+                  offset="0%"
+                  stopColor={selectedItem.color}
+                  stopOpacity={0.25}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={selectedItem.color}
+                  stopOpacity={0.03}
+                />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke={T.border} strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid
+              stroke={T.border}
+              strokeDasharray="3 3"
+              vertical={false}
+            />
             <XAxis
               axisLine={{ stroke: T.border }}
               dataKey="date"
@@ -498,29 +557,29 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
             />
             <YAxis
               axisLine={false}
+              domain={["auto", "auto"]}
               tick={{ fontSize: 10, fill: T.muted }}
               tickFormatter={(v: number) => formatUnit(v, selectedItem.unit)}
               tickLine={false}
               width={55}
-              domain={["auto", "auto"]}
             />
             <Tooltip
               content={(props) => (
                 <SingleTooltip
                   active={props.active}
-                  payload={props.payload as ReadonlyArray<TooltipEntry>}
-                  label={props.label as string}
                   item={selectedItem}
+                  label={props.label as string}
+                  payload={props.payload as ReadonlyArray<TooltipEntry>}
                 />
               )}
             />
             <Area
+              animationDuration={500}
               dataKey="value"
               fill={`url(#${gradientId})`}
               stroke={selectedItem.color}
               strokeWidth={2}
               type="monotone"
-              animationDuration={500}
             />
           </AreaChart>
         </ChartContainer>
@@ -532,25 +591,45 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
   // Render: Normalised multi-line view
   // ---------------------------------------------------------------------------
   return (
-    <div className="rounded-lg border p-4" style={{ borderColor: T.border, backgroundColor: T.bg }}>
+    <div
+      className="rounded-lg border p-4"
+      style={{ borderColor: T.border, backgroundColor: T.bg }}
+    >
       <ChartHeader
-        title="At the Pump &amp; Shelf"
-        subtitle="Showing % change from start of period"
-        range={range}
         onRangeChange={setRange}
+        range={range}
+        subtitle="Showing % change from start of period"
+        title="At the Pump &amp; Shelf"
       />
 
-      <ChartContainer config={chartConfig} className="aspect-[2.2/1] w-full [&_.recharts-area-area]:transition-all [&_.recharts-area-area]:duration-300 [&_.recharts-area-area]:ease-out [&_.recharts-area-curve]:transition-all [&_.recharts-area-curve]:duration-300 [&_.recharts-area-curve]:ease-out">
-        <ComposedChart data={normalisedMerged} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+      <ChartContainer
+        className="aspect-[2.2/1] w-full [&_.recharts-area-area]:transition-all [&_.recharts-area-area]:duration-300 [&_.recharts-area-area]:ease-out [&_.recharts-area-curve]:transition-all [&_.recharts-area-curve]:duration-300 [&_.recharts-area-curve]:ease-out"
+        config={chartConfig}
+      >
+        <ComposedChart
+          data={normalisedMerged}
+          margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+        >
           <defs>
             {visibleSeries.map((s) => (
-              <linearGradient key={s.key} id={`area-norm-${s.key}`} x1="0" x2="0" y1="0" y2="1">
+              <linearGradient
+                id={`area-norm-${s.key}`}
+                key={s.key}
+                x1="0"
+                x2="0"
+                y1="0"
+                y2="1"
+              >
                 <stop offset="0%" stopColor={s.color} stopOpacity={0.2} />
                 <stop offset="100%" stopColor={s.color} stopOpacity={0.02} />
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid stroke={T.border} strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid
+            stroke={T.border}
+            strokeDasharray="3 3"
+            vertical={false}
+          />
           <XAxis
             axisLine={{ stroke: T.border }}
             dataKey="date"
@@ -561,19 +640,19 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
           />
           <YAxis
             axisLine={false}
+            domain={yDomain}
             tick={{ fontSize: 10, fill: T.muted }}
             tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`}
             tickLine={false}
             width={45}
-            domain={yDomain}
           />
           <Tooltip
             content={(props) => (
               <NormalisedTooltip
                 active={props.active}
-                payload={props.payload as ReadonlyArray<TooltipEntry>}
                 label={props.label as string}
                 labelMap={tooltipLabelMap}
+                payload={props.payload as ReadonlyArray<TooltipEntry>}
               />
             )}
           />
@@ -583,17 +662,17 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
             const isFaded = hoveredKey !== null && !isHovered;
             return (
               <Area
-                key={s.key}
-                dataKey={s.key}
-                fill={`url(#area-norm-${s.key})`}
-                stroke={s.color}
-                strokeWidth={isHovered ? 3 : 1.5}
-                strokeOpacity={isFaded ? 0.15 : 1}
-                fillOpacity={isHovered ? 1 : 0}
-                type="monotone"
-                animationDuration={500}
-                dot={false}
                 activeDot={{ r: 3, strokeWidth: 0 }}
+                animationDuration={500}
+                dataKey={s.key}
+                dot={false}
+                fill={`url(#area-norm-${s.key})`}
+                fillOpacity={isHovered ? 1 : 0}
+                key={s.key}
+                stroke={s.color}
+                strokeOpacity={isFaded ? 0.15 : 1}
+                strokeWidth={isHovered ? 3 : 1.5}
+                type="monotone"
               />
             );
           })}
@@ -605,8 +684,8 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
         {/* Fuel — always individual */}
         {groupedItems.fuel.map((it) => (
           <button
-            key={it.key}
             className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors"
+            key={it.key}
             onClick={() => handleLegendClick(it.key)}
             onMouseEnter={() => setHoveredKey(it.key)}
             onMouseLeave={() => setHoveredKey(null)}
@@ -622,10 +701,14 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
           className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors ${
             groceryExpanded ? "border" : ""
           }`}
-          style={groceryExpanded ? { borderColor: T.btnBorder } : undefined}
           onClick={toggleGrocery}
-          onMouseEnter={() => { if (!groceryExpanded) setHoveredKey(GROCERY_META.combinedKey); }}
+          onMouseEnter={() => {
+            if (!groceryExpanded) {
+              setHoveredKey(GROCERY_META.combinedKey);
+            }
+          }}
           onMouseLeave={() => setHoveredKey(null)}
+          style={groceryExpanded ? { borderColor: T.btnBorder } : undefined}
           type="button"
         >
           <LegendDot color={GROCERY_META.color} />
@@ -633,19 +716,20 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
           <span style={{ color: T.dimmed }}>{groceryExpanded ? "−" : "+"}</span>
         </button>
 
-        {groceryExpanded && groupedItems.grocery.map((it) => (
-          <button
-            key={it.key}
-            className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors"
-            onClick={() => handleLegendClick(it.key)}
-            onMouseEnter={() => setHoveredKey(it.key)}
-            onMouseLeave={() => setHoveredKey(null)}
-            type="button"
-          >
-            <LegendDot color={it.color} />
-            <span style={{ color: T.text }}>{it.label}</span>
-          </button>
-        ))}
+        {groceryExpanded &&
+          groupedItems.grocery.map((it) => (
+            <button
+              className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors"
+              key={it.key}
+              onClick={() => handleLegendClick(it.key)}
+              onMouseEnter={() => setHoveredKey(it.key)}
+              onMouseLeave={() => setHoveredKey(null)}
+              type="button"
+            >
+              <LegendDot color={it.color} />
+              <span style={{ color: T.text }}>{it.label}</span>
+            </button>
+          ))}
       </div>
     </div>
   );

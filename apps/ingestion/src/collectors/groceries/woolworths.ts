@@ -21,7 +21,9 @@ function extractProducts(): { name: string; price: number }[] {
   for (const card of cards) {
     const titleEl = card.querySelector('h3[id*="-title"]');
     const name = titleEl?.textContent?.trim() || "";
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
 
     const dollarEl = card.querySelector("product-price h3 em");
     const centEl = card.querySelector("product-price h3 span");
@@ -90,7 +92,7 @@ async function navigateWithRetry(
       console.warn(
         `[woolworths] Timeout (attempt ${attempt}/${MAX_RETRIES}), retrying...`
       );
-      await delay(8_000 * attempt);
+      await delay(8000 * attempt);
       return navigateWithRetry(page, url, attempt + 1);
     }
     throw e;
@@ -154,7 +156,9 @@ export async function scrapeWoolworths(
           console.warn(
             `[woolworths] Skipping ${item.category} — navigation failed`
           );
-          if (i < basket.length - 1) await randomDelay(7000, 10000);
+          if (i < basket.length - 1) {
+            await randomDelay(7000, 10_000);
+          }
           continue;
         }
 
@@ -168,13 +172,18 @@ export async function scrapeWoolworths(
 
         let matched = 0;
         for (const p of parsed) {
-          if (!item.sizePatterns.some((re) => re.test(p.name))) continue;
-          if (item.excludePatterns.some((re) => re.test(p.name))) continue;
+          if (!item.sizePatterns.some((re) => re.test(p.name))) {
+            continue;
+          }
+          if (item.excludePatterns.some((re) => re.test(p.name))) {
+            continue;
+          }
           if (
             item.includePatterns &&
             !item.includePatterns.some((re) => re.test(p.name))
-          )
+          ) {
             continue;
+          }
 
           if (p.price < item.priceRange.min || p.price > item.priceRange.max) {
             console.warn(
@@ -214,7 +223,7 @@ export async function scrapeWoolworths(
 
         // Delay with jitter (skip after last)
         if (i < basket.length - 1) {
-          await randomDelay(7000, 10000);
+          await randomDelay(7000, 10_000);
         }
       } catch (e) {
         console.error(

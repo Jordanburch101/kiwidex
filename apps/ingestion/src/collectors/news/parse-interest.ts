@@ -49,17 +49,25 @@ function parseInterestDate(dateStr: string): string {
     // Strip ordinal suffix: "30th" → "30"
     const cleaned = dateStr.replace(/(\d+)(st|nd|rd|th)/i, "$1");
     // "30 Mar 26, 3:15pm" → parse parts
-    const match = cleaned.match(
-      /(\d+)\s+(\w+)\s+(\d+),\s*(\d+):(\d+)(am|pm)/i
-    );
+    const match = cleaned.match(/(\d+)\s+(\w+)\s+(\d+),\s*(\d+):(\d+)(am|pm)/i);
     if (!match) {
       return new Date().toISOString();
     }
 
     const [, day, monthStr, yearShort, hourStr, minute, ampm] = match;
     const months: Record<string, number> = {
-      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+      jan: 0,
+      feb: 1,
+      mar: 2,
+      apr: 3,
+      may: 4,
+      jun: 5,
+      jul: 6,
+      aug: 7,
+      sep: 8,
+      oct: 9,
+      nov: 10,
+      dec: 11,
     };
 
     const month = months[monthStr!.toLowerCase()] ?? 0;
@@ -96,9 +104,7 @@ function extractTag(xml: string, tag: string): string | null {
 
 function decodeEntities(text: string): string {
   return text
-    .replace(/&#(\d+);/g, (_, code) =>
-      String.fromCharCode(Number(code))
-    )
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
     .replace(/&#x([0-9a-f]+);/gi, (_, hex) =>
       String.fromCharCode(Number.parseInt(hex, 16))
     )

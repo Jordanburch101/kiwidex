@@ -1,18 +1,12 @@
 "use client";
 
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
+  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
 } from "@workspace/ui/components/chart";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 type ValueFormat = "currency" | "percent" | "ratio" | "currency_k";
 
@@ -86,7 +80,7 @@ export function AreaChartSection({
   };
 
   return (
-    <ChartContainer config={chartConfig} className="w-full" style={{ height }}>
+    <ChartContainer className="w-full" config={chartConfig} style={{ height }}>
       <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
@@ -117,16 +111,16 @@ export function AreaChartSection({
         <ChartTooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(_, payload) => {
-                const d = payload?.[0]?.payload?.date;
-                return d ? formatDateLong(d) : "";
-              }}
               formatter={(value) => (
                 <span className="font-medium font-mono">
                   {formatTick(value as number, valueFormat)}
                 </span>
               )}
               hideIndicator
+              labelFormatter={(_, payload) => {
+                const d = payload?.[0]?.payload?.date;
+                return d ? formatDateLong(d) : "";
+              }}
             />
           }
         />

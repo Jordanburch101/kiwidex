@@ -1,8 +1,5 @@
 import type { BasketItem } from "./basket";
-import {
-  PAKNSAVE_CONFIG,
-  scrapeFoodstuffs,
-} from "./foodstuffs-scraper";
+import { PAKNSAVE_CONFIG, scrapeFoodstuffs } from "./foodstuffs-scraper";
 import type { ScrapedProduct } from "./types";
 
 /**

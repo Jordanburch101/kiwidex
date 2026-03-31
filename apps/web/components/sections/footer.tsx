@@ -51,7 +51,7 @@ export function Footer() {
           <ul className="space-y-1.5">
             <SourceRow detail="OCR, FX, Mortgages" name="Reserve Bank (RBNZ)" />
             <SourceRow detail="CPI, GDP, Employment" name="Stats NZ" />
-            <SourceRow detail="Fuel, Min. wage" name="MBIE" />
+            <SourceRow detail="Fuel, Min. wage, Rent" name="MBIE" />
             <SourceRow detail="House prices" name="REINZ" />
             <SourceRow detail="Grocery prices" name="Supermarkets" />
             <SourceRow detail="Power prices" name="Electricity Authority" />
@@ -77,9 +77,10 @@ export function Footer() {
       {/* Colophon */}
       <div className="flex flex-col items-center gap-3 px-6 py-5 sm:flex-row sm:justify-between sm:px-12">
         <p className="text-center text-[#bbb] text-[10px] leading-relaxed sm:text-left">
-          Data collected from public sources.
+          Rent data sourced from the MBIE Tenancy Services Market Rent register.
           <br />
-          May not reflect real-time values.
+          All data collected from public sources. May not reflect real-time
+          values.
         </p>
         <p className="font-bold font-heading text-[#d5d0c5] text-sm tracking-[0.05em]">
           The Kiwidex

@@ -18,14 +18,19 @@ console.log = (...args: unknown[]) => console.error(...args);
 
 const store = process.argv[2];
 
-const scrapers: Record<string, (basket: typeof BASKET) => Promise<ScrapedProduct[]>> = {
+const scrapers: Record<
+  string,
+  (basket: typeof BASKET) => Promise<ScrapedProduct[]>
+> = {
   woolworths: scrapeWoolworths,
   paknsave: scrapePakNSave,
   newworld: scrapeNewWorld,
 };
 
-if (!store || !scrapers[store]) {
-  console.error(`Usage: bun run scrape-store.ts <woolworths|paknsave|newworld>`);
+if (!(store && scrapers[store])) {
+  console.error(
+    "Usage: bun run scrape-store.ts <woolworths|paknsave|newworld>"
+  );
   process.exit(1);
 }
 
@@ -35,7 +40,9 @@ try {
   process.stdout.write(JSON.stringify(results));
   process.exit(0);
 } catch (e) {
-  console.error(`[${store}] Fatal error: ${e instanceof Error ? e.message : e}`);
+  console.error(
+    `[${store}] Fatal error: ${e instanceof Error ? e.message : e}`
+  );
   // Write empty array on failure so aggregator can continue
   process.stdout.write("[]");
   process.exit(1);

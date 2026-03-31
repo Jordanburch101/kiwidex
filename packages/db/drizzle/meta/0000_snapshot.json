@@ -67,18 +67,12 @@
       "indexes": {
         "metric_date_uniq": {
           "name": "metric_date_uniq",
-          "columns": [
-            "metric",
-            "date"
-          ],
+          "columns": ["metric", "date"],
           "isUnique": true
         },
         "metric_date_idx": {
           "name": "metric_date_idx",
-          "columns": [
-            "metric",
-            "date"
-          ],
+          "columns": ["metric", "date"],
           "isUnique": false
         }
       },

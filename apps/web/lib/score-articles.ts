@@ -17,38 +17,76 @@
 // --- Keyword tiers ---
 
 const TIER_1 = [
-  "ocr", "rbnz", "reserve bank", "monetary policy",
-  "gdp", "cpi", "recession", "cash rate", "fiscal", "budget",
+  "ocr",
+  "rbnz",
+  "reserve bank",
+  "monetary policy",
+  "gdp",
+  "cpi",
+  "recession",
+  "cash rate",
+  "fiscal",
+  "budget",
 ];
 const TIER_2 = [
-  "interest rate", "inflation", "mortgage", "house price", "housing",
-  "unemployment", "employment", "labour market", "property", "reinz",
-  "cost of living", "exchange rate",
+  "interest rate",
+  "inflation",
+  "mortgage",
+  "house price",
+  "housing",
+  "unemployment",
+  "employment",
+  "labour market",
+  "property",
+  "reinz",
+  "cost of living",
+  "exchange rate",
 ];
 const ALL_ECONOMY_TERMS = [
-  ...TIER_1, ...TIER_2,
-  "petrol", "fuel", "diesel", "grocery", "supermarket",
-  "wage", "income", "economy", "trade", "currency", "nzd", "rent",
+  ...TIER_1,
+  ...TIER_2,
+  "petrol",
+  "fuel",
+  "diesel",
+  "grocery",
+  "supermarket",
+  "wage",
+  "income",
+  "economy",
+  "trade",
+  "currency",
+  "nzd",
+  "rent",
 ];
 
 function getTitleKeywordTierScore(title: string, excerpt: string): number {
   const titleLower = title.toLowerCase();
   for (const kw of TIER_1) {
-    if (titleLower.includes(kw)) return 30;
+    if (titleLower.includes(kw)) {
+      return 30;
+    }
   }
   for (const kw of TIER_2) {
-    if (titleLower.includes(kw)) return 20;
+    if (titleLower.includes(kw)) {
+      return 20;
+    }
   }
   for (const kw of ALL_ECONOMY_TERMS) {
-    if (titleLower.includes(kw)) return 10;
+    if (titleLower.includes(kw)) {
+      return 10;
+    }
   }
   // Fallback: check excerpt for smaller bonus
   const excerptLower = excerpt.toLowerCase();
   for (const kw of TIER_1) {
-    if (excerptLower.includes(kw)) return 15;
+    if (excerptLower.includes(kw)) {
+      return 15;
+    }
   }
   for (const kw of TIER_2) {
-    if (excerptLower.includes(kw)) return 10;
+    if (excerptLower.includes(kw)) {
+      return 10;
+    }
   }
   return 5;
 }
@@ -59,26 +97,97 @@ function getHeadlineFocusScore(title: string): number {
   const titleLower = title.toLowerCase();
   let count = 0;
   for (const term of ALL_ECONOMY_TERMS) {
-    if (titleLower.includes(term)) count++;
+    if (titleLower.includes(term)) {
+      count++;
+    }
   }
-  if (count >= 3) return 20;
-  if (count === 2) return 12;
-  if (count === 1) return 5;
+  if (count >= 3) {
+    return 20;
+  }
+  if (count === 2) {
+    return 12;
+  }
+  if (count === 1) {
+    return 5;
+  }
   return 0;
 }
 
 // --- Cross-source coverage (story clustering) ---
 
 const STOP_WORDS = new Set([
-  "a", "an", "the", "is", "are", "was", "were", "be", "been",
-  "to", "of", "in", "for", "on", "with", "at", "by", "from",
-  "as", "it", "its", "this", "that", "and", "or", "but", "not",
-  "will", "would", "could", "should", "may", "can", "has", "have",
-  "had", "do", "does", "did", "how", "why", "what", "when", "who",
-  "which", "where", "than", "more", "most", "very", "just", "also",
-  "says", "said", "new", "after", "over", "into", "up", "out",
-  "about", "no", "all", "some", "if", "so", "we", "our", "they",
-  "their", "nz", "zealand",
+  "a",
+  "an",
+  "the",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "to",
+  "of",
+  "in",
+  "for",
+  "on",
+  "with",
+  "at",
+  "by",
+  "from",
+  "as",
+  "it",
+  "its",
+  "this",
+  "that",
+  "and",
+  "or",
+  "but",
+  "not",
+  "will",
+  "would",
+  "could",
+  "should",
+  "may",
+  "can",
+  "has",
+  "have",
+  "had",
+  "do",
+  "does",
+  "did",
+  "how",
+  "why",
+  "what",
+  "when",
+  "who",
+  "which",
+  "where",
+  "than",
+  "more",
+  "most",
+  "very",
+  "just",
+  "also",
+  "says",
+  "said",
+  "new",
+  "after",
+  "over",
+  "into",
+  "up",
+  "out",
+  "about",
+  "no",
+  "all",
+  "some",
+  "if",
+  "so",
+  "we",
+  "our",
+  "they",
+  "their",
+  "nz",
+  "zealand",
 ]);
 
 function extractSignificantWords(title: string): Set<string> {
@@ -91,8 +200,8 @@ function extractSignificantWords(title: string): Set<string> {
 }
 
 interface StoryCluster {
-  titles: string[];
   sources: Set<string>;
+  titles: string[];
 }
 
 function buildStoryClusters(
@@ -110,7 +219,9 @@ function buildStoryClusters(
         const existingWords = extractSignificantWords(existingTitle);
         let overlap = 0;
         for (const word of words) {
-          if (existingWords.has(word)) overlap++;
+          if (existingWords.has(word)) {
+            overlap++;
+          }
         }
         if (overlap >= 2 && overlap > bestOverlap) {
           bestOverlap = overlap;
@@ -140,9 +251,15 @@ function getStoryCoverageScore(
   for (const cluster of clusters) {
     if (cluster.titles.includes(title)) {
       const sourceCount = cluster.sources.size;
-      if (sourceCount >= 4) return 45;
-      if (sourceCount >= 3) return 30;
-      if (sourceCount >= 2) return 15;
+      if (sourceCount >= 4) {
+        return 45;
+      }
+      if (sourceCount >= 3) {
+        return 30;
+      }
+      if (sourceCount >= 2) {
+        return 15;
+      }
       return 0;
     }
   }
@@ -152,23 +269,55 @@ function getStoryCoverageScore(
 // --- Breaking/urgency language ---
 
 const URGENCY_WORDS = [
-  "crisis", "emergency", "record", "historic", "unprecedented",
-  "shock", "surge", "surges", "plunge", "plunges",
-  "collapse", "collapses", "crash", "crashes",
-  "cut", "cuts", "hike", "hikes", "freeze", "freezes",
-  "halt", "halts", "breaking", "urgent", "warns", "warning",
-  "soars", "tumbles", "spikes", "slump", "slumps",
-  "plummets", "skyrockets",
+  "crisis",
+  "emergency",
+  "record",
+  "historic",
+  "unprecedented",
+  "shock",
+  "surge",
+  "surges",
+  "plunge",
+  "plunges",
+  "collapse",
+  "collapses",
+  "crash",
+  "crashes",
+  "cut",
+  "cuts",
+  "hike",
+  "hikes",
+  "freeze",
+  "freezes",
+  "halt",
+  "halts",
+  "breaking",
+  "urgent",
+  "warns",
+  "warning",
+  "soars",
+  "tumbles",
+  "spikes",
+  "slump",
+  "slumps",
+  "plummets",
+  "skyrockets",
 ];
 
 function getUrgencyScore(title: string): number {
   const titleLower = title.toLowerCase();
   let count = 0;
   for (const word of URGENCY_WORDS) {
-    if (titleLower.includes(word)) count++;
+    if (titleLower.includes(word)) {
+      count++;
+    }
   }
-  if (count >= 2) return 15;
-  if (count === 1) return 8;
+  if (count >= 2) {
+    return 15;
+  }
+  if (count === 1) {
+    return 8;
+  }
   return 0;
 }
 
@@ -177,8 +326,12 @@ function getUrgencyScore(title: string): number {
 function getRecencyTiebreaker(publishedAt: string): number {
   const ageHours =
     (Date.now() - new Date(publishedAt).getTime()) / (1000 * 60 * 60);
-  if (ageHours <= 24) return 10;
-  if (ageHours <= 48) return 7;
+  if (ageHours <= 24) {
+    return 10;
+  }
+  if (ageHours <= 48) {
+    return 7;
+  }
   return 3;
 }
 
@@ -193,7 +346,9 @@ export function pickLeadAndRest<
     imageUrl: string | null;
   },
 >(articles: T[]): { lead: T; rest: T[] } | null {
-  if (articles.length === 0) return null;
+  if (articles.length === 0) {
+    return null;
+  }
 
   const clusters = buildStoryClusters(
     articles.map((a) => ({ title: a.title, source: a.source }))

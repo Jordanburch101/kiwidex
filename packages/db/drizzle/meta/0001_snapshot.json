@@ -67,10 +67,7 @@
       "indexes": {
         "metric_date_uniq": {
           "name": "metric_date_uniq",
-          "columns": [
-            "metric",
-            "date"
-          ],
+          "columns": ["metric", "date"],
           "isUnique": true
         }
       },
@@ -170,11 +167,7 @@
       "indexes": {
         "product_store_date_uniq": {
           "name": "product_store_date_uniq",
-          "columns": [
-            "product_id",
-            "store",
-            "date"
-          ],
+          "columns": ["product_id", "store", "date"],
           "isUnique": true
         }
       },

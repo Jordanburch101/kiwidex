@@ -65,6 +65,15 @@ export const products = sqliteTable(
   ]
 );
 
+export const summaries = sqliteTable("summaries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  content: text("content").notNull(),
+  metrics: text("metrics").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
 export const articles = sqliteTable("articles", {
   url: text("url").primaryKey(),
   title: text("title").notNull(),

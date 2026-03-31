@@ -121,7 +121,8 @@ export const METRIC_META = {
     label: "Avg. Income",
     unit: "nzd",
     category: "employment_income",
-    description: "Average annual income (derived from QES avg hourly earnings × 2080hrs)",
+    description:
+      "Average annual income (derived from QES avg hourly earnings × 2080hrs)",
   },
   wage_growth: {
     label: "Wage Growth",

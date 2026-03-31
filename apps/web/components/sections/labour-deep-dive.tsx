@@ -1,8 +1,8 @@
 import { SectionHeader } from "@workspace/ui/components/section-header";
 import { AreaChartSection } from "@/components/charts/area-chart";
 import { MultiLineChart } from "@/components/charts/multi-line-chart";
-import { getLabourChartData } from "@/lib/queries";
 import { LABOUR_COLORS } from "@/lib/colors";
+import { getLabourChartData } from "@/lib/queries";
 
 export async function LabourDeepDive() {
   const { unemployment, wageGrowth, cpi, medianIncome } =
@@ -44,7 +44,11 @@ export async function LabourDeepDive() {
             data={wageVsCpi}
             height={180}
             lines={[
-              { key: "wages", color: LABOUR_COLORS.wageGrowth, label: "Wage Growth" },
+              {
+                key: "wages",
+                color: LABOUR_COLORS.wageGrowth,
+                label: "Wage Growth",
+              },
               { key: "cpi", color: LABOUR_COLORS.cpi, label: "CPI" },
             ]}
             valueFormat="percent"

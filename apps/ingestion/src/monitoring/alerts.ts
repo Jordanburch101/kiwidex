@@ -15,7 +15,9 @@ const alertedIssues = new Map<string, number>();
 
 function shouldAlert(issueKey: string): boolean {
   const lastAlerted = alertedIssues.get(issueKey);
-  if (!lastAlerted) return true;
+  if (!lastAlerted) {
+    return true;
+  }
   return Date.now() - lastAlerted > ALERT_COOLDOWN_MS;
 }
 
@@ -74,7 +76,6 @@ function buildAlertHtml(
 
   return lines.join("\n");
 }
-
 
 export async function checkAndAlert(): Promise<void> {
   const latestRuns = await getLatestRuns(db);

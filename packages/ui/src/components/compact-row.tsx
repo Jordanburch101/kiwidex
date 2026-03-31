@@ -18,6 +18,7 @@ const INDICATOR = {
 
 interface CompactRowProps {
   change: string;
+  changePeriod?: string;
   changeType: "up" | "down" | "neutral";
   description?: string;
   label: string;
@@ -58,6 +59,7 @@ export function CompactRow({
   label,
   value,
   change,
+  changePeriod,
   changeType,
   description,
   sentiment,
@@ -97,6 +99,9 @@ export function CompactRow({
           >
             {change}
           </span>
+          {changePeriod && (
+            <span className="text-[#998] text-[10px]">{changePeriod}</span>
+          )}
         </div>
         {description && (
           <p className="mb-3 text-[#887] text-[11px] leading-relaxed">

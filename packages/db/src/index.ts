@@ -13,6 +13,7 @@ export {
   getLatestArticles,
   getLatestByCategory,
   getLatestRuns,
+  getLatestSummary,
   getLatestValue,
   getProductsByCategory,
   getStaleCollectors,
@@ -20,9 +21,10 @@ export {
   insertArticles,
   insertProducts,
   insertScraperRun,
+  insertSummary,
   type NewArticle,
   type NewProduct,
   type NewScraperRun,
   type ScraperRun,
 } from "./queries";
-export { articles, metrics, products, scraperRuns } from "./schema";
+export { articles, metrics, products, scraperRuns, summaries } from "./schema";

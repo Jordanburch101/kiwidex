@@ -19,9 +19,7 @@ if (skipList.size > 0) {
 console.log("");
 
 const RECENT_DAYS = 90;
-const cutoffDate = new Date(
-  Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000
-)
+const cutoffDate = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000)
   .toISOString()
   .split("T")[0]!;
 

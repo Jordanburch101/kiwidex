@@ -1,5 +1,6 @@
 "use client";
 
+import { animate, motion, useMotionValue, useSpring } from "motion/react";
 import {
   type ReactNode,
   useCallback,
@@ -7,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { animate, motion, useMotionValue, useSpring } from "motion/react";
 
 interface MarqueeProps {
   children: ReactNode;
@@ -35,7 +35,9 @@ export function Marquee({ children, speed = 50 }: MarqueeProps) {
 
   // Measure the content half-width (one copy of children)
   useEffect(() => {
-    if (!innerRef.current) return;
+    if (!innerRef.current) {
+      return;
+    }
     const measure = () => {
       const w = innerRef.current!.scrollWidth / 2;
       setHalfWidth(w);
@@ -49,7 +51,9 @@ export function Marquee({ children, speed = 50 }: MarqueeProps) {
   // Wrap x so it loops seamlessly
   const wrap = useCallback(
     (v: number) => {
-      if (halfWidth === 0) return v;
+      if (halfWidth === 0) {
+        return v;
+      }
       return (((-v % halfWidth) + halfWidth) % halfWidth) * -1;
     },
     [halfWidth]
@@ -64,7 +68,9 @@ export function Marquee({ children, speed = 50 }: MarqueeProps) {
         return;
       }
 
-      const dt = lastFrameTime.current ? (time - lastFrameTime.current) / 1000 : 0;
+      const dt = lastFrameTime.current
+        ? (time - lastFrameTime.current) / 1000
+        : 0;
       lastFrameTime.current = time;
 
       const pxPerSec = halfWidth / speed;
@@ -78,7 +84,9 @@ export function Marquee({ children, speed = 50 }: MarqueeProps) {
   );
 
   useEffect(() => {
-    if (!halfWidth) return;
+    if (!halfWidth) {
+      return;
+    }
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
   }, [halfWidth, tick]);
@@ -109,7 +117,9 @@ export function Marquee({ children, speed = 50 }: MarqueeProps) {
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!isDragging.current) return;
+      if (!isDragging.current) {
+        return;
+      }
       const delta = e.clientX - lastPointerX.current;
       lastPointerX.current = e.clientX;
       x.jump(wrap(x.get() + delta));
@@ -124,7 +134,9 @@ export function Marquee({ children, speed = 50 }: MarqueeProps) {
   );
 
   const onPointerUp = useCallback(() => {
-    if (!isDragging.current) return;
+    if (!isDragging.current) {
+      return;
+    }
     isDragging.current = false;
 
     const samples = velocityTracker.current;
@@ -135,7 +147,9 @@ export function Marquee({ children, speed = 50 }: MarqueeProps) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const last = samples[samples.length - 1]!;
       const dt = (last.t - first.t) / 1000;
-      if (dt > 0) velocity = (last.x - first.x) / dt;
+      if (dt > 0) {
+        velocity = (last.x - first.x) / dt;
+      }
     }
 
     // Momentum spring with overshoot, then ease back to full speed
@@ -151,18 +165,18 @@ export function Marquee({ children, speed = 50 }: MarqueeProps) {
 
   return (
     <div
-      className="relative overflow-x-clip border-[#e5e0d5] border-b bg-[#f5f3ee] touch-pan-y select-none"
+      className="relative touch-pan-y select-none overflow-x-clip border-[#e5e0d5] border-b bg-[#f5f3ee]"
       onMouseEnter={onContainerEnter}
       onMouseLeave={onContainerLeave}
     >
       <motion.div
-        ref={innerRef}
         className="flex w-max cursor-grab active:cursor-grabbing"
-        style={{ x }}
+        onPointerCancel={onPointerUp}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        ref={innerRef}
+        style={{ x }}
       >
         <div className="flex items-center py-2">{children}</div>
         <div aria-hidden="true" className="flex items-center py-2">

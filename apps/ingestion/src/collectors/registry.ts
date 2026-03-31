@@ -7,6 +7,7 @@ import collectRBNZ from "./rbnz/index";
 import collectREINZ from "./reinz/index";
 import collectRentVsBuy from "./rent-vs-buy/index";
 import collectStatsNZ from "./stats-nz/index";
+import collectSummary from "./summary/index";
 import type { Collector } from "./types";
 
 export const registry: Record<string, Collector> = {
@@ -19,4 +20,5 @@ export const registry: Record<string, Collector> = {
   "rent-vs-buy": collectRentVsBuy,
   news: collectNews,
   groceries: collectGroceries,
+  summary: collectSummary,
 };

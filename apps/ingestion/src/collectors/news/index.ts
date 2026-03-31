@@ -1,9 +1,9 @@
 import { db, insertArticles, type NewArticle } from "@workspace/db";
 import type { CollectorResult } from "../types";
 import { matchesEconomyKeywords } from "./keywords";
+import { parse1NewsRss } from "./parse-1news";
 import { parseStuffAtom } from "./parse-atom";
 import { parseHeraldRss } from "./parse-herald";
-import { parse1NewsRss } from "./parse-1news";
 import { type ParsedArticle, parseRnzRss } from "./parse-rss";
 import { scoreArticles } from "./score";
 
@@ -30,7 +30,9 @@ async function fetchOgImage(url: string): Promise<string | null> {
 
     // Only read first 100KB — og:image is in <head> but RNZ pages have ~68KB of inline CSS/JS before it
     const reader = response.body?.getReader();
-    if (!reader) return null;
+    if (!reader) {
+      return null;
+    }
 
     const chunks: Uint8Array[] = [];
     let totalBytes = 0;
@@ -38,7 +40,9 @@ async function fetchOgImage(url: string): Promise<string | null> {
 
     while (totalBytes < MAX_BYTES) {
       const { done, value } = await reader.read();
-      if (done || !value) break;
+      if (done || !value) {
+        break;
+      }
       chunks.push(value);
       totalBytes += value.byteLength;
     }

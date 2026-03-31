@@ -14,13 +14,13 @@ export interface ScrapedPrice {
 }
 
 export interface ScrapedProduct {
-  productId: string;
-  store: string;
+  brand: string;
   category: string;
   name: string;
-  brand: string;
-  size: string;
   price: number;
-  unitPrice?: string;
+  productId: string;
+  size: string;
   source: string;
+  store: string;
+  unitPrice?: string;
 }

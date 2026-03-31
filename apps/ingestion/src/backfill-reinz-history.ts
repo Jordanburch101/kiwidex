@@ -89,9 +89,7 @@ async function main() {
         },
       });
 
-      if (!response.ok) {
-        console.log(`  ${label}: HTTP ${response.status} — skipped`);
-      } else {
+      if (response.ok) {
         const html = await response.text();
         const price = extractMedianPrice(html);
 
@@ -104,12 +102,12 @@ async function main() {
             date,
             source: url,
           });
-          console.log(
-            `  ${label}: $${price.toLocaleString()} ✓`
-          );
+          console.log(`  ${label}: $${price.toLocaleString()} ✓`);
         } else {
           console.log(`  ${label}: page loaded but no price found`);
         }
+      } else {
+        console.log(`  ${label}: HTTP ${response.status} — skipped`);
       }
     } catch (e) {
       console.log(`  ${label}: fetch failed — ${e}`);
