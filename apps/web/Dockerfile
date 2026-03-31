@@ -20,8 +20,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 RUN bun run build --filter=web
 
-# ── Stage 4: Production runner ──
-FROM oven/bun:1.3.9-slim AS runner
+# ── Stage 4: Production runner (Node.js for Next.js standalone) ──
+FROM node:22-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -32,4 +32,4 @@ ENV HOSTNAME=0.0.0.0
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 EXPOSE 3000
-CMD ["bun", "apps/web/server.js"]
+CMD ["node", "apps/web/server.js"]
