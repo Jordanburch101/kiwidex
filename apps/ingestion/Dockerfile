@@ -73,13 +73,8 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN addgroup --system --gid 1001 app && \
-    adduser --system --uid 1001 app
-
 # Copy app source + deps + browsers
-COPY --from=builder --chown=app:app /app/ .
-COPY --from=builder --chown=app:app /ms-playwright /ms-playwright
-
-USER app
+COPY --from=builder /app/ .
+COPY --from=builder /ms-playwright /ms-playwright
 EXPOSE 3001
 CMD ["bun", "apps/ingestion/src/index.ts"]
