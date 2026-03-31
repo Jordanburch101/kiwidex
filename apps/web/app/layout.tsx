@@ -36,7 +36,6 @@ export const metadata: Metadata = {
     title: "The Kiwidex — New Zealand Economy Dashboard",
     description:
       "Live NZ economic indicators updated daily: CPI, fuel, groceries, housing, FX, employment.",
-    creator: "@jordanburchdev",
   },
   alternates: {
     canonical: "https://kiwidex.co.nz",
