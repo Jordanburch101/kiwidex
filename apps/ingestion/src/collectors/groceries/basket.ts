@@ -129,11 +129,13 @@ export const BASKET: BasketItem[] = [
     standardUnit: "1kg",
     searchQueries: {
       woolworths: "bananas fresh fruit",
-      paknsave: "bananas loose",
-      newworld: "bananas loose",
+      paknsave: "bananas",
+      newworld: "bananas",
     },
     sizePatterns: [/banana/i],
-    includePatterns: [/fresh|loose|yellow/i],
+    // Match fresh/loose/yellow OR a bare "Bananas" product (Foodstuffs API
+    // labels the basic fruit simply as "Bananas" with no qualifier)
+    includePatterns: [/fresh|loose|yellow|^bananas?\b/i],
     excludePatterns: [
       /chip|dried|organic|baby|smoothie|cake|bread|muffin|plant|bar|cookie|biscuit|yoghurt|milk|protein|sweet|candy|lolly|ice.?cream|flavour|brine|blossom|powder|cereal|slice|pouch|cooking|green|snack.?pack|lady.?finger|plantain/i,
     ],
