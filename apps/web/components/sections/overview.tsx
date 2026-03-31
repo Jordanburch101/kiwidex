@@ -50,9 +50,9 @@ export async function Overview() {
 
       {/* Right column: Key indicators (housing + economy) */}
       <div className="flex flex-col">
-        <h3 className="mb-4 border-[#e5e0d5] border-b pb-2 font-heading font-semibold text-[#2a2520] text-sm">
+        <h2 className="mb-4 border-[#e5e0d5] border-b pb-2 font-heading font-semibold text-[#2a2520] text-sm">
           Key Indicators
-        </h3>
+        </h2>
         <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-[#e8e4dc]">
           {economyRows.map((item, i) => (
             <div

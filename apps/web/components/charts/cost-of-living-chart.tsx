@@ -247,12 +247,12 @@ function ChartHeader({
     <>
       <div className="mb-1 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3
+          <h2
             className="font-heading font-semibold text-sm"
             style={{ color: T.heading }}
           >
             {title}
-          </h3>
+          </h2>
           {backButton && (
             <button
               className="rounded-md border px-2 py-0.5 text-xs transition-colors"
