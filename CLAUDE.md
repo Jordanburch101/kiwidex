@@ -89,7 +89,7 @@ cd apps/ingestion && bun run collect # Run all collectors
 
 - `basket.ts` — Standardised basket items with search queries, size validation regexes, price ranges
 - `brands.ts` — Brand extraction from 40+ known NZ grocery brands
-- `woolworths.ts` — Firefox + page.evaluate for Woolworths NZ
+- `woolworths.ts` — Chromium + stealth + page.evaluate for Woolworths NZ
 - `foodstuffs-scraper.ts` — Shared Chromium + stealth scraper for Pak'nSave + New World
 - `paknsave.ts` / `newworld.ts` — Thin wrappers over foodstuffs-scraper
 - `index.ts` — Aggregator: runs all 3, writes products to `products` table, averages to `metrics`

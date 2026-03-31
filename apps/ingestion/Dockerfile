@@ -45,7 +45,7 @@ RUN apt-get update && \
       libxrandr2 \
       xdg-utils \
       wget && \
-    bunx playwright install chromium firefox && \
+    bunx playwright install chromium && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

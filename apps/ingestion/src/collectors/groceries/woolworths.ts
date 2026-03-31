@@ -1,4 +1,3 @@
-import { firefox } from "playwright";
 import type { BasketItem } from "./basket";
 import { extractBrand } from "./brands";
 import type { ScrapedProduct } from "./types";
@@ -44,6 +43,9 @@ function extractProducts(): { name: string; price: number }[] {
   return items;
 }
 
+// Register stealth plugin once at module scope
+let stealthRegistered = false;
+
 const MAX_RETRIES = 2;
 
 /**
@@ -60,6 +62,28 @@ async function navigateWithRetry(
       timeout: 30_000,
     });
 
+    // Wait for page to settle — catch Cloudflare redirects
+    await delay(2000);
+
+    // Check if we landed on a Cloudflare challenge or error page
+    const currentUrl = page.url();
+    if (
+      currentUrl.includes("chrome-error") ||
+      currentUrl.includes("challenges.cloudflare")
+    ) {
+      if (attempt <= MAX_RETRIES) {
+        console.warn(
+          `[woolworths] Cloudflare challenge detected (attempt ${attempt}/${MAX_RETRIES}), waiting...`
+        );
+        await delay(10_000 * attempt);
+        return navigateWithRetry(page, url, attempt + 1);
+      }
+      console.error(
+        `[woolworths] Cloudflare blocked after ${MAX_RETRIES} retries`
+      );
+      return false;
+    }
+
     // Wait for Angular to render product cards
     try {
       await page.waitForSelector("cdx-card", { timeout: 15_000 });
@@ -73,11 +97,12 @@ async function navigateWithRetry(
       ) {
         if (attempt <= MAX_RETRIES) {
           console.warn(
-            `[woolworths] Cloudflare challenge (attempt ${attempt}/${MAX_RETRIES}), waiting...`
+            `[woolworths] Cloudflare JS challenge (attempt ${attempt}/${MAX_RETRIES}), waiting...`
           );
-          await delay(10_000 * attempt);
+          await delay(15_000 * attempt);
           return navigateWithRetry(page, url, attempt + 1);
         }
+        console.error("[woolworths] Cloudflare challenge not resolved");
         return false;
       }
       // Page loaded but no cdx-card elements — could be empty results
@@ -85,6 +110,24 @@ async function navigateWithRetry(
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+
+    // Handle "navigation interrupted" — page is redirecting (Cloudflare)
+    if (msg.includes("interrupted by another navigation")) {
+      if (attempt <= MAX_RETRIES) {
+        console.warn(
+          `[woolworths] Navigation interrupted (attempt ${attempt}/${MAX_RETRIES}), waiting...`
+        );
+        try {
+          await page.waitForLoadState("domcontentloaded", { timeout: 30_000 });
+        } catch {
+          // ignore
+        }
+        await delay(5000 * attempt);
+        return navigateWithRetry(page, url, attempt + 1);
+      }
+      return false;
+    }
+
     if (
       (msg.includes("Timeout") || msg.includes("ERR_TIMED_OUT")) &&
       attempt <= MAX_RETRIES
@@ -103,18 +146,32 @@ export async function scrapeWoolworths(
   basket: BasketItem[]
 ): Promise<ScrapedProduct[]> {
   console.log("[woolworths] Starting scrape...");
-  const browser = await firefox.launch({ headless: true });
+
+  const { chromium } = await import("playwright-extra");
+
+  if (!stealthRegistered) {
+    const stealthModule = await import("puppeteer-extra-plugin-stealth");
+    const stealthFn =
+      typeof stealthModule.default === "function"
+        ? stealthModule.default
+        : (stealthModule as unknown as { default: () => unknown }).default;
+    // biome-ignore lint/suspicious/noExplicitAny: stealth plugin types don't align with playwright-extra
+    chromium.use(stealthFn() as any);
+    stealthRegistered = true;
+  }
+
+  const browser = await chromium.launch({ headless: true });
   const allProducts: ScrapedProduct[] = [];
 
   try {
     const context = await browser.newContext({
       userAgent:
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       viewport: { width: 1280, height: 800 },
     });
     const page = await context.newPage();
 
-    // Block heavy resources
+    // Block heavy resources for speed (NOT Cloudflare challenge scripts)
     await page.route("**/*", (route) => {
       const resourceType = route.request().resourceType();
       const url = route.request().url();
@@ -132,8 +189,8 @@ export async function scrapeWoolworths(
       return route.continue();
     });
 
-    // Warmup: visit homepage to establish session cookies
-    console.log("[woolworths] Warming up...");
+    // Warmup: visit homepage to establish session/Cloudflare cookies
+    console.log("[woolworths] Warming up (homepage)...");
     try {
       await page.goto("https://www.woolworths.co.nz", {
         waitUntil: "domcontentloaded",
@@ -142,7 +199,8 @@ export async function scrapeWoolworths(
     } catch {
       // timeout is fine — cookies should still be set
     }
-    await delay(3000);
+    // Let any Cloudflare challenge JS run
+    await delay(5000);
 
     for (let i = 0; i < basket.length; i++) {
       const item = basket[i]!;
