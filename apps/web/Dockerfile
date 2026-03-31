@@ -26,22 +26,22 @@ ENV DATABASE_URL=https://libsql-production-c788.up.railway.app
 ENV DATABASE_AUTH_TOKEN=$DATABASE_AUTH_TOKEN
 RUN bun run build --filter=web
 
-# ── Stage 4: Production runner (Node.js for Next.js standalone) ──
-FROM node:22-slim AS runner
+# ── Stage 4: Production runner (Bun) ──
+FROM oven/bun:1.3.9-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+RUN groupadd --system --gid 1001 app && \
+    useradd --system --uid 1001 -g app app
 
 # Copy standalone server, static assets, and public folder
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=1001:1001 /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=1001:1001 /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=1001:1001 /app/apps/web/public ./apps/web/public
 
-USER nextjs
+USER app
 EXPOSE 3000
-CMD ["node", "apps/web/server.js"]
+CMD ["bun", "apps/web/server.js"]
