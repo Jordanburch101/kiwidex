@@ -7,7 +7,14 @@ import {
 import { Resend } from "resend";
 
 const STALE_THRESHOLD_DAYS = 3;
-const DEGRADED_PRODUCT_THRESHOLD = 25;
+// Per-store minimum product thresholds (roughly half their normal count)
+// Woolworths: ~28 normal, Pak'nSave: ~20 normal, New World: ~10 normal
+const DEGRADED_STORE_THRESHOLDS: Record<string, number> = {
+  "woolworths.co.nz": 15,
+  "paknsave.co.nz": 10,
+  "newworld.co.nz": 5,
+};
+const DEGRADED_PRODUCT_THRESHOLD = 15;
 const ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Track alerted issues with timestamps for TTL-based dedup
@@ -102,26 +109,31 @@ export async function checkAndAlert(): Promise<void> {
       }
     }
 
-    // Check for degraded grocery results
+    // Check for degraded grocery results (per-store or aggregate)
     if (
       run.collector === "groceries" &&
       run.status === "success" &&
-      run.totalProducts !== null &&
-      run.totalProducts < DEGRADED_PRODUCT_THRESHOLD
+      run.totalProducts !== null
     ) {
-      const issueKey = `degraded:${key}`;
-      if (shouldAlert(issueKey)) {
-        markAlerted(issueKey);
-        await sendAlert(
-          `Degraded Results: ${key}`,
-          buildAlertHtml(
-            `${key} returned only ${run.totalProducts} products (expected 25+)`,
-            {
-              action:
-                "Check if the store website structure changed or if products are being filtered incorrectly",
-            }
-          )
-        );
+      const threshold = run.store
+        ? (DEGRADED_STORE_THRESHOLDS[run.store] ?? DEGRADED_PRODUCT_THRESHOLD)
+        : DEGRADED_PRODUCT_THRESHOLD;
+
+      if (run.totalProducts < threshold) {
+        const issueKey = `degraded:${key}`;
+        if (shouldAlert(issueKey)) {
+          markAlerted(issueKey);
+          await sendAlert(
+            `Degraded Results: ${key}`,
+            buildAlertHtml(
+              `${key} returned only ${run.totalProducts} products (expected ${threshold}+)`,
+              {
+                action:
+                  "Check if the store website structure changed or if products are being filtered incorrectly",
+              }
+            )
+          );
+        }
       }
     }
   }
