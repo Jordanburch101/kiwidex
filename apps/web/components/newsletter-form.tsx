@@ -1,7 +1,7 @@
 "use client";
 
-import { subscribeNewsletter } from "@/app/actions/newsletter";
 import { useActionState } from "react";
+import { subscribeNewsletter } from "@/app/actions/newsletter";
 
 export function NewsletterForm() {
   const [state, action, pending] = useActionState(subscribeNewsletter, {
@@ -24,8 +24,8 @@ export function NewsletterForm() {
           className="w-full border border-[#d5d0c5] border-r-0 bg-[#faf9f6] px-4 py-2.5 font-sans text-[#2a2520] text-xs outline-none placeholder:text-[#bbb] focus:border-[#2a2520] sm:w-60"
           name="email"
           placeholder="your@email.co.nz"
-          type="email"
           required
+          type="email"
         />
         <button
           className="shrink-0 border border-[#2a2520] bg-[#2a2520] px-5 py-2.5 font-semibold text-[#faf9f6] text-[10px] uppercase tracking-[0.15em] transition-colors hover:bg-transparent hover:text-[#2a2520] disabled:opacity-50"

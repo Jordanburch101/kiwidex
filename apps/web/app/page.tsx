@@ -98,7 +98,6 @@ function JsonLd() {
     <>
       {STRUCTURED_DATA.map((data) => (
         <script
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted hardcoded JSON-LD
           dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
           key={data["@type"]}
           type="application/ld+json"

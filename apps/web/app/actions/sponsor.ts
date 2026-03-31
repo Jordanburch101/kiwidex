@@ -39,7 +39,8 @@ export async function submitSponsorEnquiry(
 
   const resend = new Resend(process.env.RESEND_API_KEY);
 
-  const toEmail = process.env.SPONSOR_CONTACT_EMAIL || "jordanburch.dev@gmail.com";
+  const toEmail =
+    process.env.SPONSOR_CONTACT_EMAIL || "jordanburch.dev@gmail.com";
 
   const { error } = await resend.emails.send({
     from: "The Kiwidex <onboarding@resend.dev>",
