@@ -50,7 +50,7 @@ function formatDateLong(d: string): string {
 
 interface MultiLinePoint {
   date: string;
-  [key: string]: string | number;
+  [key: string]: string | number | undefined;
 }
 
 interface MultiLineChartProps {

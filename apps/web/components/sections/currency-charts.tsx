@@ -11,6 +11,7 @@ interface FxPoint {
   date: string;
   eur?: number;
   usd?: number;
+  [key: string]: string | number | undefined;
 }
 
 interface CurrencyChartsProps {

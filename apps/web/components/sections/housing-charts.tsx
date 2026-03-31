@@ -17,6 +17,7 @@ interface MortgagePoint {
   floating?: number;
   oneYear?: number;
   twoYear?: number;
+  [key: string]: string | number | undefined;
 }
 
 interface HousingChartsProps {

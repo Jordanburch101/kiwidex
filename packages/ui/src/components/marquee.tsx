@@ -130,8 +130,10 @@ export function Marquee({ children, speed = 50 }: MarqueeProps) {
     const samples = velocityTracker.current;
     let velocity = 0;
     if (samples.length >= 2) {
-      const first = samples[0];
-      const last = samples[samples.length - 1];
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const first = samples[0]!;
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const last = samples[samples.length - 1]!;
       const dt = (last.t - first.t) / 1000;
       if (dt > 0) velocity = (last.x - first.x) / dt;
     }

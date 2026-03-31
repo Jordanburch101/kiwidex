@@ -11,6 +11,7 @@ interface FuelPoint {
   diesel?: number;
   petrol91?: number;
   petrol95?: number;
+  [key: string]: string | number | undefined;
 }
 
 interface FuelChartsProps {
