@@ -11,8 +11,9 @@ WORKDIR /app
 COPY --from=pruner /app/out/json/ .
 RUN bun install --frozen-lockfile
 
-# ── Stage 3: Build ──
-FROM oven/bun:1.3.9-slim AS builder
+# ── Stage 3: Build (Node.js — Bun's WASM runtime doesn't support resvg/OG images) ──
+FROM node:22-slim AS builder
+RUN npm install -g bun@1.3.9
 WORKDIR /app
 COPY --from=deps /app/ .
 COPY --from=pruner /app/out/full/ .
