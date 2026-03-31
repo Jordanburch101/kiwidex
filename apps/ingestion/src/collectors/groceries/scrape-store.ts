@@ -10,7 +10,7 @@ import { BASKET } from "./basket";
 import { scrapeNewWorld } from "./newworld";
 import { scrapePakNSave } from "./paknsave";
 import type { ScrapedProduct } from "./types";
-import { scrapeWoolworths } from "./woolworths";
+import { scrapeWoolworthsApi } from "./woolworths-api";
 
 // Redirect console.log to stderr so stdout is clean JSON
 const origLog = console.log;
@@ -22,7 +22,7 @@ const scrapers: Record<
   string,
   (basket: typeof BASKET) => Promise<ScrapedProduct[]>
 > = {
-  woolworths: scrapeWoolworths,
+  woolworths: scrapeWoolworthsApi,
   paknsave: scrapePakNSave,
   newworld: scrapeNewWorld,
 };
