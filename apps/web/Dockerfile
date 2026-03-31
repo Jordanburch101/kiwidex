@@ -19,11 +19,12 @@ COPY --from=pruner /app/out/full/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 # Build prerendering uses the public libsql URL (private network unreachable during build).
-# At runtime, DATABASE_URL is set to the private URL by Railway service variables.
+# At runtime, DATABASE_URL is overridden by Railway service variables (private network).
+# These ENVs only exist in the builder stage — the runner starts from a clean base image.
 ARG DATABASE_AUTH_TOKEN
-RUN DATABASE_URL=libsql://libsql-production-c788.up.railway.app \
-    DATABASE_AUTH_TOKEN=$DATABASE_AUTH_TOKEN \
-    bun run build --filter=web
+ENV DATABASE_URL=libsql://libsql-production-c788.up.railway.app
+ENV DATABASE_AUTH_TOKEN=$DATABASE_AUTH_TOKEN
+RUN bun run build --filter=web
 
 # ── Stage 4: Production runner (Node.js for Next.js standalone) ──
 FROM node:22-slim AS runner
