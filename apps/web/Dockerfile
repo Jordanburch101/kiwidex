@@ -22,7 +22,7 @@ ENV NODE_ENV=production
 # At runtime, DATABASE_URL is overridden by Railway service variables (private network).
 # These ENVs only exist in the builder stage — the runner starts from a clean base image.
 ARG DATABASE_AUTH_TOKEN
-ENV DATABASE_URL=libsql://libsql-production-c788.up.railway.app
+ENV DATABASE_URL=https://libsql-production-c788.up.railway.app
 ENV DATABASE_AUTH_TOKEN=$DATABASE_AUTH_TOKEN
 RUN bun run build --filter=web
 
