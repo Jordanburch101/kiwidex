@@ -127,6 +127,15 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
     }
   }
 
+  // Record aggregate groceries run (covers the stale "groceries" key with no store)
+  await recordRun("groceries", allProducts.length > 0 ? "success" : "failed", {
+    totalProducts: allProducts.length,
+    error:
+      allProducts.length === 0
+        ? "All grocery sources failed: no products scraped"
+        : undefined,
+  });
+
   if (allProducts.length === 0) {
     throw new Error("All grocery sources failed: no products scraped");
   }
