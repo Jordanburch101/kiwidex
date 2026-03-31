@@ -1,3 +1,4 @@
+import { cron } from "@elysiajs/cron";
 import { bulkInsert, db } from "@workspace/db";
 import { Elysia } from "elysia";
 import { registry } from "./collectors/registry";
@@ -33,7 +34,40 @@ function requireApiKey({
   }
 }
 
+async function runCollection() {
+  console.log(
+    `[cron] Starting scheduled collection at ${new Date().toISOString()}`
+  );
+  const summary: Record<string, { collected: number; error?: string }> = {};
+
+  for (const [name, collector] of Object.entries(registry)) {
+    try {
+      const results = filterRecent(await collector());
+      await bulkInsert(db, results);
+      summary[name] = { collected: results.length };
+    } catch (e) {
+      console.error(`[cron] ${name} failed:`, e);
+      summary[name] = {
+        collected: 0,
+        error: e instanceof Error ? e.message : "Unknown error",
+      };
+    }
+  }
+
+  await revalidateWeb();
+  console.log("[cron] Collection complete:", summary);
+  return summary;
+}
+
 const app = new Elysia()
+  .use(
+    cron({
+      name: "collect-all",
+      pattern: "0 20,1 * * *",
+      runOnInit: true,
+      run: runCollection,
+    })
+  )
   .get("/health", () => ({ status: "ok", collectors: Object.keys(registry) }))
   .get("/health/scrapers", async () => {
     const health = await checkHealth();
@@ -49,24 +83,7 @@ const app = new Elysia()
   })
   .post("/collect/all", async ({ headers }) => {
     requireApiKey({ headers });
-
-    const summary: Record<string, { collected: number; error?: string }> = {};
-
-    for (const [name, collector] of Object.entries(registry)) {
-      try {
-        const results = filterRecent(await collector());
-        await bulkInsert(db, results);
-        summary[name] = { collected: results.length };
-      } catch (e) {
-        console.error(`[collect/all] ${name} failed:`, e);
-        summary[name] = {
-          collected: 0,
-          error: e instanceof Error ? e.message : "Unknown error",
-        };
-      }
-    }
-
-    await revalidateWeb();
+    const summary = await runCollection();
     return { summary };
   })
   .post("/collect/:source", async ({ params, headers }) => {
