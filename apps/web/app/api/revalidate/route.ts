@@ -8,6 +8,11 @@ export async function POST(request: NextRequest) {
     if (auth !== `Bearer ${secret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+  } else if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "REVALIDATION_SECRET not configured" },
+      { status: 500 }
+    );
   }
 
   revalidatePath("/");

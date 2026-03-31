@@ -2,6 +2,14 @@
 
 import { Resend } from "resend";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 interface SponsorFormState {
   error: string;
   success: boolean;
@@ -48,10 +56,10 @@ export async function submitSponsorEnquiry(
     subject: `Sponsorship Enquiry — ${business}`,
     html: [
       "<h2>New Sponsorship Enquiry</h2>",
-      `<p><strong>Name:</strong> ${name}</p>`,
-      `<p><strong>Business:</strong> ${business}</p>`,
-      `<p><strong>Email:</strong> ${email}</p>`,
-      message ? `<p><strong>Message:</strong> ${message}</p>` : "",
+      `<p><strong>Name:</strong> ${escapeHtml(name)}</p>`,
+      `<p><strong>Business:</strong> ${escapeHtml(business)}</p>`,
+      `<p><strong>Email:</strong> ${escapeHtml(email)}</p>`,
+      message ? `<p><strong>Message:</strong> ${escapeHtml(message)}</p>` : "",
     ].join("\n"),
   });
 

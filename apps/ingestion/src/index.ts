@@ -4,6 +4,15 @@ import { registry } from "./collectors/registry";
 import { checkHealth } from "./monitoring";
 import { revalidateWeb } from "./revalidate";
 
+const RECENT_DAYS = 90;
+
+function filterRecent<T extends { date: string }>(results: T[]): T[] {
+  const cutoff = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0]!;
+  return results.filter((r) => r.date >= cutoff);
+}
+
 function requireApiKey({
   headers,
 }: {
@@ -45,7 +54,7 @@ const app = new Elysia()
 
     for (const [name, collector] of Object.entries(registry)) {
       try {
-        const results = await collector();
+        const results = filterRecent(await collector());
         await bulkInsert(db, results);
         summary[name] = { collected: results.length };
       } catch (e) {
@@ -72,7 +81,7 @@ const app = new Elysia()
     }
 
     try {
-      const results = await collector();
+      const results = filterRecent(await collector());
       await bulkInsert(db, results);
       await revalidateWeb();
       return { source: params.source, collected: results.length };

@@ -2,7 +2,8 @@
 
 import { Resend } from "resend";
 
-const AUDIENCE_ID = "559dc36c-5eaf-4f62-80c4-041cf4d337f2";
+const AUDIENCE_ID =
+  process.env.RESEND_AUDIENCE_ID || "559dc36c-5eaf-4f62-80c4-041cf4d337f2";
 
 interface NewsletterFormState {
   error: string;
