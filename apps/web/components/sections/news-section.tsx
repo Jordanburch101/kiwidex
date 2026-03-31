@@ -41,12 +41,12 @@ export async function NewsSection() {
 
       {/* Lead story — horizontal card (image left, text right) */}
       <a
-        className="group grid grid-cols-2 overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
+        className="group grid grid-cols-1 overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf] sm:grid-cols-2"
         href={lead.url}
         rel="noopener noreferrer"
         target="_blank"
       >
-        <div className="relative h-[240px] overflow-hidden">
+        <div className="relative h-[200px] overflow-hidden sm:h-[240px]">
           {lead.imageUrl ? (
             <Image
               alt={lead.title}
@@ -85,7 +85,7 @@ export async function NewsSection() {
 
       {/* 6 small image cards — 2 rows of 3 */}
       {displayRest.length > 0 && (
-        <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {displayRest.map((article) => (
             <a
               className="group/card block overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
