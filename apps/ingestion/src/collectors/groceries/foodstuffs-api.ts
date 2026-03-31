@@ -63,6 +63,7 @@ interface DecoratedProduct {
 async function getAnonymousToken(config: FoodstuffsApiConfig): Promise<string> {
   const res = await fetch(`${config.siteDomain}/api/user/get-current-user`, {
     method: "POST",
+    signal: AbortSignal.timeout(15_000),
     headers: {
       "Content-Type": "application/json",
       "User-Agent": USER_AGENT,
@@ -88,7 +89,10 @@ async function getNearestStoreId(config: FoodstuffsApiConfig): Promise<string> {
   const { latitude, longitude } = config.geolocation;
   const res = await fetch(
     `${config.siteDomain}/next/api/stores/geolocation?lat=${latitude}&lng=${longitude}`,
-    { headers: { "User-Agent": USER_AGENT } }
+    {
+      headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(15_000),
+    }
   );
 
   if (!res.ok) {
@@ -112,6 +116,7 @@ async function searchProducts(
     `${config.apiDomain}/v1/edge/search/products/query/index/products-index-popularity-asc`,
     {
       method: "POST",
+      signal: AbortSignal.timeout(15_000),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -152,6 +157,7 @@ async function decorateProducts(
     `${config.apiDomain}/v1/edge/store/${storeId}/decorateProducts`,
     {
       method: "POST",
+      signal: AbortSignal.timeout(15_000),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,

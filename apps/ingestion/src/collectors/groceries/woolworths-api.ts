@@ -43,11 +43,20 @@ async function searchProducts(query: string): Promise<WoolworthsProduct[]> {
       "User-Agent": USER_AGENT,
       "x-requested-with": "OnlineShopping.WebApp",
     },
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {
     throw new Error(
       `Woolworths search failed: ${res.status} ${res.statusText}`
+    );
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const body = await res.text();
+    throw new Error(
+      `Woolworths returned non-JSON (${contentType}): ${body.slice(0, 200)}`
     );
   }
 
