@@ -1,4 +1,4 @@
-import { getLatestValue, METRIC_META, type MetricKey } from "@workspace/db";
+import { getLatestValue, type MetricKey } from "@workspace/db";
 import { db } from "@workspace/db/client";
 import { formatValue } from "@/lib/data";
 
@@ -14,7 +14,6 @@ const OG_METRICS: { key: MetricKey; label: string }[] = [
 export interface OgMetric {
   label: string;
   value: string;
-  description: string;
 }
 
 export async function getOgMetrics(): Promise<OgMetric[]> {
@@ -27,7 +26,6 @@ export async function getOgMetrics(): Promise<OgMetric[]> {
           latest?.value !== undefined && latest?.value !== null
             ? formatValue(key, latest.value)
             : "—",
-        description: METRIC_META[key].description,
       };
     })
   );
