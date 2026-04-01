@@ -185,5 +185,7 @@ export function SparklineArea({
     };
   }, [data, height, color]);
 
-  return <div ref={containerRef} />;
+  return (
+    <div className="[&_a[href*='tradingview']]:!hidden" ref={containerRef} />
+  );
 }
