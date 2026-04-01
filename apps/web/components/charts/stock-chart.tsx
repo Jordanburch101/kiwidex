@@ -60,6 +60,7 @@ export function CandlestickChart({
         background: { type: ColorType.Solid, color: CHART_THEME.background },
         textColor: CHART_THEME.text,
         fontSize: 11,
+        attributionLogo: false,
       },
       grid: {
         vertLines: { color: CHART_THEME.border },
@@ -112,7 +113,7 @@ export function CandlestickChart({
     };
   }, [data, height, upColor, downColor]);
 
-  return <div ref={containerRef} />;
+  return <div className="[&_a[href*='tradingview']]:!hidden" ref={containerRef} />;
 }
 
 interface SparklineAreaProps {
