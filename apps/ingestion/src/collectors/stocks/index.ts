@@ -16,7 +16,7 @@ const TICKERS = [
 ] as const;
 
 const SOURCE = "https://finance.yahoo.com";
-const BACKFILL_DAYS = 730; // ~2 years
+const BACKFILL_DAYS = 3650; // ~10 years
 const RECENT_DAYS = 7;
 
 export default async function collectStocks(): Promise<CollectorResult[]> {
