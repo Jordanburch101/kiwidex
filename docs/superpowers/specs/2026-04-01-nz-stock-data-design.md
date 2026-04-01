@@ -36,7 +36,7 @@ Add NZ stock market data to The Kiwidex dashboard: the NZX 50 index as a headlin
 | `high` | real | |
 | `low` | real | |
 | `close` | real | |
-| `volume` | integer | |
+| `volume` | integer (nullable) | May be null for indices |
 | `createdAt` | text | ISO timestamp |
 
 **Unique constraint** on `(ticker, date)` — upsert on conflict, same pattern as `metrics` and `products`.
@@ -129,8 +129,7 @@ Daily, after NZX market close (4:45pm NZST). Runs alongside other daily collecto
 
 ### Dependencies
 
-- `lightweight-charts` (TradingView open-source library)
-- `lightweight-charts-react-wrapper` (React bindings)
+- `lightweight-charts` (TradingView open-source library) — use directly with a custom ref-based React component, no third-party wrapper
 
 ### Section layout
 
@@ -154,6 +153,7 @@ Charts are themed to match the existing design system (warm stone/neutral palett
 - **Dark mode:** Reads from `.dark` CSS variables — dark stone background, same chart colour tokens.
 - Bellwether sparklines use `--chart-2` through `--chart-5` for visual distinction.
 - Crosshair and tooltips styled to match `--card`/`--popover` tokens.
+- Use `businessDay` time scale (not UTC) to avoid visible gaps on weekends/holidays.
 
 ### Page placement
 
@@ -162,6 +162,11 @@ In `apps/web/app/page.tsx`: inserted after `CurrencyDeepDive`, before `SponsorCT
 ### Ticker integration
 
 NZX 50 appears in the ticker marquee automatically — `getTickerData()` already pulls from the `metrics` table, and the collector mirrors the close price there.
+
+## Implementation risks
+
+- **Yahoo Finance tickers:** The exact tickers (especially `^NZ50` for the index) must be verified against Yahoo Finance before coding the collector. May be `^NZ50`, `NZ50.NZ`, or `^NZSE50FG`.
+- **Bun compatibility:** `yahoo-finance2` is a Node.js package. Smoke-test early in implementation to confirm it works under Bun in the ingestion service.
 
 ## Non-goals
 
