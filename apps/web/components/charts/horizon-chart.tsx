@@ -411,6 +411,7 @@ export function HorizonChart({ rows: rawRows }: HorizonChartProps) {
     }
 
     const startTime = performance.now();
+    const fromSamples = oldSamples;
 
     function tick() {
       const elapsed = performance.now() - startTime;
@@ -419,7 +420,7 @@ export function HorizonChart({ rows: rawRows }: HorizonChartProps) {
 
       // Build interpolated rows
       const interpRows: ProcessedRow[] = processedRows.map((row, i) => {
-        const lerped = lerpArrays(oldSamples[i]!, newSamples[i]!, eased);
+        const lerped = lerpArrays(fromSamples[i]!, newSamples[i]!, eased);
         const interpData = lerped.map((v, j) => ({
           date:
             row.data[
@@ -431,7 +432,7 @@ export function HorizonChart({ rows: rawRows }: HorizonChartProps) {
         }));
         const lastChange =
           row.change * eased +
-          (oldSamples[i]![oldSamples[i]!.length - 1] ?? 0) * (1 - eased);
+          (fromSamples[i]![fromSamples[i]!.length - 1] ?? 0) * (1 - eased);
         return { ...row, data: interpData, change: lastChange };
       });
 
