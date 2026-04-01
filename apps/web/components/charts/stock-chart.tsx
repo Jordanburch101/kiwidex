@@ -17,13 +17,23 @@ function toBusinessDay(dateStr: string): BusinessDay {
   return { year: year!, month: month!, day: day! };
 }
 
-/** Resolve a CSS variable (e.g. "var(--foreground)") to its computed value, or return the string as-is. */
+/**
+ * Resolve a CSS color (including var() and oklch/lab) to a hex string
+ * that Lightweight Charts can parse.
+ */
 function resolveColor(raw: string, el: Element): string {
-  if (!raw.startsWith("var(")) {
-    return raw;
+  let color = raw;
+  if (color.startsWith("var(")) {
+    const name = color.slice(4, -1).trim();
+    color = getComputedStyle(el).getPropertyValue(name).trim() || raw;
   }
-  const name = raw.slice(4, -1).trim();
-  return getComputedStyle(el).getPropertyValue(name).trim() || raw;
+  // Lightweight Charts only understands hex/rgb — convert via canvas
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) {
+    return color;
+  }
+  ctx.fillStyle = color;
+  return ctx.fillStyle; // always returns #rrggbb or rgba()
 }
 
 interface CandlestickChartProps {
