@@ -261,7 +261,7 @@ async function _getOverviewData() {
     ocrLatest,
     cpiLatest,
     unemploymentLatest,
-    gdpLatest,
+    nzx50Latest,
     _minimumWageLatest,
     nzdUsdLatest,
     medianIncomeLatest,
@@ -277,7 +277,7 @@ async function _getOverviewData() {
     ocrSeries,
     cpiSeries,
     unemploymentSeries,
-    gdpSeries,
+    nzx50Series,
     _minimumWageSeries,
     nzdUsdSeries,
     medianIncomeSeries,
@@ -289,7 +289,7 @@ async function _getOverviewData() {
     getLatestValue(db, "ocr"),
     getLatestValue(db, "cpi"),
     getLatestValue(db, "unemployment"),
-    getLatestValue(db, "gdp_growth"),
+    getLatestValue(db, "nzx_50"),
     getLatestValue(db, "minimum_wage"),
     getLatestValue(db, "nzd_usd"),
     getLatestValue(db, "median_income"),
@@ -305,7 +305,7 @@ async function _getOverviewData() {
     getTimeSeries(db, "ocr", from, to),
     getTimeSeries(db, "cpi", from, to),
     getTimeSeries(db, "unemployment", from, to),
-    getTimeSeries(db, "gdp_growth", from, to),
+    getTimeSeries(db, "nzx_50", from, to),
     getTimeSeries(db, "minimum_wage", from, to),
     getTimeSeries(db, "nzd_usd", from, to),
     getTimeSeries(db, "median_income", from, to),
@@ -347,6 +347,7 @@ async function _getOverviewData() {
 
   const economyRows = [
     // 30-day comparison
+    buildRowData("nzx_50", nzx50Latest, nzx50Series),
     buildRowData("nzd_usd", nzdUsdLatest, nzdUsdSeries),
     buildGroceryRow([
       milkSeries,
@@ -363,7 +364,6 @@ async function _getOverviewData() {
     buildRowData("ocr", ocrLatest, ocrSeries),
     buildRowData("cpi", cpiLatest, cpiSeries),
     buildRowData("unemployment", unemploymentLatest, unemploymentSeries),
-    buildRowData("gdp_growth", gdpLatest, gdpSeries),
     buildRowData("median_income", medianIncomeLatest, medianIncomeSeries),
   ];
 
