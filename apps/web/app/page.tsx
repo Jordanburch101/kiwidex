@@ -35,6 +35,9 @@ export default function Page() {
             <GroceryDeepDive />
           </div>
           <div className="border-[#e5e0d5] border-t">
+            <MarketsDeepDive />
+          </div>
+          <div className="border-[#e5e0d5] border-t">
             <FuelDeepDive />
           </div>
           <div className="border-[#e5e0d5] border-t">
@@ -45,9 +48,6 @@ export default function Page() {
           </div>
           <div className="border-[#e5e0d5] border-t">
             <CurrencyDeepDive />
-          </div>
-          <div className="border-[#e5e0d5] border-t">
-            <MarketsDeepDive />
           </div>
           <div className="border-[#e5e0d5] border-t">
             <SponsorCTA />
