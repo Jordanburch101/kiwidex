@@ -113,7 +113,9 @@ export function CandlestickChart({
     };
   }, [data, height, upColor, downColor]);
 
-  return <div className="[&_a[href*='tradingview']]:!hidden" ref={containerRef} />;
+  return (
+    <div className="[&_a[href*='tradingview']]:!hidden" ref={containerRef} />
+  );
 }
 
 interface SparklineAreaProps {
