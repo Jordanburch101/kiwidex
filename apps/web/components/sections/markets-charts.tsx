@@ -41,10 +41,21 @@ export function MarketsCharts({
   const [range, setRange] = useState<TimeRange>("1y");
 
   const filteredNzx50 = filterByRange(nzx50, range);
+  const nzx50Quote = quotes.find((q) => q.ticker === "^NZ50");
 
   return (
     <>
-      <div className="mb-6 flex justify-end">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h3 className="font-medium text-[#2a2520] text-sm">NZX 50 Index</h3>
+          {nzx50Quote && (
+            <p className="mt-0.5 font-mono text-[#2a2520] text-xl">
+              {nzx50Quote.close.toLocaleString("en-NZ", {
+                maximumFractionDigits: 0,
+              })}
+            </p>
+          )}
+        </div>
         <TimeRangeSelector
           onChange={setRange}
           ranges={["90d", "1y", "5y", "all"]}
