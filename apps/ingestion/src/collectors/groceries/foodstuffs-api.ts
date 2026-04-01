@@ -1,4 +1,4 @@
-import type { BasketItem } from "./basket";
+import { type BasketItem, computeNormalizationFactor } from "./basket";
 import { extractBrand } from "./brands";
 import { USER_AGENT } from "./constants";
 import type { ScrapedProduct } from "./types";
@@ -27,7 +27,10 @@ export const NEWWORLD_API_CONFIG: FoodstuffsApiConfig = {
   siteDomain: "https://www.newworld.co.nz",
   storeKey: "newworld",
   storeName: "newworld.co.nz",
-  geolocation: { latitude: -36.8485, longitude: 174.7633 },
+  // Albany — full-size supermarket with broad product range.
+  // CBD resolves to "Metro Auckland" which is a small convenience store
+  // with limited stock (e.g. no 1kg cheese blocks).
+  geolocation: { latitude: -36.7275, longitude: 174.6966 },
 };
 
 interface AlgoliaHit {
@@ -233,7 +236,7 @@ export async function scrapeFoodstuffsApi(
       for (const hit of hits) {
         const dec = priceMap.get(hit.fan);
         // decorateProducts returns price in cents; averagePrice is already in dollars
-        const price = dec?.singlePrice
+        const shelfPrice = dec?.singlePrice
           ? dec.singlePrice.price / 100
           : hit.averagePrice;
 
@@ -252,6 +255,14 @@ export async function scrapeFoodstuffsApi(
         ) {
           continue;
         }
+
+        // Normalize price when product size differs from standard unit
+        // e.g. 500g cheese at $9.49 → $18.98/kg
+        const normFactor = computeNormalizationFactor(
+          fullName,
+          item.standardUnit
+        );
+        const price = Math.round(shelfPrice * normFactor * 100) / 100;
 
         if (price < item.priceRange.min || price > item.priceRange.max) {
           console.warn(

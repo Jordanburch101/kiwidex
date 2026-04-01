@@ -38,6 +38,42 @@ const SPECIALTY_BUTTER =
 const SPECIALTY_CHEESE =
   /cream.?cheese|brie|camembert|parmesan|feta|halloumi|mozzarella|gouda|edam|colby|vintage|aged|tasty|smoked|pepper|chili|cumin|cranberry|apricot|slice|shred|grate/i;
 
+/**
+ * Compute a price normalization factor when the detected product size
+ * differs from the basket item's standard unit.
+ * Returns a multiplier to convert the shelf price to standard-unit price.
+ * e.g. 500g product with 1kg standard → factor 2.
+ */
+export function computeNormalizationFactor(
+  productName: string,
+  standardUnit: string
+): number {
+  const kgMatch = standardUnit.match(/(\d+(?:\.\d+)?)\s*kg/i);
+  const gMatch = standardUnit.match(/(\d+(?:\.\d+)?)\s*g(?!a)/i);
+  if (!(kgMatch || gMatch)) {
+    return 1;
+  }
+
+  const standardGrams = kgMatch
+    ? Number.parseFloat(kgMatch[1]!) * 1000
+    : Number.parseFloat(gMatch![1]!);
+
+  const productKg = productName.match(/\b(\d+(?:\.\d+)?)\s*kg\b/i);
+  const productG = productName.match(/\b(\d+)\s*g\b/i);
+  if (!(productKg || productG)) {
+    return 1;
+  }
+
+  const productGrams = productKg
+    ? Number.parseFloat(productKg[1]!) * 1000
+    : Number.parseFloat(productG![1]!);
+
+  if (productGrams === standardGrams) {
+    return 1;
+  }
+  return standardGrams / productGrams;
+}
+
 export const BASKET: BasketItem[] = [
   {
     // Stats NZ: "Milk - standard homogenised, 2 litres"
@@ -114,9 +150,9 @@ export const BASKET: BasketItem[] = [
     searchQueries: {
       woolworths: "mild cheddar 1kg",
       paknsave: "mild cheddar 1kg",
-      newworld: "mild cheddar 1kg",
+      newworld: "mild cheese",
     },
-    sizePatterns: [/\b1\s*kg\b/i, /\b1000\s*g\b/i],
+    sizePatterns: [/\b1\s*kg\b/i, /\b1000\s*g\b/i, /\b500\s*g\b/i],
     includePatterns: [/mild/i],
     excludePatterns: [SPECIALTY_CHEESE],
     priceRange: { min: 8, max: 20 },
