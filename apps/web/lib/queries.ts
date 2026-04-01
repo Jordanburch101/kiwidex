@@ -2,6 +2,8 @@ import {
   getLatestArticles,
   getLatestSummary,
   getLatestValue,
+  getStockTimeSeries,
+  getAllLatestQuotes,
   getTimeSeries,
   METRIC_META,
   type MetricKey,
@@ -573,6 +575,42 @@ async function _getNewsData() {
   return pickLeadAndRest(articles);
 }
 
+async function _getMarketData() {
+  const from = getAllTimeStart();
+  const to = getToday();
+
+  const [nzx50Ohlc, airNzSeries, fphSeries, melSeries, fbuSeries, quotes] =
+    await Promise.all([
+      getStockTimeSeries(db, "^NZ50", from, to),
+      getStockTimeSeries(db, "AIR.NZ", from, to),
+      getStockTimeSeries(db, "FPH.NZ", from, to),
+      getStockTimeSeries(db, "MEL.NZ", from, to),
+      getStockTimeSeries(db, "FBU.NZ", from, to),
+      getAllLatestQuotes(db),
+    ]);
+
+  return {
+    nzx50: nzx50Ohlc.map((r) => ({
+      date: r.date,
+      open: r.open,
+      high: r.high,
+      low: r.low,
+      close: r.close,
+    })),
+    bellwethers: {
+      "AIR.NZ": airNzSeries.map((r) => ({ date: r.date, value: r.close })),
+      "FPH.NZ": fphSeries.map((r) => ({ date: r.date, value: r.close })),
+      "MEL.NZ": melSeries.map((r) => ({ date: r.date, value: r.close })),
+      "FBU.NZ": fbuSeries.map((r) => ({ date: r.date, value: r.close })),
+    },
+    quotes: quotes.map((q) => ({
+      ticker: q.ticker,
+      close: q.close,
+      date: q.date,
+    })),
+  };
+}
+
 // Cached exports — data is cached indefinitely and invalidated via revalidateTag("metrics")
 const CACHE_OPTS = { tags: ["metrics"] };
 
@@ -622,3 +660,8 @@ export const getCurrencyChartData = unstable_cache(
   CACHE_OPTS
 );
 export const getNewsData = unstable_cache(_getNewsData, ["news"], CACHE_OPTS);
+export const getMarketData = unstable_cache(
+  _getMarketData,
+  ["market"],
+  CACHE_OPTS
+);
