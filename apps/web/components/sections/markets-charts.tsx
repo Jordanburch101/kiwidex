@@ -55,7 +55,7 @@ export function MarketsCharts({
         />
       </div>
 
-      <CandlestickChart data={filteredNzx50} height={300} />
+      <CandlestickChart data={filteredNzx50} height={300} key={range} />
 
       <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {Object.entries(BELLWETHER_META).map(([ticker, { label, color }]) => {
@@ -74,7 +74,7 @@ export function MarketsCharts({
           return (
             <div
               className="rounded-lg border border-[#e5e0d5] bg-white p-3"
-              key={ticker}
+              key={`${ticker}-${range}`}
             >
               <p className="font-medium text-[#2a2520] text-xs">{label}</p>
               <p className="mt-0.5 font-mono text-lg text-[#2a2520]">
