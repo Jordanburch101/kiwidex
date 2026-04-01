@@ -1,0 +1,114 @@
+"use client";
+
+import { useState } from "react";
+import { SparklineArea, StockChart } from "@/components/charts/stock-chart";
+import { TimeRangeSelector } from "@/components/time-range-selector";
+import { STOCK_COLORS } from "@/lib/colors";
+import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
+
+interface OhlcPoint {
+  close: number;
+  date: string;
+  high: number;
+  low: number;
+  open: number;
+}
+
+interface QuoteInfo {
+  close: number;
+  date: string;
+  ticker: string;
+}
+
+const BELLWETHER_META: Record<string, { label: string; color: string }> = {
+  "AIR.NZ": { label: "Air NZ", color: STOCK_COLORS.air_nz },
+  "FPH.NZ": { label: "Fisher & Paykel", color: STOCK_COLORS.fph },
+  "MEL.NZ": { label: "Meridian", color: STOCK_COLORS.mel },
+  "FBU.NZ": { label: "Fletcher Building", color: STOCK_COLORS.fbu },
+};
+
+interface MarketsChartsProps {
+  bellwethers: Record<string, { date: string; value: number }[]>;
+  nzx50: OhlcPoint[];
+  quotes: QuoteInfo[];
+}
+
+export function MarketsCharts({
+  nzx50,
+  bellwethers,
+  quotes,
+}: MarketsChartsProps) {
+  const [range, setRange] = useState<TimeRange>("1y");
+
+  const filteredNzx50 = filterByRange(nzx50, range);
+  const nzx50Quote = quotes.find((q) => q.ticker === "^NZ50");
+
+  return (
+    <>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h3 className="font-medium text-[#2a2520] text-sm">NZX 50 Index</h3>
+          {nzx50Quote && (
+            <p className="mt-0.5 font-mono text-[#2a2520] text-xl">
+              {nzx50Quote.close.toLocaleString("en-NZ", {
+                maximumFractionDigits: 0,
+              })}
+            </p>
+          )}
+        </div>
+        <TimeRangeSelector
+          onChange={setRange}
+          ranges={["90d", "1y", "5y", "all"]}
+          value={range}
+        />
+      </div>
+
+      <StockChart
+        data={filteredNzx50}
+        height={300}
+        key={range}
+        mode={range === "5y" || range === "all" ? "line" : "candle"}
+      />
+
+      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {Object.entries(BELLWETHER_META).map(([ticker, { label, color }]) => {
+          const seriesData = bellwethers[ticker] ?? [];
+          const filteredData = filterByRange(seriesData, range);
+          const quote = quotes.find((q) => q.ticker === ticker);
+          const prevClose =
+            filteredData.length >= 2
+              ? filteredData[filteredData.length - 2]?.value
+              : null;
+          const change =
+            quote && prevClose
+              ? ((quote.close - prevClose) / prevClose) * 100
+              : null;
+
+          return (
+            <div
+              className="rounded-lg border border-[#e5e0d5] bg-white p-3"
+              key={`${ticker}-${range}`}
+            >
+              <p className="font-medium text-[#2a2520] text-xs">{label}</p>
+              <p className="mt-0.5 font-mono text-lg text-[#2a2520]">
+                ${quote?.close.toFixed(2) ?? "—"}
+              </p>
+              {change !== null && (
+                <p
+                  className={`mt-0.5 font-mono text-xs ${
+                    change >= 0 ? "text-[#2ea85a]" : "text-[#e24b35]"
+                  }`}
+                >
+                  {change >= 0 ? "▲" : "▼"} {Math.abs(change).toFixed(1)}%
+                </p>
+              )}
+              <div className="mt-2">
+                <SparklineArea color={color} data={filteredData} height={50} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}

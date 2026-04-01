@@ -9,22 +9,34 @@ export {
 } from "./metrics";
 export {
   bulkInsert,
+  getAllLatestQuotes,
   getLastSuccessDate,
   getLatestArticles,
   getLatestByCategory,
   getLatestRuns,
+  getLatestStockQuote,
   getLatestSummary,
   getLatestValue,
   getProductsByCategory,
   getStaleCollectors,
+  getStockTimeSeries,
   getTimeSeries,
   insertArticles,
   insertProducts,
   insertScraperRun,
+  insertStocks,
   insertSummary,
   type NewArticle,
   type NewProduct,
   type NewScraperRun,
+  type NewStock,
   type ScraperRun,
 } from "./queries";
-export { articles, metrics, products, scraperRuns, summaries } from "./schema";
+export {
+  articles,
+  metrics,
+  products,
+  scraperRuns,
+  stocks,
+  summaries,
+} from "./schema";

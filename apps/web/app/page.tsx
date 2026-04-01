@@ -5,6 +5,7 @@ import { GroceryDeepDive } from "@/components/sections/grocery-deep-dive";
 import { HousingDeepDive } from "@/components/sections/housing-deep-dive";
 import { Intro } from "@/components/sections/intro";
 import { LabourDeepDive } from "@/components/sections/labour-deep-dive";
+import { MarketsDeepDive } from "@/components/sections/markets-deep-dive";
 import { Masthead } from "@/components/sections/masthead";
 import { NewsSection } from "@/components/sections/news-section";
 import { Overview } from "@/components/sections/overview";
@@ -32,6 +33,9 @@ export default function Page() {
           </div>
           <div className="border-[#e5e0d5] border-t">
             <GroceryDeepDive />
+          </div>
+          <div className="border-[#e5e0d5] border-t">
+            <MarketsDeepDive />
           </div>
           <div className="border-[#e5e0d5] border-t">
             <FuelDeepDive />
@@ -87,6 +91,7 @@ const STRUCTURED_DATA = [
       "Mortgage Rates",
       "Unemployment Rate",
       "Wage Growth",
+      "NZX 50 Index",
     ],
     license: "https://creativecommons.org/licenses/by/4.0/",
     isAccessibleForFree: true,

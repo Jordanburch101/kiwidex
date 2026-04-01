@@ -1,7 +1,9 @@
 import {
+  getAllLatestQuotes,
   getLatestArticles,
   getLatestSummary,
   getLatestValue,
+  getStockTimeSeries,
   getTimeSeries,
   METRIC_META,
   type MetricKey,
@@ -47,6 +49,7 @@ function getPeriodDays(metric: MetricKey): number {
     "unemployment",
     "wage_growth",
     "house_price_index",
+    "ocr",
   ];
   const monthly: MetricKey[] = [
     "house_price_median",
@@ -55,7 +58,6 @@ function getPeriodDays(metric: MetricKey): number {
     "mortgage_2yr",
     "minimum_wage",
     "median_income",
-    "ocr",
   ];
   if (quarterly.includes(metric)) {
     return 365;
@@ -182,6 +184,7 @@ const TICKER_SENTIMENT: Partial<
   nzd_usd: "up_is_good",
   nzd_aud: "up_is_good",
   nzd_eur: "up_is_good",
+  nzx_50: "up_is_good",
 };
 
 function getTrendColor(sparklineData: number[], metric: MetricKey): string {
@@ -222,6 +225,7 @@ async function _getTickerData() {
     { metric: "nzd_usd" as MetricKey, label: "NZD/USD" },
     { metric: "nzd_aud" as MetricKey, label: "NZD/AUD" },
     { metric: "nzd_eur" as MetricKey, label: "NZD/EUR" },
+    { metric: "nzx_50" as MetricKey, label: "NZX 50" },
   ] as const;
 
   const results = await Promise.all(
@@ -257,7 +261,7 @@ async function _getOverviewData() {
     ocrLatest,
     cpiLatest,
     unemploymentLatest,
-    gdpLatest,
+    nzx50Latest,
     _minimumWageLatest,
     nzdUsdLatest,
     medianIncomeLatest,
@@ -273,7 +277,7 @@ async function _getOverviewData() {
     ocrSeries,
     cpiSeries,
     unemploymentSeries,
-    gdpSeries,
+    nzx50Series,
     _minimumWageSeries,
     nzdUsdSeries,
     medianIncomeSeries,
@@ -285,7 +289,7 @@ async function _getOverviewData() {
     getLatestValue(db, "ocr"),
     getLatestValue(db, "cpi"),
     getLatestValue(db, "unemployment"),
-    getLatestValue(db, "gdp_growth"),
+    getLatestValue(db, "nzx_50"),
     getLatestValue(db, "minimum_wage"),
     getLatestValue(db, "nzd_usd"),
     getLatestValue(db, "median_income"),
@@ -301,7 +305,7 @@ async function _getOverviewData() {
     getTimeSeries(db, "ocr", from, to),
     getTimeSeries(db, "cpi", from, to),
     getTimeSeries(db, "unemployment", from, to),
-    getTimeSeries(db, "gdp_growth", from, to),
+    getTimeSeries(db, "nzx_50", from, to),
     getTimeSeries(db, "minimum_wage", from, to),
     getTimeSeries(db, "nzd_usd", from, to),
     getTimeSeries(db, "median_income", from, to),
@@ -343,7 +347,7 @@ async function _getOverviewData() {
 
   const economyRows = [
     // 30-day comparison
-    buildRowData("ocr", ocrLatest, ocrSeries),
+    buildRowData("nzx_50", nzx50Latest, nzx50Series),
     buildRowData("nzd_usd", nzdUsdLatest, nzdUsdSeries),
     buildGroceryRow([
       milkSeries,
@@ -357,9 +361,9 @@ async function _getOverviewData() {
     buildRowData("house_price_median", housePriceLatest, housePriceSeries),
     buildRowData("mortgage_1yr", mortgage1yrLatest, mortgage1yrSeries),
     // 365-day comparison
+    buildRowData("ocr", ocrLatest, ocrSeries),
     buildRowData("cpi", cpiLatest, cpiSeries),
     buildRowData("unemployment", unemploymentLatest, unemploymentSeries),
-    buildRowData("gdp_growth", gdpLatest, gdpSeries),
     buildRowData("median_income", medianIncomeLatest, medianIncomeSeries),
   ];
 
@@ -458,7 +462,16 @@ async function _getIntroData() {
     return { summary: null, metrics: {} as Record<string, string> };
   }
 
-  const metrics = JSON.parse(row.metrics) as Record<string, string>;
+  const raw = JSON.parse(row.metrics) as Record<string, string | number>;
+  const metrics: Record<string, string> = {};
+  for (const [key, val] of Object.entries(raw)) {
+    // New format stores raw numbers — format for display
+    // Legacy format stores pre-formatted strings — pass through
+    metrics[key] =
+      typeof val === "number"
+        ? formatValue(key as MetricKey, val)
+        : String(val);
+  }
   return { summary: row.content, metrics };
 }
 
@@ -571,6 +584,42 @@ async function _getNewsData() {
   return pickLeadAndRest(articles);
 }
 
+async function _getMarketData() {
+  const from = getAllTimeStart();
+  const to = getToday();
+
+  const [nzx50Ohlc, airNzSeries, fphSeries, melSeries, fbuSeries, quotes] =
+    await Promise.all([
+      getStockTimeSeries(db, "^NZ50", from, to),
+      getStockTimeSeries(db, "AIR.NZ", from, to),
+      getStockTimeSeries(db, "FPH.NZ", from, to),
+      getStockTimeSeries(db, "MEL.NZ", from, to),
+      getStockTimeSeries(db, "FBU.NZ", from, to),
+      getAllLatestQuotes(db, ["^NZ50", "AIR.NZ", "FPH.NZ", "MEL.NZ", "FBU.NZ"]),
+    ]);
+
+  return {
+    nzx50: nzx50Ohlc.map((r) => ({
+      date: r.date,
+      open: r.open,
+      high: r.high,
+      low: r.low,
+      close: r.close,
+    })),
+    bellwethers: {
+      "AIR.NZ": airNzSeries.map((r) => ({ date: r.date, value: r.close })),
+      "FPH.NZ": fphSeries.map((r) => ({ date: r.date, value: r.close })),
+      "MEL.NZ": melSeries.map((r) => ({ date: r.date, value: r.close })),
+      "FBU.NZ": fbuSeries.map((r) => ({ date: r.date, value: r.close })),
+    },
+    quotes: quotes.map((q) => ({
+      ticker: q.ticker,
+      close: q.close,
+      date: q.date,
+    })),
+  };
+}
+
 // Cached exports — data is cached indefinitely and invalidated via revalidateTag("metrics")
 const CACHE_OPTS = { tags: ["metrics"] };
 
@@ -620,3 +669,8 @@ export const getCurrencyChartData = unstable_cache(
   CACHE_OPTS
 );
 export const getNewsData = unstable_cache(_getNewsData, ["news"], CACHE_OPTS);
+export const getMarketData = unstable_cache(
+  _getMarketData,
+  ["market"],
+  CACHE_OPTS
+);

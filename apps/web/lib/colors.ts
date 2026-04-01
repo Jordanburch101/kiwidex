@@ -83,3 +83,12 @@ export const LABOUR_COLORS = {
   cpi: DATA.burntOrange,
   unemployment: DATA.purple,
 } as const;
+
+/** Stock market series */
+export const STOCK_COLORS = {
+  nzx_50: DATA.blue,
+  air_nz: DATA.burntOrange,
+  fph: DATA.purple,
+  mel: DATA.teal,
+  fbu: DATA.gold,
+} as const;

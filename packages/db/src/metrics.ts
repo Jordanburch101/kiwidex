@@ -178,6 +178,12 @@ export const METRIC_META = {
     category: "macro_financial",
     description: "GDP quarterly growth",
   },
+  nzx_50: {
+    label: "NZX 50",
+    unit: "index",
+    category: "macro_financial",
+    description: "NZX 50 stock market index (daily close)",
+  },
 } as const satisfies Record<string, MetricMeta>;
 
 export type MetricKey = keyof typeof METRIC_META;

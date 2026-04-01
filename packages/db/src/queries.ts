@@ -2,7 +2,14 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { METRIC_META, type MetricCategory, type MetricKey } from "./metrics";
 import type * as schema from "./schema";
-import { articles, metrics, products, scraperRuns, summaries } from "./schema";
+import {
+  articles,
+  metrics,
+  products,
+  scraperRuns,
+  stocks,
+  summaries,
+} from "./schema";
 
 type Db = LibSQLDatabase<typeof schema>;
 
@@ -312,4 +319,68 @@ export async function getLatestArticles(db: Db, perSource: number) {
       (a, b) =>
         new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     );
+}
+
+// --- Stock queries ---
+
+export type NewStock = Omit<typeof stocks.$inferInsert, "id" | "createdAt">;
+
+export async function insertStocks(db: Db, items: NewStock[]) {
+  if (items.length === 0) {
+    return;
+  }
+
+  for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+    const chunk = items.slice(i, i + CHUNK_SIZE);
+    await db
+      .insert(stocks)
+      .values(chunk)
+      .onConflictDoUpdate({
+        target: [stocks.ticker, stocks.date],
+        set: {
+          open: sql`excluded.open`,
+          high: sql`excluded.high`,
+          low: sql`excluded.low`,
+          close: sql`excluded.close`,
+          volume: sql`excluded.volume`,
+          createdAt: new Date().toISOString(),
+        },
+      });
+  }
+}
+
+export async function getStockTimeSeries(
+  db: Db,
+  ticker: string,
+  from: string,
+  to: string
+) {
+  return db
+    .select()
+    .from(stocks)
+    .where(
+      and(
+        eq(stocks.ticker, ticker),
+        gte(stocks.date, from),
+        lte(stocks.date, to)
+      )
+    )
+    .orderBy(stocks.date);
+}
+
+export async function getLatestStockQuote(db: Db, ticker: string) {
+  const rows = await db
+    .select()
+    .from(stocks)
+    .where(eq(stocks.ticker, ticker))
+    .orderBy(desc(stocks.date))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getAllLatestQuotes(db: Db, tickers: string[]) {
+  const results = await Promise.all(
+    tickers.map((ticker) => getLatestStockQuote(db, ticker))
+  );
+  return results.filter((r): r is NonNullable<typeof r> => r !== null);
 }
