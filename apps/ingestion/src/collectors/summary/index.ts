@@ -10,6 +10,7 @@ import {
 } from "@workspace/db";
 import type { CollectorResult } from "../types";
 
+/** Metrics eligible for inline {badge} placeholders in the summary */
 const INTRO_METRICS: MetricKey[] = [
   "ocr",
   "cpi",
@@ -17,8 +18,10 @@ const INTRO_METRICS: MetricKey[] = [
   "petrol_91",
   "unemployment",
   "wage_growth",
+  "nzx_50",
 ];
 
+/** Background context — never shown as badges but fed to the model */
 const CONTEXT_METRICS: MetricKey[] = [
   "gdp_growth",
   "house_price_median",
@@ -26,6 +29,9 @@ const CONTEXT_METRICS: MetricKey[] = [
   "milk",
   "eggs",
   "bread",
+  "butter",
+  "cheese",
+  "bananas",
 ];
 
 function formatMetricValue(metric: MetricKey, value: number): string {
@@ -44,81 +50,157 @@ function formatMetricValue(metric: MetricKey, value: number): string {
   }
 }
 
+/**
+ * Minimum % change required for a metric move to be considered "significant".
+ * Anything below this threshold is treated as noise.
+ */
+const SIGNIFICANCE_THRESHOLDS: Partial<Record<MetricKey, number>> = {
+  ocr: 5, // 25bp on a 5% rate
+  cpi: 3, // quarterly, rarely moves
+  unemployment: 3,
+  wage_growth: 5,
+  nzd_usd: 1.5, // FX moves daily
+  petrol_91: 2, // ~5c on $2.50/L
+  nzx_50: 1, // ~120 pts on ~12,000
+  milk: 5, // ~25c on $5
+  eggs: 5,
+  bread: 5,
+  butter: 5,
+  cheese: 5,
+  bananas: 5,
+};
+
 function describeChanges(
   currentRaw: Record<string, number>,
-  previousFormatted: Record<string, string> | null
-): { changed: string[]; unchanged: string[] } {
-  if (!previousFormatted) {
-    return { changed: [], unchanged: [] };
+  previousRaw: Record<string, number> | null
+): { changed: string[]; unchanged: string[]; movedKeys: Set<string> } {
+  if (!previousRaw) {
+    return { changed: [], unchanged: [], movedKeys: new Set() };
   }
 
   const changed: string[] = [];
   const unchanged: string[] = [];
+  const movedKeys = new Set<string>();
 
-  for (const metric of INTRO_METRICS) {
+  const allTracked = [...INTRO_METRICS, ...CONTEXT_METRICS];
+
+  for (const metric of allTracked) {
     const current = currentRaw[metric];
+    const previous = previousRaw[metric];
     if (current == null) {
       continue;
     }
 
-    const prevStr = previousFormatted[metric];
     const currentStr = formatMetricValue(metric, current);
 
-    if (!prevStr || prevStr === currentStr) {
+    if (previous == null) {
+      unchanged.push(
+        `${METRIC_META[metric].label} (${currentStr}) — no prior data`
+      );
+      continue;
+    }
+
+    const pctChange =
+      previous === 0 ? 0 : Math.abs((current - previous) / previous) * 100;
+    const threshold = SIGNIFICANCE_THRESHOLDS[metric] ?? 2;
+
+    if (pctChange < threshold) {
       unchanged.push(
         `${METRIC_META[metric].label} (${currentStr}) — unchanged`
       );
     } else {
-      changed.push(`${METRIC_META[metric].label}: ${prevStr} → ${currentStr}`);
+      const direction = current > previous ? "↑" : "↓";
+      const prevStr = formatMetricValue(metric, previous);
+      changed.push(
+        `${METRIC_META[metric].label}: ${prevStr} → ${currentStr} (${direction}${pctChange.toFixed(1)}%)`
+      );
+      movedKeys.add(metric);
     }
   }
 
-  return { changed, unchanged };
+  return { changed, unchanged, movedKeys };
 }
+
+const BADGE_LABELS: Record<string, string> = {
+  ocr: "OCR (Official Cash Rate)",
+  cpi: "CPI (inflation)",
+  nzd_usd: "NZD/USD exchange rate",
+  petrol_91: "Petrol 91",
+  unemployment: "Unemployment",
+  wage_growth: "Wage growth",
+  nzx_50: "NZX 50 index",
+};
 
 function buildPrompt(
   metricValues: Record<string, string>,
   contextValues: Record<string, string>,
   headlines: string[],
-  changes: { changed: string[]; unchanged: string[] }
+  changes: { changed: string[]; unchanged: string[] },
+  movedMetrics: Set<string>
 ): string {
-  const changeGuidance =
-    changes.changed.length > 0 || changes.unchanged.length > 0
-      ? `
-WHAT HAS CHANGED since the last summary (focus your narrative on these):
-${changes.changed.length > 0 ? changes.changed.map((c) => `- ${c}`).join("\n") : "- Nothing has moved significantly"}
+  const hasChanges = changes.changed.length > 0;
 
-WHAT IS STATIC (mention briefly for context, don't dwell on these):
-${changes.unchanged.map((u) => `- ${u}`).join("\n")}
+  const changeSection = hasChanges
+    ? `SIGNIFICANT MOVES (lead your narrative with these — this is the news):
+${changes.changed.map((c) => `- ${c}`).join("\n")}
 
-IMPORTANT: Lead with what's moving. Metrics that haven't changed should be woven in as background context, not presented as news.`
-      : "";
+STATIC BACKGROUND (weave in briefly if relevant, do NOT treat as news):
+${changes.unchanged.map((u) => `- ${u}`).join("\n")}`
+    : `NO METRICS HAVE MOVED SIGNIFICANTLY.
+All current values: ${changes.unchanged.map((u) => `- ${u}`).join("\n")}
 
-  return `You are a financial journalist writing a brief editorial introduction for "The Kiwidex", a New Zealand economy dashboard. Write a single paragraph of MAXIMUM 75 words summarising the current state of the NZ economy.
+Since nothing has moved, your narrative MUST be driven entirely by the news headlines below. Reference 1-2 metrics only as supporting context for the news story.`;
 
-Style: Newspaper editorial voice — authoritative, measured, slightly literary. The first word MUST be "A" (it renders as a large drop-cap in the UI). Use plain language a general audience would understand. Weave in specific numbers naturally. Don't list metrics mechanically — tell a story that connects the data to what's happening in the news.
+  // Split badge metrics into moved vs static — model sees moved first
+  const movedBadges: string[] = [];
+  const staticBadges: string[] = [];
+  for (const [key, val] of Object.entries(metricValues)) {
+    const label = BADGE_LABELS[key] ?? key;
+    const line = `- ${label}: ${val} → use {${key}}`;
+    if (movedMetrics.has(key)) {
+      movedBadges.push(line);
+    } else {
+      staticBadges.push(line);
+    }
+  }
 
-Current metric values (rendered as highlighted badges — use ALL of these):
-- OCR (Official Cash Rate): ${metricValues.ocr}
-- CPI (inflation): ${metricValues.cpi}
-- NZD/USD exchange rate: ${metricValues.nzd_usd}
-- Petrol 91: ${metricValues.petrol_91}
-- Unemployment: ${metricValues.unemployment}
-- Wage growth: ${metricValues.wage_growth}
+  const badgePlaceholders = Object.keys(metricValues)
+    .map((k) => `{${k}}`)
+    .join(", ");
 
-Additional data context:
+  const badgeSection =
+    movedBadges.length > 0
+      ? `PREFERRED badge metrics (these MOVED — use these first):
+${movedBadges.join("\n")}
+
+Other available badges (static — only use if directly relevant to the news angle):
+${staticBadges.join("\n")}`
+      : `Available badge metrics (all static — pick 2-3 that best support the news story):
+${staticBadges.join("\n")}`;
+
+  return `You are a financial journalist writing a brief editorial introduction for "The Kiwidex", a New Zealand economy dashboard. Write a single paragraph of MAXIMUM 75 words.
+
+Style: Newspaper editorial voice — authoritative, measured, slightly literary. The first word MUST be "A" (it renders as a large drop-cap in the UI). Use plain language a general audience would understand.
+
+NARRATIVE PRIORITY (follow this order):
+1. News headlines — these set the story angle
+2. Metrics that have significantly moved — weave these in as evidence
+3. Static metrics — mention at most 1-2 for context, never as the lead
+
+${changeSection}
+
+News headlines (pick the dominant theme — this should DRIVE your angle):
+${headlines.map((h, i) => `${i + 1}. ${h}`).join("\n")}
+
+${badgeSection}
+
+Additional data context (no badges, but use to inform your narrative):
 - GDP growth: ${contextValues.gdp_growth}
 - Median house price: ${contextValues.house_price_median}
 - 1yr mortgage rate: ${contextValues.mortgage_1yr}
-- Milk: ${contextValues.milk}, Eggs: ${contextValues.eggs}, Bread: ${contextValues.bread}
-${changeGuidance}
+- Groceries: Milk ${contextValues.milk}, Eggs ${contextValues.eggs}, Bread ${contextValues.bread}, Butter ${contextValues.butter}, Cheese ${contextValues.cheese}, Bananas ${contextValues.bananas}
 
-Current news headlines (pick the dominant theme to shape the narrative):
-${headlines.map((h, i) => `${i + 1}. ${h}`).join("\n")}
-
-Format: Return ONLY the paragraph text. Use {metric_name} placeholders where these specific metric values should appear: {ocr}, {cpi}, {nzd_usd}, {petrol_91}, {unemployment}, {wage_growth}. These placeholders will be replaced with styled number badges in the UI.
-
-IMPORTANT: Return ONLY the paragraph. No preamble, no explanation, no markdown, no quotes. MAXIMUM 75 words.`;
+Format: Return ONLY the paragraph. Use {metric_name} placeholders where badge values should appear (available: ${badgePlaceholders}). Use at least 2 badges, preferring MOVED metrics over static ones. No preamble, no markdown, no quotes. MAXIMUM 75 words.`;
 }
 
 export default async function collectSummary(): Promise<CollectorResult[]> {
@@ -161,11 +243,26 @@ export default async function collectSummary(): Promise<CollectorResult[]> {
     }
   }
 
-  // Compare to previous summary
-  const previousMetrics = previousSummary
-    ? (JSON.parse(previousSummary.metrics) as Record<string, string>)
-    : null;
-  const changes = describeChanges(rawValues, previousMetrics);
+  // Compare to previous summary (parse raw numbers for threshold comparison)
+  let previousRaw: Record<string, number> | null = null;
+  if (previousSummary) {
+    const parsed = JSON.parse(previousSummary.metrics) as Record<
+      string,
+      string | number
+    >;
+    previousRaw = {};
+    for (const [key, val] of Object.entries(parsed)) {
+      // Handle both raw numbers (new format) and formatted strings (legacy)
+      const num =
+        typeof val === "number"
+          ? val
+          : Number.parseFloat(String(val).replace(/[^0-9.-]/g, ""));
+      if (!Number.isNaN(num)) {
+        previousRaw[key] = num;
+      }
+    }
+  }
+  const changes = describeChanges(rawValues, previousRaw);
 
   if (changes.changed.length > 0) {
     console.log(`[summary] Changes detected: ${changes.changed.join(", ")}`);
@@ -181,7 +278,13 @@ export default async function collectSummary(): Promise<CollectorResult[]> {
     return [];
   }
 
-  const prompt = buildPrompt(metricValues, contextValues, headlines, changes);
+  const prompt = buildPrompt(
+    metricValues,
+    contextValues,
+    headlines,
+    changes,
+    changes.movedKeys
+  );
 
   console.log("[summary] Generating intro with Claude Sonnet...");
   const client = new Anthropic({ apiKey });
@@ -201,8 +304,8 @@ export default async function collectSummary(): Promise<CollectorResult[]> {
   console.log(`[summary] Generated (${content.split(/\s+/).length} words):`);
   console.log(`  ${content.slice(0, 120)}...`);
 
-  // Store in DB
-  await insertSummary(db, content, JSON.stringify(metricValues));
+  // Store in DB — save raw numeric values for accurate future comparison
+  await insertSummary(db, content, JSON.stringify(rawValues));
   console.log("[summary] Saved to summaries table");
 
   return [];

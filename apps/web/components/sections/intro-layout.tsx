@@ -9,7 +9,8 @@ const BADGE_EXTRA_PX = 12;
 // Gap between drop cap and text
 const DROP_CAP_GAP = 12;
 // Regex matching metric placeholders in summary text
-const BADGE_RE = /\{(ocr|cpi|nzd_usd|petrol_91|unemployment|wage_growth)\}/g;
+const BADGE_RE =
+  /\{(ocr|cpi|nzd_usd|petrol_91|unemployment|wage_growth|nzx_50)\}/g;
 
 type Part = { type: "text"; value: string } | { type: "badge"; value: string };
 

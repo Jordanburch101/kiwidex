@@ -32,4 +32,11 @@ export {
   type NewStock,
   type ScraperRun,
 } from "./queries";
-export { articles, metrics, products, scraperRuns, stocks, summaries } from "./schema";
+export {
+  articles,
+  metrics,
+  products,
+  scraperRuns,
+  stocks,
+  summaries,
+} from "./schema";
