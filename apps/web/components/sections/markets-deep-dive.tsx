@@ -14,11 +14,7 @@ export async function MarketsDeepDive() {
   return (
     <section className="px-6 py-10">
       <SectionHeader subtitle={subtitle} title="Markets" />
-      <MarketsCharts
-        bellwethers={bellwethers}
-        nzx50={nzx50}
-        quotes={quotes}
-      />
+      <MarketsCharts bellwethers={bellwethers} nzx50={nzx50} quotes={quotes} />
     </section>
   );
 }

@@ -1,23 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { CandlestickChart, SparklineArea } from "@/components/charts/stock-chart";
+import {
+  CandlestickChart,
+  SparklineArea,
+} from "@/components/charts/stock-chart";
 import { TimeRangeSelector } from "@/components/time-range-selector";
 import { STOCK_COLORS } from "@/lib/colors";
 import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
 
 interface OhlcPoint {
+  close: number;
   date: string;
-  open: number;
   high: number;
   low: number;
-  close: number;
+  open: number;
 }
 
 interface QuoteInfo {
-  ticker: string;
   close: number;
   date: string;
+  ticker: string;
 }
 
 const BELLWETHER_META: Record<string, { label: string; color: string }> = {
@@ -28,12 +31,16 @@ const BELLWETHER_META: Record<string, { label: string; color: string }> = {
 };
 
 interface MarketsChartsProps {
-  nzx50: OhlcPoint[];
   bellwethers: Record<string, { date: string; value: number }[]>;
+  nzx50: OhlcPoint[];
   quotes: QuoteInfo[];
 }
 
-export function MarketsCharts({ nzx50, bellwethers, quotes }: MarketsChartsProps) {
+export function MarketsCharts({
+  nzx50,
+  bellwethers,
+  quotes,
+}: MarketsChartsProps) {
   const [range, setRange] = useState<TimeRange>("1y");
 
   const filteredNzx50 = filterByRange(nzx50, range);

@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import {
+  type AreaData,
+  AreaSeries,
+  type BusinessDay,
+  type CandlestickData,
+  CandlestickSeries,
+  ColorType,
   createChart,
   type IChartApi,
-  type CandlestickData,
-  type AreaData,
-  type BusinessDay,
-  ColorType,
-  CandlestickSeries,
-  AreaSeries,
 } from "lightweight-charts";
+import { useEffect, useRef } from "react";
 
 function toBusinessDay(dateStr: string): BusinessDay {
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -18,10 +18,16 @@ function toBusinessDay(dateStr: string): BusinessDay {
 }
 
 interface CandlestickChartProps {
-  data: { date: string; open: number; high: number; low: number; close: number }[];
+  data: {
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  }[];
+  downColor?: string;
   height?: number;
   upColor?: string;
-  downColor?: string;
 }
 
 export function CandlestickChart({
@@ -35,7 +41,9 @@ export function CandlestickChart({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || data.length === 0) return;
+    if (!container || data.length === 0) {
+      return;
+    }
 
     const chart = createChart(container, {
       height,
@@ -100,9 +108,9 @@ export function CandlestickChart({
 }
 
 interface SparklineAreaProps {
+  color?: string;
   data: { date: string; value: number }[];
   height?: number;
-  color?: string;
 }
 
 export function SparklineArea({
@@ -114,7 +122,9 @@ export function SparklineArea({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || data.length === 0) return;
+    if (!container || data.length === 0) {
+      return;
+    }
 
     const chart = createChart(container, {
       height,

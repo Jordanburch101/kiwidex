@@ -1,9 +1,9 @@
 import {
+  getAllLatestQuotes,
   getLatestArticles,
   getLatestSummary,
   getLatestValue,
   getStockTimeSeries,
-  getAllLatestQuotes,
   getTimeSeries,
   METRIC_META,
   type MetricKey,

@@ -1,11 +1,11 @@
 import { CurrencyDeepDive } from "@/components/sections/currency-deep-dive";
-import { MarketsDeepDive } from "@/components/sections/markets-deep-dive";
 import { Footer } from "@/components/sections/footer";
 import { FuelDeepDive } from "@/components/sections/fuel-deep-dive";
 import { GroceryDeepDive } from "@/components/sections/grocery-deep-dive";
 import { HousingDeepDive } from "@/components/sections/housing-deep-dive";
 import { Intro } from "@/components/sections/intro";
 import { LabourDeepDive } from "@/components/sections/labour-deep-dive";
+import { MarketsDeepDive } from "@/components/sections/markets-deep-dive";
 import { Masthead } from "@/components/sections/masthead";
 import { NewsSection } from "@/components/sections/news-section";
 import { Overview } from "@/components/sections/overview";
