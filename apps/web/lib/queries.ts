@@ -47,6 +47,7 @@ function getPeriodDays(metric: MetricKey): number {
     "unemployment",
     "wage_growth",
     "house_price_index",
+    "ocr",
   ];
   const monthly: MetricKey[] = [
     "house_price_median",
@@ -55,7 +56,6 @@ function getPeriodDays(metric: MetricKey): number {
     "mortgage_2yr",
     "minimum_wage",
     "median_income",
-    "ocr",
   ];
   if (quarterly.includes(metric)) {
     return 365;
@@ -182,6 +182,7 @@ const TICKER_SENTIMENT: Partial<
   nzd_usd: "up_is_good",
   nzd_aud: "up_is_good",
   nzd_eur: "up_is_good",
+  nzx_50: "up_is_good",
 };
 
 function getTrendColor(sparklineData: number[], metric: MetricKey): string {
@@ -222,6 +223,7 @@ async function _getTickerData() {
     { metric: "nzd_usd" as MetricKey, label: "NZD/USD" },
     { metric: "nzd_aud" as MetricKey, label: "NZD/AUD" },
     { metric: "nzd_eur" as MetricKey, label: "NZD/EUR" },
+    { metric: "nzx_50" as MetricKey, label: "NZX 50" },
   ] as const;
 
   const results = await Promise.all(
@@ -343,7 +345,6 @@ async function _getOverviewData() {
 
   const economyRows = [
     // 30-day comparison
-    buildRowData("ocr", ocrLatest, ocrSeries),
     buildRowData("nzd_usd", nzdUsdLatest, nzdUsdSeries),
     buildGroceryRow([
       milkSeries,
@@ -357,6 +358,7 @@ async function _getOverviewData() {
     buildRowData("house_price_median", housePriceLatest, housePriceSeries),
     buildRowData("mortgage_1yr", mortgage1yrLatest, mortgage1yrSeries),
     // 365-day comparison
+    buildRowData("ocr", ocrLatest, ocrSeries),
     buildRowData("cpi", cpiLatest, cpiSeries),
     buildRowData("unemployment", unemploymentLatest, unemploymentSeries),
     buildRowData("gdp_growth", gdpLatest, gdpSeries),
