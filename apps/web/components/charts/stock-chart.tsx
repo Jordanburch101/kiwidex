@@ -11,30 +11,20 @@ import {
   type IChartApi,
 } from "lightweight-charts";
 import { useEffect, useRef } from "react";
+import { DATA, INDICATOR } from "@/lib/colors";
 
 function toBusinessDay(dateStr: string): BusinessDay {
   const [year, month, day] = dateStr.split("-").map(Number);
   return { year: year!, month: month!, day: day! };
 }
 
-/**
- * Resolve a CSS color (including var() and oklch/lab) to a hex string
- * that Lightweight Charts can parse.
- */
-function resolveColor(raw: string, el: Element): string {
-  let color = raw;
-  if (color.startsWith("var(")) {
-    const name = color.slice(4, -1).trim();
-    color = getComputedStyle(el).getPropertyValue(name).trim() || raw;
-  }
-  // Lightweight Charts only understands hex/rgb — convert via canvas
-  const ctx = document.createElement("canvas").getContext("2d");
-  if (!ctx) {
-    return color;
-  }
-  ctx.fillStyle = color;
-  return ctx.fillStyle; // always returns #rrggbb or rgba()
-}
+// Theme colors as hex — Lightweight Charts cannot parse oklch/lab/var()
+const CHART_THEME = {
+  text: "#3d3830",
+  border: "#e5e0d5",
+  background: "transparent",
+  card: "#ffffff",
+} as const;
 
 interface CandlestickChartProps {
   data: {
@@ -52,8 +42,8 @@ interface CandlestickChartProps {
 export function CandlestickChart({
   data,
   height = 300,
-  upColor = "var(--chart-1)",
-  downColor = "var(--destructive)",
+  upColor = INDICATOR.up,
+  downColor = INDICATOR.down,
 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -64,41 +54,37 @@ export function CandlestickChart({
       return;
     }
 
-    const r = (v: string) => resolveColor(v, container);
-
     const chart = createChart(container, {
       height,
       layout: {
-        background: { type: ColorType.Solid, color: "transparent" },
-        textColor: r("var(--foreground)"),
+        background: { type: ColorType.Solid, color: CHART_THEME.background },
+        textColor: CHART_THEME.text,
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: r("var(--border)") },
-        horzLines: { color: r("var(--border)") },
+        vertLines: { color: CHART_THEME.border },
+        horzLines: { color: CHART_THEME.border },
       },
       crosshair: {
-        vertLine: { labelBackgroundColor: r("var(--card)") },
-        horzLine: { labelBackgroundColor: r("var(--card)") },
+        vertLine: { labelBackgroundColor: CHART_THEME.card },
+        horzLine: { labelBackgroundColor: CHART_THEME.card },
       },
       rightPriceScale: {
-        borderColor: r("var(--border)"),
+        borderColor: CHART_THEME.border,
       },
       timeScale: {
-        borderColor: r("var(--border)"),
+        borderColor: CHART_THEME.border,
         timeVisible: false,
       },
     });
 
-    const resolvedUp = r(upColor);
-    const resolvedDown = r(downColor);
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: resolvedUp,
-      downColor: resolvedDown,
-      borderUpColor: resolvedUp,
-      borderDownColor: resolvedDown,
-      wickUpColor: resolvedUp,
-      wickDownColor: resolvedDown,
+      upColor,
+      downColor,
+      borderUpColor: upColor,
+      borderDownColor: downColor,
+      wickUpColor: upColor,
+      wickDownColor: downColor,
     });
 
     const candlestickData: CandlestickData[] = data.map((d) => ({
@@ -138,7 +124,7 @@ interface SparklineAreaProps {
 export function SparklineArea({
   data,
   height = 60,
-  color = "var(--chart-1)",
+  color = DATA.blue,
 }: SparklineAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -168,11 +154,10 @@ export function SparklineArea({
       handleScroll: false,
     });
 
-    const resolved = resolveColor(color, container);
     const series = chart.addSeries(AreaSeries, {
-      lineColor: resolved,
-      topColor: `${resolved}33`,
-      bottomColor: `${resolved}05`,
+      lineColor: color,
+      topColor: `${color}33`,
+      bottomColor: `${color}05`,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false,
