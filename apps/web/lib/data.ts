@@ -17,6 +17,8 @@ export function formatValue(metric: MetricKey, value: number): string {
       return `$${value.toFixed(2)}/L`;
     case "nzd_per_kwh":
       return `$${value.toFixed(2)}/kWh`;
+    case "nzd_per_mwh":
+      return `$${value.toFixed(0)}/MWh`;
     case "nzd_per_week":
       return `$${value.toFixed(0)}/wk`;
     case "nzd_per_hour":

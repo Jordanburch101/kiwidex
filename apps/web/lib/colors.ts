@@ -38,17 +38,19 @@ export const DATA = {
   darkAmber: "#7a5c3a",
   warmAmber: "#c47a20",
   yellowGold: "#d4a030",
+  cyan: "#2ca9c4",
 } as const;
 
 // ---------------------------------------------------------------------------
 // Metric → color assignments
 // ---------------------------------------------------------------------------
 
-/** Fuel series (always shown individually) */
+/** Fuel & energy series (always shown individually) */
 export const FUEL_COLORS = {
-  petrol_91: DATA.burntOrange,
-  petrol_95: DATA.terracotta,
-  petrol_diesel: DATA.darkAmber,
+  petrol_91: DATA.blue,
+  petrol_95: DATA.burntOrange,
+  petrol_diesel: DATA.purple,
+  electricity: DATA.cyan,
 } as const;
 
 /** Grocery series (shown when expanded) */

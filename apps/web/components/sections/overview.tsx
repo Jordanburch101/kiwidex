@@ -1,9 +1,11 @@
 import type { MetricKey } from "@workspace/db";
 import { CompactRow } from "@workspace/ui/components/compact-row";
-import { CostOfLivingChart } from "@/components/charts/cost-of-living-chart";
-import { getCostOfLivingData, getOverviewData } from "@/lib/queries";
+import { HorizonChart } from "@/components/charts/horizon-chart";
+import { getHorizonData, getOverviewData } from "@/lib/queries";
 
 const METRIC_DESCRIPTIONS: Partial<Record<MetricKey | "groceries", string>> = {
+  electricity_wholesale:
+    "National average wholesale electricity spot price from the em6 API (Transpower). Updates daily — a leading indicator of retail power costs.",
   house_price_median:
     "National median house price from REINZ. Published monthly, covering all residential property sales across New Zealand.",
   mortgage_1yr:
@@ -26,6 +28,7 @@ const METRIC_DESCRIPTIONS: Partial<Record<MetricKey | "groceries", string>> = {
 const METRIC_SENTIMENT: Partial<
   Record<MetricKey | "groceries", "up_is_good" | "down_is_good">
 > = {
+  electricity_wholesale: "down_is_good",
   house_price_median: "down_is_good",
   mortgage_1yr: "down_is_good",
   ocr: "down_is_good",
@@ -38,15 +41,15 @@ const METRIC_SENTIMENT: Partial<
 };
 
 export async function Overview() {
-  const [costOfLivingItems, { economyRows }] = await Promise.all([
-    getCostOfLivingData(),
+  const [horizonRows, { economyRows }] = await Promise.all([
+    getHorizonData(),
     getOverviewData(),
   ]);
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.8fr_1fr] lg:items-stretch">
-      {/* Left column: Interactive cost of living chart */}
-      <CostOfLivingChart items={costOfLivingItems} />
+      {/* Left column: Horizon chart — cost of living trends */}
+      <HorizonChart rows={horizonRows} />
 
       {/* Right column: Key indicators (housing + economy) */}
       <div className="flex flex-col">

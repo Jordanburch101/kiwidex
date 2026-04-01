@@ -9,7 +9,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  ComposedChart,
+  ReferenceLine,
   Tooltip,
   XAxis,
   YAxis,
@@ -87,6 +87,10 @@ function formatUnit(value: number, unit: string): string {
   switch (unit) {
     case "nzd_per_litre":
       return `$${value.toFixed(2)}/L`;
+    case "nzd_per_kwh":
+      return `$${value.toFixed(2)}/kWh`;
+    case "nzd_per_mwh":
+      return `$${value.toFixed(0)}/MWh`;
     case "nzd":
       if (value >= 10_000) {
         return `$${Math.round(value / 1000)}K`;
@@ -469,7 +473,10 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
         }
       }
     }
-    return [Math.floor(min / 10) * 10, Math.ceil(max / 10) * 10] as const;
+    // Ensure at least ±5% padding so near-zero series stay visible
+    const lo = Math.min(min, -5);
+    const hi = Math.max(max, 5);
+    return [Math.floor(lo / 5) * 5, Math.ceil(hi / 5) * 5] as const;
   }, [normalisedMerged, visibleSeries]);
 
   const tooltipLabelMap = useMemo(
@@ -479,6 +486,22 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
       ),
     [visibleSeries]
   );
+
+  // Latest normalised value per visible series (for inline legend)
+  const latestValues = useMemo(() => {
+    const map = new Map<string, number>();
+    if (normalisedMerged.length === 0) {
+      return map;
+    }
+    const lastRow = normalisedMerged[normalisedMerged.length - 1]!;
+    for (const s of visibleSeries) {
+      const v = lastRow[s.key];
+      if (typeof v === "number") {
+        map.set(s.key, v);
+      }
+    }
+    return map;
+  }, [normalisedMerged, visibleSeries]);
 
   const singleData = useMemo(() => {
     if (!selectedItem) {
@@ -590,6 +613,16 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
   // ---------------------------------------------------------------------------
   // Render: Normalised multi-line view
   // ---------------------------------------------------------------------------
+
+  const formatLegendValue = (key: string) => {
+    const v = latestValues.get(key);
+    if (v === undefined) {
+      return "";
+    }
+    const sign = v >= 0 ? "+" : "";
+    return `${sign}${v.toFixed(1)}%`;
+  };
+
   return (
     <div
       className="rounded-lg border p-4"
@@ -602,11 +635,75 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
         title="At the Pump &amp; Shelf"
       />
 
-      <ChartContainer
-        className="aspect-[2.2/1] w-full [&_.recharts-area-area]:transition-all [&_.recharts-area-area]:duration-300 [&_.recharts-area-area]:ease-out [&_.recharts-area-curve]:transition-all [&_.recharts-area-curve]:duration-300 [&_.recharts-area-curve]:ease-out"
-        config={chartConfig}
-      >
-        <ComposedChart
+      {/* Legend — above chart, with live values */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        {/* Fuel — always individual */}
+        {groupedItems.fuel.map((it) => (
+          <button
+            className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors"
+            key={it.key}
+            onClick={() => handleLegendClick(it.key)}
+            onMouseEnter={() => setHoveredKey(it.key)}
+            onMouseLeave={() => setHoveredKey(null)}
+            type="button"
+          >
+            <LegendDot color={it.color} />
+            <span style={{ color: T.text }}>{it.label}</span>
+            <span className="font-mono tabular-nums" style={{ color: T.muted }}>
+              {formatLegendValue(it.key)}
+            </span>
+          </button>
+        ))}
+
+        {/* Grocery — combined or individual */}
+        <button
+          className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors ${
+            groceryExpanded ? "border" : ""
+          }`}
+          onClick={toggleGrocery}
+          onMouseEnter={() => {
+            if (!groceryExpanded) {
+              setHoveredKey(GROCERY_META.combinedKey);
+            }
+          }}
+          onMouseLeave={() => setHoveredKey(null)}
+          style={groceryExpanded ? { borderColor: T.btnBorder } : undefined}
+          type="button"
+        >
+          <LegendDot color={GROCERY_META.color} />
+          <span style={{ color: T.text }}>{GROCERY_META.label}</span>
+          {!groceryExpanded && (
+            <span className="font-mono tabular-nums" style={{ color: T.muted }}>
+              {formatLegendValue(GROCERY_META.combinedKey)}
+            </span>
+          )}
+          <span style={{ color: T.dimmed }}>{groceryExpanded ? "−" : "+"}</span>
+        </button>
+
+        {groceryExpanded &&
+          groupedItems.grocery.map((it) => (
+            <button
+              className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors"
+              key={it.key}
+              onClick={() => handleLegendClick(it.key)}
+              onMouseEnter={() => setHoveredKey(it.key)}
+              onMouseLeave={() => setHoveredKey(null)}
+              type="button"
+            >
+              <LegendDot color={it.color} />
+              <span style={{ color: T.text }}>{it.label}</span>
+              <span
+                className="font-mono tabular-nums"
+                style={{ color: T.muted }}
+              >
+                {formatLegendValue(it.key)}
+              </span>
+            </button>
+          ))}
+      </div>
+
+      <ChartContainer className="aspect-[2.2/1] w-full" config={chartConfig}>
+        <AreaChart
           data={normalisedMerged}
           margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
         >
@@ -620,7 +717,7 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
                 y1="0"
                 y2="1"
               >
-                <stop offset="0%" stopColor={s.color} stopOpacity={0.2} />
+                <stop offset="0%" stopColor={s.color} stopOpacity={0.18} />
                 <stop offset="100%" stopColor={s.color} stopOpacity={0.02} />
               </linearGradient>
             ))}
@@ -646,6 +743,12 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
             tickLine={false}
             width={45}
           />
+          <ReferenceLine
+            stroke={T.border}
+            strokeDasharray="6 4"
+            strokeWidth={1.5}
+            y={0}
+          />
           <Tooltip
             content={(props) => (
               <NormalisedTooltip
@@ -667,70 +770,17 @@ export function CostOfLivingChart({ items }: CostOfLivingChartProps) {
                 dataKey={s.key}
                 dot={false}
                 fill={`url(#area-norm-${s.key})`}
-                fillOpacity={isHovered ? 1 : 0}
+                fillOpacity={isFaded ? 0.05 : 1}
                 key={s.key}
                 stroke={s.color}
                 strokeOpacity={isFaded ? 0.15 : 1}
-                strokeWidth={isHovered ? 3 : 1.5}
+                strokeWidth={isHovered ? 4 : 2.5}
                 type="monotone"
               />
             );
           })}
-        </ComposedChart>
+        </AreaChart>
       </ChartContainer>
-
-      {/* Legend */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-        {/* Fuel — always individual */}
-        {groupedItems.fuel.map((it) => (
-          <button
-            className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors"
-            key={it.key}
-            onClick={() => handleLegendClick(it.key)}
-            onMouseEnter={() => setHoveredKey(it.key)}
-            onMouseLeave={() => setHoveredKey(null)}
-            type="button"
-          >
-            <LegendDot color={it.color} />
-            <span style={{ color: T.text }}>{it.label}</span>
-          </button>
-        ))}
-
-        {/* Grocery — combined or individual */}
-        <button
-          className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors ${
-            groceryExpanded ? "border" : ""
-          }`}
-          onClick={toggleGrocery}
-          onMouseEnter={() => {
-            if (!groceryExpanded) {
-              setHoveredKey(GROCERY_META.combinedKey);
-            }
-          }}
-          onMouseLeave={() => setHoveredKey(null)}
-          style={groceryExpanded ? { borderColor: T.btnBorder } : undefined}
-          type="button"
-        >
-          <LegendDot color={GROCERY_META.color} />
-          <span style={{ color: T.text }}>{GROCERY_META.label}</span>
-          <span style={{ color: T.dimmed }}>{groceryExpanded ? "−" : "+"}</span>
-        </button>
-
-        {groceryExpanded &&
-          groupedItems.grocery.map((it) => (
-            <button
-              className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors"
-              key={it.key}
-              onClick={() => handleLegendClick(it.key)}
-              onMouseEnter={() => setHoveredKey(it.key)}
-              onMouseLeave={() => setHoveredKey(null)}
-              type="button"
-            >
-              <LegendDot color={it.color} />
-              <span style={{ color: T.text }}>{it.label}</span>
-            </button>
-          ))}
-      </div>
     </div>
   );
 }

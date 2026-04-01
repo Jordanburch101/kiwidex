@@ -11,6 +11,7 @@ import {
 import { db } from "@workspace/db/client";
 import { unstable_cache } from "next/cache";
 import {
+  DATA,
   FUEL_COLORS,
   GROCERY_COLORS,
   HOUSING_COLORS,
@@ -176,6 +177,7 @@ const TICKER_SENTIMENT: Partial<
   petrol_91: "down_is_good",
   petrol_95: "down_is_good",
   petrol_diesel: "down_is_good",
+  electricity_wholesale: "down_is_good",
   milk: "down_is_good",
   eggs: "down_is_good",
   bread: "down_is_good",
@@ -217,6 +219,7 @@ async function _getTickerData() {
     { metric: "petrol_91" as MetricKey, label: "91" },
     { metric: "petrol_95" as MetricKey, label: "95" },
     { metric: "petrol_diesel" as MetricKey, label: "Diesel" },
+    { metric: "electricity_wholesale" as MetricKey, label: "Power" },
     { metric: "milk" as MetricKey, label: "Milk" },
     { metric: "eggs" as MetricKey, label: "Eggs" },
     { metric: "bread" as MetricKey, label: "Bread" },
@@ -259,7 +262,7 @@ async function _getOverviewData() {
     housePriceLatest,
     mortgage1yrLatest,
     ocrLatest,
-    cpiLatest,
+    elecWholesaleLatest,
     unemploymentLatest,
     nzx50Latest,
     _minimumWageLatest,
@@ -275,7 +278,7 @@ async function _getOverviewData() {
     housePriceSeries,
     mortgage1yrSeries,
     ocrSeries,
-    cpiSeries,
+    elecWholesaleSeries,
     unemploymentSeries,
     nzx50Series,
     _minimumWageSeries,
@@ -287,7 +290,7 @@ async function _getOverviewData() {
     getLatestValue(db, "house_price_median"),
     getLatestValue(db, "mortgage_1yr"),
     getLatestValue(db, "ocr"),
-    getLatestValue(db, "cpi"),
+    getLatestValue(db, "electricity_wholesale"),
     getLatestValue(db, "unemployment"),
     getLatestValue(db, "nzx_50"),
     getLatestValue(db, "minimum_wage"),
@@ -303,7 +306,7 @@ async function _getOverviewData() {
     getTimeSeries(db, "house_price_median", from, to),
     getTimeSeries(db, "mortgage_1yr", from, to),
     getTimeSeries(db, "ocr", from, to),
-    getTimeSeries(db, "cpi", from, to),
+    getTimeSeries(db, "electricity_wholesale", from, to),
     getTimeSeries(db, "unemployment", from, to),
     getTimeSeries(db, "nzx_50", from, to),
     getTimeSeries(db, "minimum_wage", from, to),
@@ -347,6 +350,11 @@ async function _getOverviewData() {
 
   const economyRows = [
     // 30-day comparison
+    buildRowData(
+      "electricity_wholesale",
+      elecWholesaleLatest,
+      elecWholesaleSeries
+    ),
     buildRowData("nzx_50", nzx50Latest, nzx50Series),
     buildRowData("nzd_usd", nzdUsdLatest, nzdUsdSeries),
     buildGroceryRow([
@@ -362,7 +370,6 @@ async function _getOverviewData() {
     buildRowData("mortgage_1yr", mortgage1yrLatest, mortgage1yrSeries),
     // 365-day comparison
     buildRowData("ocr", ocrLatest, ocrSeries),
-    buildRowData("cpi", cpiLatest, cpiSeries),
     buildRowData("unemployment", unemploymentLatest, unemploymentSeries),
     buildRowData("median_income", medianIncomeLatest, medianIncomeSeries),
   ];
@@ -434,6 +441,32 @@ const COST_OF_LIVING_ITEMS: {
   },
 ];
 
+/**
+ * 7-day rolling average to smooth volatile daily data (e.g. wholesale power).
+ */
+function smooth7d(
+  data: { date: string; value: number }[]
+): { date: string; value: number }[] {
+  if (data.length < 7) {
+    return data;
+  }
+  const result: { date: string; value: number }[] = [];
+  for (let i = 0; i < data.length; i++) {
+    const windowStart = Math.max(0, i - 6);
+    let sum = 0;
+    for (let j = windowStart; j <= i; j++) {
+      sum += data[j]!.value;
+    }
+    result.push({
+      date: data[i]!.date,
+      value: sum / (i - windowStart + 1),
+    });
+  }
+  return result;
+}
+
+const SMOOTH_METRICS = new Set<MetricKey>(["electricity_wholesale"]);
+
 async function _getCostOfLivingData() {
   const from = getOneYearAgo();
   const to = getToday();
@@ -441,18 +474,117 @@ async function _getCostOfLivingData() {
   const seriesList = await Promise.all(
     COST_OF_LIVING_ITEMS.map(async (item) => {
       const series = await getTimeSeries(db, item.metric, from, to);
+      const points = toChartPoints(series);
       return {
         key: item.metric,
         label: item.label,
         unit: METRIC_META[item.metric].unit,
         color: item.color,
         group: item.group,
-        data: toChartPoints(series),
+        data: SMOOTH_METRICS.has(item.metric) ? smooth7d(points) : points,
       };
     })
   );
 
   return seriesList;
+}
+
+/**
+ * Averages multiple time series into one by date.
+ */
+function averageSeriesByDate(
+  seriesList: { date: string; value: number }[][]
+): { date: string; value: number }[] {
+  const byDate = new Map<string, number[]>();
+  for (const series of seriesList) {
+    for (const pt of series) {
+      const arr = byDate.get(pt.date);
+      if (arr) {
+        arr.push(pt.value);
+      } else {
+        byDate.set(pt.date, [pt.value]);
+      }
+    }
+  }
+  const result: { date: string; value: number }[] = [];
+  for (const [date, values] of byDate) {
+    result.push({
+      date,
+      value: values.reduce((a, b) => a + b, 0) / values.length,
+    });
+  }
+  result.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return result;
+}
+
+async function _getHorizonData() {
+  const from = getOneYearAgo();
+  const to = getToday();
+
+  // Fetch all individual series
+  const [
+    p91,
+    p95,
+    diesel,
+    elec,
+    milk,
+    eggs,
+    bread,
+    butter,
+    cheese,
+    bananas,
+    nzx50,
+  ] = await Promise.all([
+    getTimeSeries(db, "petrol_91", from, to),
+    getTimeSeries(db, "petrol_95", from, to),
+    getTimeSeries(db, "petrol_diesel", from, to),
+    getTimeSeries(db, "electricity_wholesale", from, to),
+    getTimeSeries(db, "milk", from, to),
+    getTimeSeries(db, "eggs", from, to),
+    getTimeSeries(db, "bread", from, to),
+    getTimeSeries(db, "butter", from, to),
+    getTimeSeries(db, "cheese", from, to),
+    getTimeSeries(db, "bananas", from, to),
+    getStockTimeSeries(db, "^NZ50", from, to),
+  ]);
+
+  return [
+    {
+      key: "fuel",
+      label: "Fuel",
+      color: DATA.burntOrange,
+      data: averageSeriesByDate([
+        toChartPoints(p91),
+        toChartPoints(p95),
+        toChartPoints(diesel),
+      ]),
+    },
+    {
+      key: "groceries",
+      label: "Groceries",
+      color: DATA.teal,
+      data: averageSeriesByDate([
+        toChartPoints(milk),
+        toChartPoints(eggs),
+        toChartPoints(bread),
+        toChartPoints(butter),
+        toChartPoints(cheese),
+        toChartPoints(bananas),
+      ]),
+    },
+    {
+      key: "power",
+      label: "Power",
+      color: DATA.gold,
+      data: smooth7d(toChartPoints(elec)),
+    },
+    {
+      key: "nzx50",
+      label: "NZX 50",
+      color: DATA.blue,
+      data: nzx50.map((r) => ({ date: r.date, value: r.close })),
+    },
+  ];
 }
 
 async function _getIntroData() {
@@ -636,6 +768,11 @@ export const getOverviewData = unstable_cache(
 export const getCostOfLivingData = unstable_cache(
   _getCostOfLivingData,
   ["cost-of-living"],
+  CACHE_OPTS
+);
+export const getHorizonData = unstable_cache(
+  _getHorizonData,
+  ["horizon-chart"],
   CACHE_OPTS
 );
 export const getIntroData = unstable_cache(

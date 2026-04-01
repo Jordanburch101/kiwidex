@@ -81,6 +81,13 @@ export const METRIC_META = {
     category: "everyday_costs",
     description: "Average residential electricity price",
   },
+  electricity_wholesale: {
+    label: "Wholesale Power",
+    unit: "nzd_per_mwh",
+    category: "everyday_costs",
+    description:
+      "National average wholesale electricity spot price (em6, daily)",
+  },
   house_price_median: {
     label: "Median House Price",
     unit: "nzd",
