@@ -24,7 +24,7 @@ ENV NODE_ENV=production
 ENV PORT=3001
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Install Playwright browsers + runtime deps in one layer
+# Install Chromium runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       ca-certificates \
@@ -45,15 +45,15 @@ RUN apt-get update && \
       libxrandr2 \
       xdg-utils \
       wget && \
-    bunx playwright install chromium && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system --gid 1001 app && \
     useradd --system --uid 1001 -g app app
 
-# Copy app source + deps
+# Copy app source + deps, then install browsers using the project's pinned Playwright version
 COPY --from=builder --chown=1001:1001 /app/ .
+RUN cd /app && bun run --bun apps/ingestion/node_modules/.bin/playwright install chromium
 
 USER app
 EXPOSE 3001
