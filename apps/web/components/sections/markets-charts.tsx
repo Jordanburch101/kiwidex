@@ -1,10 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  CandlestickChart,
-  SparklineArea,
-} from "@/components/charts/stock-chart";
+import { SparklineArea, StockChart } from "@/components/charts/stock-chart";
 import { TimeRangeSelector } from "@/components/time-range-selector";
 import { STOCK_COLORS } from "@/lib/colors";
 import { filterByRange, type TimeRange } from "@/lib/filter-by-range";
@@ -55,7 +52,12 @@ export function MarketsCharts({
         />
       </div>
 
-      <CandlestickChart data={filteredNzx50} height={300} key={range} />
+      <StockChart
+        data={filteredNzx50}
+        height={300}
+        key={range}
+        mode={range === "5y" || range === "all" ? "line" : "candle"}
+      />
 
       <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {Object.entries(BELLWETHER_META).map(([ticker, { label, color }]) => {

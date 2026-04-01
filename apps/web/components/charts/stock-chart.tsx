@@ -26,7 +26,7 @@ const CHART_THEME = {
   card: "#ffffff",
 } as const;
 
-interface CandlestickChartProps {
+interface StockChartProps {
   data: {
     date: string;
     open: number;
@@ -36,15 +36,18 @@ interface CandlestickChartProps {
   }[];
   downColor?: string;
   height?: number;
+  /** "candle" for short ranges, "line" for long ranges (5Y/All) */
+  mode?: "candle" | "line";
   upColor?: string;
 }
 
-export function CandlestickChart({
+export function StockChart({
   data,
   height = 300,
   upColor = INDICATOR.up,
   downColor = INDICATOR.down,
-}: CandlestickChartProps) {
+  mode = "candle",
+}: StockChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
 
@@ -79,24 +82,43 @@ export function CandlestickChart({
       },
     });
 
-    const series = chart.addSeries(CandlestickSeries, {
-      upColor,
-      downColor,
-      borderUpColor: upColor,
-      borderDownColor: downColor,
-      wickUpColor: upColor,
-      wickDownColor: downColor,
-    });
+    if (mode === "candle") {
+      const series = chart.addSeries(CandlestickSeries, {
+        upColor,
+        downColor,
+        borderUpColor: upColor,
+        borderDownColor: downColor,
+        wickUpColor: upColor,
+        wickDownColor: downColor,
+      });
 
-    const candlestickData: CandlestickData[] = data.map((d) => ({
-      time: toBusinessDay(d.date),
-      open: d.open,
-      high: d.high,
-      low: d.low,
-      close: d.close,
-    }));
+      const candlestickData: CandlestickData[] = data.map((d) => ({
+        time: toBusinessDay(d.date),
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+      }));
 
-    series.setData(candlestickData);
+      series.setData(candlestickData);
+    } else {
+      const series = chart.addSeries(AreaSeries, {
+        lineColor: DATA.blue,
+        topColor: `${DATA.blue}33`,
+        bottomColor: `${DATA.blue}05`,
+        lineWidth: 2,
+        priceLineVisible: false,
+        lastValueVisible: false,
+      });
+
+      const areaData: AreaData[] = data.map((d) => ({
+        time: toBusinessDay(d.date),
+        value: d.close,
+      }));
+
+      series.setData(areaData);
+    }
+
     chart.timeScale().fitContent();
     chartRef.current = chart;
 
@@ -111,7 +133,7 @@ export function CandlestickChart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [data, height, upColor, downColor]);
+  }, [data, height, upColor, downColor, mode]);
 
   return (
     <div className="[&_a[href*='tradingview']]:!hidden" ref={containerRef} />
