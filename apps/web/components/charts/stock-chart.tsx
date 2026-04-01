@@ -17,6 +17,15 @@ function toBusinessDay(dateStr: string): BusinessDay {
   return { year: year!, month: month!, day: day! };
 }
 
+/** Resolve a CSS variable (e.g. "var(--foreground)") to its computed value, or return the string as-is. */
+function resolveColor(raw: string, el: Element): string {
+  if (!raw.startsWith("var(")) {
+    return raw;
+  }
+  const name = raw.slice(4, -1).trim();
+  return getComputedStyle(el).getPropertyValue(name).trim() || raw;
+}
+
 interface CandlestickChartProps {
   data: {
     date: string;
@@ -45,38 +54,41 @@ export function CandlestickChart({
       return;
     }
 
+    const r = (v: string) => resolveColor(v, container);
+
     const chart = createChart(container, {
       height,
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "var(--foreground)",
-        fontFamily: "var(--font-geist-mono)",
+        textColor: r("var(--foreground)"),
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: "var(--border)" },
-        horzLines: { color: "var(--border)" },
+        vertLines: { color: r("var(--border)") },
+        horzLines: { color: r("var(--border)") },
       },
       crosshair: {
-        vertLine: { labelBackgroundColor: "var(--card)" },
-        horzLine: { labelBackgroundColor: "var(--card)" },
+        vertLine: { labelBackgroundColor: r("var(--card)") },
+        horzLine: { labelBackgroundColor: r("var(--card)") },
       },
       rightPriceScale: {
-        borderColor: "var(--border)",
+        borderColor: r("var(--border)"),
       },
       timeScale: {
-        borderColor: "var(--border)",
+        borderColor: r("var(--border)"),
         timeVisible: false,
       },
     });
 
+    const resolvedUp = r(upColor);
+    const resolvedDown = r(downColor);
     const series = chart.addSeries(CandlestickSeries, {
-      upColor,
-      downColor,
-      borderUpColor: upColor,
-      borderDownColor: downColor,
-      wickUpColor: upColor,
-      wickDownColor: downColor,
+      upColor: resolvedUp,
+      downColor: resolvedDown,
+      borderUpColor: resolvedUp,
+      borderDownColor: resolvedDown,
+      wickUpColor: resolvedUp,
+      wickDownColor: resolvedDown,
     });
 
     const candlestickData: CandlestickData[] = data.map((d) => ({
@@ -146,10 +158,11 @@ export function SparklineArea({
       handleScroll: false,
     });
 
+    const resolved = resolveColor(color, container);
     const series = chart.addSeries(AreaSeries, {
-      lineColor: color,
-      topColor: `${color}33`,
-      bottomColor: `${color}05`,
+      lineColor: resolved,
+      topColor: `${resolved}33`,
+      bottomColor: `${resolved}05`,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false,
