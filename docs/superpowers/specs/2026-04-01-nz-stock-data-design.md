@@ -45,10 +45,10 @@ Add NZ stock market data to The Kiwidex dashboard: the NZX 50 index as a headlin
 
 The NZX 50 close price is also written to the `metrics` table:
 
-- **Key:** `nzx50-close`
-- **Category:** `macro-financial`
-- **Unit:** `index-points`
-- **Sentiment:** `up_is_good`
+- **Key:** `nzx_50`
+- **Category:** `macro_financial`
+- **Unit:** `index`
+- **Sentiment:** `up_is_good` (via `TICKER_SENTIMENT` in queries.ts)
 
 This allows the NZX 50 to appear in the ticker marquee and overview cards with zero special-casing.
 
@@ -57,12 +57,11 @@ The 4 bellwether stocks are **not** mirrored to metrics — they only appear in 
 ### New metric definition (`packages/db/src/metrics.ts`)
 
 ```
-nzx50-close: {
+nzx_50: {
   label: "NZX 50",
-  category: "macro-financial",
-  unit: "index-points",
-  sentiment: "up_is_good",
-  frequency: "daily"
+  unit: "index",
+  category: "macro_financial",
+  description: "NZX 50 stock market index (daily close)",
 }
 ```
 
