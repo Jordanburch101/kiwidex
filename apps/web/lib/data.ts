@@ -25,6 +25,11 @@ export function formatValue(metric: MetricKey, value: number): string {
       return `${value.toFixed(1)}%`;
     case "ratio":
       return value.toFixed(4);
+    case "index":
+      return value.toLocaleString("en-NZ", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      });
     default:
       return value.toString();
   }
