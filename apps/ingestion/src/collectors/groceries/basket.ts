@@ -34,7 +34,7 @@ const SPECIALTY_EGGS = /quail|duck|liquid|free.?flow|omega/i;
 const SPECIALTY_BREAD =
   /sourdough|ciabatta|brioche|gluten.?free|low.?carb|rye|wholemeal|wheatmeal|wholegrain|multigrain|grain|ancient|keto|protein|wrap|pita|english.?muffin|bun|roll|high.?fibre|sandwich/i;
 const SPECIALTY_BUTTER =
-  /almond|peanut|cashew|spread|margarine|olive|garlic|herb|truffle|cultured|ghee|vegan/i;
+  /almond|peanut|cashew|spread|margarine|olive|garlic|herb|truffle|cultured|ghee|vegan|unsalted|chicken|pickle|sauce|semi.?soft|nuts?|chocolate|seeds?|super.?food|everything.?butter|fix.+fogg/i;
 const SPECIALTY_CHEESE =
   /cream.?cheese|brie|camembert|parmesan|feta|halloumi|mozzarella|gouda|edam|colby|vintage|aged|tasty|smoked|pepper|chili|cumin|cranberry|apricot|slice|shred|grate/i;
 
@@ -132,7 +132,7 @@ export const BASKET: BasketItem[] = [
     label: "500g Salted Butter",
     standardUnit: "500g",
     searchQueries: {
-      woolworths: "salted butter 500g",
+      woolworths: "butter 500g",
       paknsave: "butter salted 500g",
       newworld: "butter salted 500g",
     },

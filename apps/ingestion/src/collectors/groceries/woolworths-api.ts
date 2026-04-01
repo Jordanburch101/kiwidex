@@ -4,6 +4,7 @@ import { USER_AGENT } from "./constants";
 import type { ScrapedProduct } from "./types";
 
 const SEARCH_URL = "https://www.woolworths.co.nz/api/v1/products";
+const SCRAPEOPS_KEY = process.env.SCRAPEOPS_API_KEY;
 
 interface WoolworthsProduct {
   brand: string;
@@ -31,8 +32,12 @@ interface WoolworthsSearchResponse {
 
 /**
  * Search Woolworths NZ products via their internal API.
- * Requires a session cookie from the homepage — without it,
- * the CDN blocks requests from cloud hosting IPs (e.g. Railway).
+ *
+ * Woolworths' CDN (Akamai) blocks requests from cloud IPs.
+ * When SCRAPEOPS_API_KEY is set, requests are routed through
+ * ScrapeOps residential proxy to bypass the block.
+ * Without a proxy, falls back to direct requests with session cookies
+ * (works locally but not from Railway).
  */
 const MAX_RETRIES = 3;
 
@@ -40,19 +45,19 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** Module-level session state, set by initSession(). */
+/** Module-level session state for direct (non-proxy) mode. */
 let sessionCookies = "";
 let sessionFailed = false;
 
 /**
- * Establish a session by fetching the Woolworths homepage.
- * The CDN sets tracking/session cookies that must be included
- * in subsequent API requests, otherwise cloud IPs get blocked.
- *
- * If this fails (e.g. timeout on Railway), sets sessionFailed=true
- * so the scraper can bail early instead of burning time on doomed retries.
+ * Establish a session by fetching the Woolworths homepage (direct mode only).
+ * Skipped entirely when ScrapeOps proxy is available.
  */
 async function initSession(): Promise<void> {
+  if (SCRAPEOPS_KEY) {
+    return;
+  }
+
   try {
     const res = await fetch("https://www.woolworths.co.nz/", {
       headers: {
@@ -68,7 +73,6 @@ async function initSession(): Promise<void> {
     const setCookieHeaders = res.headers.getSetCookie();
     sessionCookies = setCookieHeaders.map((c) => c.split(";")[0]).join("; ");
 
-    // Consume response body to free connection
     await res.text();
 
     if (sessionCookies) {
@@ -90,25 +94,35 @@ async function searchProducts(
   query: string,
   attempt = 1
 ): Promise<WoolworthsProduct[]> {
-  const url = `${SEARCH_URL}?target=search&search=${encodeURIComponent(query)}&inStockProductsOnly=false&size=48`;
+  const targetUrl = `${SEARCH_URL}?target=search&search=${encodeURIComponent(query)}&inStockProductsOnly=false&size=48`;
 
-  const headers: Record<string, string> = {
-    "User-Agent": USER_AGENT,
-    "x-requested-with": "OnlineShopping.WebApp",
-    Accept: "application/json, text/plain, */*",
-    "Accept-Language": "en-NZ,en;q=0.9",
-    Origin: "https://www.woolworths.co.nz",
-    Referer: `https://www.woolworths.co.nz/shop/searchproducts?search=${encodeURIComponent(query)}`,
-  };
+  // Route through ScrapeOps proxy when available, otherwise direct
+  const fetchUrl = SCRAPEOPS_KEY
+    ? `https://proxy.scrapeops.io/v1/?api_key=${SCRAPEOPS_KEY}&url=${encodeURIComponent(targetUrl)}&render_js=false`
+    : targetUrl;
+
+  const headers: Record<string, string> = SCRAPEOPS_KEY
+    ? { Accept: "application/json" }
+    : {
+        "User-Agent": USER_AGENT,
+        "x-requested-with": "OnlineShopping.WebApp",
+        Accept: "application/json, text/plain, */*",
+        "Accept-Language": "en-NZ,en;q=0.9",
+        Origin: "https://www.woolworths.co.nz",
+        Referer: `https://www.woolworths.co.nz/shop/searchproducts?search=${encodeURIComponent(query)}`,
+      };
 
   if (sessionCookies) {
     headers.Cookie = sessionCookies;
   }
 
+  // ScrapeOps free tier is slow (~30-50s per request) — generous timeout
+  const timeout = SCRAPEOPS_KEY ? 90_000 : 15_000;
+
   try {
-    const res = await fetch(url, {
+    const res = await fetch(fetchUrl, {
       headers,
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeout),
     });
 
     if (!res.ok) {
@@ -117,21 +131,24 @@ async function searchProducts(
       );
     }
 
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      const body = await res.text();
-      throw new Error(
-        `Woolworths returned non-JSON (${contentType}): ${body.slice(0, 200)}`
-      );
+    const body = await res.text();
+
+    // ScrapeOps may return HTML error pages on failure
+    let data: WoolworthsSearchResponse;
+    try {
+      data = JSON.parse(body) as WoolworthsSearchResponse;
+    } catch {
+      throw new Error(`Woolworths returned non-JSON: ${body.slice(0, 200)}`);
     }
 
-    const data = (await res.json()) as WoolworthsSearchResponse;
     return (data.products?.items || []).filter((p) => p.type === "Product");
   } catch (e) {
-    if (attempt < MAX_RETRIES) {
+    // Fewer retries for proxy mode (each attempt is ~50s on free tier)
+    const maxRetries = SCRAPEOPS_KEY ? 1 : MAX_RETRIES;
+    if (attempt < maxRetries) {
       const backoff = attempt * 5000;
       console.warn(
-        `[woolworths] Retry ${attempt}/${MAX_RETRIES} for "${query}" in ${backoff / 1000}s: ${e instanceof Error ? e.message : e}`
+        `[woolworths] Retry ${attempt}/${maxRetries} for "${query}" in ${backoff / 1000}s: ${e instanceof Error ? e.message : e}`
       );
       await delay(backoff);
       return searchProducts(query, attempt + 1);
@@ -160,7 +177,9 @@ function buildFullName(product: WoolworthsProduct): string {
 export async function scrapeWoolworthsApi(
   basket: BasketItem[]
 ): Promise<ScrapedProduct[]> {
-  console.log("[woolworths] Starting API scrape...");
+  console.log(
+    `[woolworths] Starting API scrape${SCRAPEOPS_KEY ? " (via ScrapeOps proxy)" : ""}...`
+  );
 
   await initSession();
 
@@ -188,7 +207,19 @@ export async function scrapeWoolworthsApi(
       let matched = 0;
       for (const p of products) {
         const fullName = buildFullName(p);
-        const shelfPrice = p.price?.salePrice ?? p.price?.originalPrice;
+
+        // For per-kg items (e.g. bananas), the API salePrice may reflect
+        // a default order quantity rather than the per-kg price. Use cupPrice
+        // when it matches the basket's standard unit.
+        const usePerKgPrice =
+          p.size?.cupPrice &&
+          p.size?.cupMeasure &&
+          /kg/i.test(item.standardUnit) &&
+          /kg/i.test(p.size.cupMeasure);
+
+        const shelfPrice = usePerKgPrice
+          ? p.size.cupPrice
+          : (p.price?.salePrice ?? p.price?.originalPrice);
 
         if (!shelfPrice || shelfPrice <= 0) {
           continue;
@@ -207,11 +238,11 @@ export async function scrapeWoolworthsApi(
           continue;
         }
 
-        // Normalize price when product size differs from standard unit
-        const normFactor = computeNormalizationFactor(
-          fullName,
-          item.standardUnit
-        );
+        // Normalize price when product size differs from standard unit.
+        // Skip normalization when cupPrice is already per-standard-unit.
+        const normFactor = usePerKgPrice
+          ? 1
+          : computeNormalizationFactor(fullName, item.standardUnit);
         const price = Math.round(shelfPrice * normFactor * 100) / 100;
 
         if (price < item.priceRange.min || price > item.priceRange.max) {

@@ -86,8 +86,16 @@ export default async function collectGroceries(): Promise<CollectorResult[]> {
     storeStarts.set(store, Date.now());
   }
 
+  // Woolworths via ScrapeOps proxy is slow (~50s/request × 6 items)
+  const woolworthsTimeout = process.env.SCRAPEOPS_API_KEY ? 600_000 : 120_000;
+
   const results = await Promise.allSettled(
-    STORES.map((store) => scrapeInProcess(store))
+    STORES.map((store) =>
+      scrapeInProcess(
+        store,
+        store === "woolworths" ? woolworthsTimeout : 120_000
+      )
+    )
   );
 
   const allProducts: ScrapedProduct[] = [];
