@@ -6,7 +6,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://kiwidex.co.nz"),
+  metadataBase: new URL("https://thekiwidex.co.nz"),
   title: "The Kiwidex — New Zealand Economy Dashboard",
   description:
     "Live NZ economic indicators updated daily: CPI, fuel prices, groceries, housing, exchange rates, and employment. Data from RBNZ, Stats NZ, REINZ, and more.",
@@ -25,14 +25,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_NZ",
-    url: "https://kiwidex.co.nz",
+    url: "https://thekiwidex.co.nz",
     siteName: "The Kiwidex",
     title: "The Kiwidex — New Zealand Economy Dashboard",
     description:
       "Live NZ economic indicators updated daily: CPI, fuel prices, groceries, housing, exchange rates, and employment.",
     images: [
       {
-        url: "/api/og",
+        url: "https://thekiwidex.co.nz/api/og",
         width: 1200,
         height: 630,
         alt: "The Kiwidex — New Zealand Economy Dashboard",
@@ -44,10 +44,10 @@ export const metadata: Metadata = {
     title: "The Kiwidex — New Zealand Economy Dashboard",
     description:
       "Live NZ economic indicators updated daily: CPI, fuel, groceries, housing, FX, employment.",
-    images: ["/api/og"],
+    images: ["https://thekiwidex.co.nz/api/og"],
   },
   alternates: {
-    canonical: "https://kiwidex.co.nz",
+    canonical: "https://thekiwidex.co.nz",
   },
   robots: {
     index: true,
