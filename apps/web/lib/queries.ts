@@ -462,7 +462,16 @@ async function _getIntroData() {
     return { summary: null, metrics: {} as Record<string, string> };
   }
 
-  const metrics = JSON.parse(row.metrics) as Record<string, string>;
+  const raw = JSON.parse(row.metrics) as Record<string, string | number>;
+  const metrics: Record<string, string> = {};
+  for (const [key, val] of Object.entries(raw)) {
+    // New format stores raw numbers — format for display
+    // Legacy format stores pre-formatted strings — pass through
+    metrics[key] =
+      typeof val === "number"
+        ? formatValue(key as MetricKey, val)
+        : String(val);
+  }
   return { summary: row.content, metrics };
 }
 
@@ -586,7 +595,7 @@ async function _getMarketData() {
       getStockTimeSeries(db, "FPH.NZ", from, to),
       getStockTimeSeries(db, "MEL.NZ", from, to),
       getStockTimeSeries(db, "FBU.NZ", from, to),
-      getAllLatestQuotes(db),
+      getAllLatestQuotes(db, ["^NZ50", "AIR.NZ", "FPH.NZ", "MEL.NZ", "FBU.NZ"]),
     ]);
 
   return {

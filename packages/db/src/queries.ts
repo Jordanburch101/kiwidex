@@ -2,7 +2,14 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { METRIC_META, type MetricCategory, type MetricKey } from "./metrics";
 import type * as schema from "./schema";
-import { articles, metrics, products, scraperRuns, stocks, summaries } from "./schema";
+import {
+  articles,
+  metrics,
+  products,
+  scraperRuns,
+  stocks,
+  summaries,
+} from "./schema";
 
 type Db = LibSQLDatabase<typeof schema>;
 
@@ -371,18 +378,9 @@ export async function getLatestStockQuote(db: Db, ticker: string) {
   return rows[0] ?? null;
 }
 
-export async function getAllLatestQuotes(db: Db) {
-  const allRows = await db
-    .select()
-    .from(stocks)
-    .orderBy(desc(stocks.date));
-
-  const latest = new Map<string, typeof stocks.$inferSelect>();
-  for (const row of allRows) {
-    if (!latest.has(row.ticker)) {
-      latest.set(row.ticker, row);
-    }
-  }
-
-  return Array.from(latest.values());
+export async function getAllLatestQuotes(db: Db, tickers: string[]) {
+  const results = await Promise.all(
+    tickers.map((ticker) => getLatestStockQuote(db, ticker))
+  );
+  return results.filter((r): r is NonNullable<typeof r> => r !== null);
 }

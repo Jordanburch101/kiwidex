@@ -282,16 +282,16 @@ describe("query helpers", () => {
           {
             ticker: "^NZ50",
             date: "2026-03-28",
-            open: 12100,
-            high: 12200,
-            low: 12050,
-            close: 12150,
-            volume: 50000,
+            open: 12_100,
+            high: 12_200,
+            low: 12_050,
+            close: 12_150,
+            volume: 50_000,
           },
         ]);
         const rows = await testDb.select().from(schema.stocks);
         expect(rows).toHaveLength(1);
-        expect(rows[0]?.close).toBe(12150);
+        expect(rows[0]?.close).toBe(12_150);
       });
 
       test("upserts on duplicate ticker+date", async () => {
@@ -299,27 +299,27 @@ describe("query helpers", () => {
           {
             ticker: "^NZ50",
             date: "2026-03-28",
-            open: 12100,
-            high: 12200,
-            low: 12050,
-            close: 12150,
-            volume: 50000,
+            open: 12_100,
+            high: 12_200,
+            low: 12_050,
+            close: 12_150,
+            volume: 50_000,
           },
         ]);
         await insertStocks(testDb, [
           {
             ticker: "^NZ50",
             date: "2026-03-28",
-            open: 12100,
-            high: 12250,
-            low: 12050,
-            close: 12200,
-            volume: 55000,
+            open: 12_100,
+            high: 12_250,
+            low: 12_050,
+            close: 12_200,
+            volume: 55_000,
           },
         ]);
         const rows = await testDb.select().from(schema.stocks);
         expect(rows).toHaveLength(1);
-        expect(rows[0]?.close).toBe(12200);
+        expect(rows[0]?.close).toBe(12_200);
       });
 
       test("handles null volume", async () => {
@@ -327,10 +327,10 @@ describe("query helpers", () => {
           {
             ticker: "^NZ50",
             date: "2026-03-28",
-            open: 12100,
-            high: 12200,
-            low: 12050,
-            close: 12150,
+            open: 12_100,
+            high: 12_200,
+            low: 12_050,
+            close: 12_150,
             volume: null,
           },
         ]);
@@ -342,11 +342,40 @@ describe("query helpers", () => {
     describe("getStockTimeSeries", () => {
       test("returns OHLC data ordered by date", async () => {
         await insertStocks(testDb, [
-          { ticker: "AIR.NZ", date: "2026-03-26", open: 0.71, high: 0.73, low: 0.7, close: 0.72, volume: 1000000 },
-          { ticker: "AIR.NZ", date: "2026-03-27", open: 0.72, high: 0.74, low: 0.71, close: 0.73, volume: 900000 },
-          { ticker: "AIR.NZ", date: "2026-03-28", open: 0.73, high: 0.75, low: 0.72, close: 0.74, volume: 1100000 },
+          {
+            ticker: "AIR.NZ",
+            date: "2026-03-26",
+            open: 0.71,
+            high: 0.73,
+            low: 0.7,
+            close: 0.72,
+            volume: 1_000_000,
+          },
+          {
+            ticker: "AIR.NZ",
+            date: "2026-03-27",
+            open: 0.72,
+            high: 0.74,
+            low: 0.71,
+            close: 0.73,
+            volume: 900_000,
+          },
+          {
+            ticker: "AIR.NZ",
+            date: "2026-03-28",
+            open: 0.73,
+            high: 0.75,
+            low: 0.72,
+            close: 0.74,
+            volume: 1_100_000,
+          },
         ]);
-        const results = await getStockTimeSeries(testDb, "AIR.NZ", "2026-03-27", "2026-03-28");
+        const results = await getStockTimeSeries(
+          testDb,
+          "AIR.NZ",
+          "2026-03-27",
+          "2026-03-28"
+        );
         expect(results).toHaveLength(2);
         expect(results[0]?.date).toBe("2026-03-27");
         expect(results[1]?.close).toBe(0.74);
@@ -356,8 +385,24 @@ describe("query helpers", () => {
     describe("getLatestStockQuote", () => {
       test("returns most recent row for a ticker", async () => {
         await insertStocks(testDb, [
-          { ticker: "FPH.NZ", date: "2026-03-27", open: 30, high: 31, low: 29.5, close: 30.5, volume: 200000 },
-          { ticker: "FPH.NZ", date: "2026-03-28", open: 30.5, high: 31.5, low: 30, close: 31, volume: 250000 },
+          {
+            ticker: "FPH.NZ",
+            date: "2026-03-27",
+            open: 30,
+            high: 31,
+            low: 29.5,
+            close: 30.5,
+            volume: 200_000,
+          },
+          {
+            ticker: "FPH.NZ",
+            date: "2026-03-28",
+            open: 30.5,
+            high: 31.5,
+            low: 30,
+            close: 31,
+            volume: 250_000,
+          },
         ]);
         const result = await getLatestStockQuote(testDb, "FPH.NZ");
         expect(result).not.toBeNull();
@@ -374,14 +419,38 @@ describe("query helpers", () => {
     describe("getAllLatestQuotes", () => {
       test("returns latest row for each ticker", async () => {
         await insertStocks(testDb, [
-          { ticker: "^NZ50", date: "2026-03-27", open: 12000, high: 12100, low: 11900, close: 12050, volume: null },
-          { ticker: "^NZ50", date: "2026-03-28", open: 12050, high: 12200, low: 12000, close: 12150, volume: null },
-          { ticker: "AIR.NZ", date: "2026-03-28", open: 0.72, high: 0.74, low: 0.71, close: 0.73, volume: 1000000 },
+          {
+            ticker: "^NZ50",
+            date: "2026-03-27",
+            open: 12_000,
+            high: 12_100,
+            low: 11_900,
+            close: 12_050,
+            volume: null,
+          },
+          {
+            ticker: "^NZ50",
+            date: "2026-03-28",
+            open: 12_050,
+            high: 12_200,
+            low: 12_000,
+            close: 12_150,
+            volume: null,
+          },
+          {
+            ticker: "AIR.NZ",
+            date: "2026-03-28",
+            open: 0.72,
+            high: 0.74,
+            low: 0.71,
+            close: 0.73,
+            volume: 1_000_000,
+          },
         ]);
-        const results = await getAllLatestQuotes(testDb);
+        const results = await getAllLatestQuotes(testDb, ["^NZ50", "AIR.NZ"]);
         expect(results).toHaveLength(2);
         const nzx = results.find((r) => r.ticker === "^NZ50");
-        expect(nzx?.close).toBe(12150);
+        expect(nzx?.close).toBe(12_150);
       });
     });
   });
