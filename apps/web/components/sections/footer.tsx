@@ -75,24 +75,24 @@ export function Footer() {
       </div>
 
       {/* Colophon */}
-      <div className="flex flex-col items-center gap-3 px-6 py-5 sm:flex-row sm:justify-between sm:px-12">
+      <div className="grid grid-cols-1 items-center gap-3 px-6 py-5 sm:grid-cols-3 sm:px-12">
         <p className="text-center text-[#bbb] text-[10px] leading-relaxed sm:text-left">
           Rent data sourced from the MBIE Tenancy Services Market Rent register.
           <br />
           All data collected from public sources. May not reflect real-time
           values.
         </p>
-        <p className="font-bold font-heading text-[#d5d0c5] text-sm tracking-[0.05em]">
+        <p className="text-center font-bold font-heading text-[#d5d0c5] text-sm tracking-[0.05em]">
           The Kiwidex
         </p>
-        <p className="text-[10px]">
+        <p className="text-center text-[10px] sm:text-right sm:justify-self-end">
           <a
             className="border-transparent border-b text-[#998] no-underline transition-colors hover:border-[#998]"
             href="https://jordanburch.dev"
             rel="noopener noreferrer"
             target="_blank"
           >
-            jordanburch.dev
+            Built by Jordan Burch
           </a>
         </p>
       </div>

@@ -80,6 +80,8 @@ export function StockChart({
         borderColor: CHART_THEME.border,
         timeVisible: false,
       },
+      handleScale: false,
+      handleScroll: false,
     });
 
     if (mode === "candle") {
