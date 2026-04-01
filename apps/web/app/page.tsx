@@ -1,4 +1,5 @@
 import { CurrencyDeepDive } from "@/components/sections/currency-deep-dive";
+import { MarketsDeepDive } from "@/components/sections/markets-deep-dive";
 import { Footer } from "@/components/sections/footer";
 import { FuelDeepDive } from "@/components/sections/fuel-deep-dive";
 import { GroceryDeepDive } from "@/components/sections/grocery-deep-dive";
@@ -46,6 +47,9 @@ export default function Page() {
             <CurrencyDeepDive />
           </div>
           <div className="border-[#e5e0d5] border-t">
+            <MarketsDeepDive />
+          </div>
+          <div className="border-[#e5e0d5] border-t">
             <SponsorCTA />
           </div>
         </main>
@@ -87,6 +91,7 @@ const STRUCTURED_DATA = [
       "Mortgage Rates",
       "Unemployment Rate",
       "Wage Growth",
+      "NZX 50 Index",
     ],
     license: "https://creativecommons.org/licenses/by/4.0/",
     isAccessibleForFree: true,
