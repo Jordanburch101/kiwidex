@@ -65,6 +65,26 @@ export const products = sqliteTable(
   ]
 );
 
+export const stocks = sqliteTable(
+  "stocks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ticker: text("ticker").notNull(),
+    date: text("date").notNull(),
+    open: real("open").notNull(),
+    high: real("high").notNull(),
+    low: real("low").notNull(),
+    close: real("close").notNull(),
+    volume: integer("volume"),
+    createdAt: text("created_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString()),
+  },
+  (table) => [
+    uniqueIndex("stock_ticker_date_uniq").on(table.ticker, table.date),
+  ]
+);
+
 export const summaries = sqliteTable("summaries", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   content: text("content").notNull(),
