@@ -9,7 +9,10 @@ export {
 } from "./metrics";
 export {
   bulkInsert,
+  deleteOldArticles,
+  deleteOrphanedStories,
   getAllLatestQuotes,
+  getArticlesByStoryId,
   getLastSuccessDate,
   getLatestArticles,
   getLatestByCategory,
@@ -18,8 +21,11 @@ export {
   getLatestSummary,
   getLatestValue,
   getProductsByCategory,
+  getRecentStories,
   getStaleCollectors,
   getStockTimeSeries,
+  getStories,
+  getStoryBySlug,
   getTimeSeries,
   insertArticles,
   insertProducts,
@@ -30,7 +36,10 @@ export {
   type NewProduct,
   type NewScraperRun,
   type NewStock,
+  type NewStory,
   type ScraperRun,
+  updateStoryEnrichment,
+  upsertStory,
 } from "./queries";
 export {
   articles,
@@ -38,5 +47,6 @@ export {
   products,
   scraperRuns,
   stocks,
+  stories,
   summaries,
 } from "./schema";

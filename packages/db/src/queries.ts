@@ -8,6 +8,7 @@ import {
   products,
   scraperRuns,
   stocks,
+  stories,
   summaries,
 } from "./schema";
 
@@ -272,7 +273,9 @@ export async function insertArticles(db: Db, items: NewArticle[]) {
           imageUrl: sql`excluded.image_url`,
           source: sql`excluded.source`,
           publishedAt: sql`excluded.published_at`,
-          createdAt: new Date().toISOString(),
+          tags: sql`excluded.tags`,
+          storyId: sql`excluded.story_id`,
+          createdAt: sql`datetime('now')`,
         },
       });
   }
@@ -383,4 +386,112 @@ export async function getAllLatestQuotes(db: Db, tickers: string[]) {
     tickers.map((ticker) => getLatestStockQuote(db, ticker))
   );
   return results.filter((r): r is NonNullable<typeof r> => r !== null);
+}
+
+// --- Story queries ---
+
+export type NewStory = typeof stories.$inferInsert;
+
+export async function upsertStory(db: Db, story: NewStory) {
+  await db
+    .insert(stories)
+    .values(story)
+    .onConflictDoUpdate({
+      target: [stories.id],
+      set: {
+        headline: story.headline,
+        tags: story.tags,
+        sourceCount: story.sourceCount,
+        imageUrl: story.imageUrl,
+        firstReportedAt: story.firstReportedAt,
+        updatedAt: story.updatedAt,
+      },
+    });
+}
+
+export async function getStories(
+  db: Db,
+  opts: { days?: number; tag?: string; limit?: number; offset?: number }
+) {
+  const { days = 30, tag, limit = 50, offset = 0 } = opts;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0]!;
+
+  const rows = await db
+    .select()
+    .from(stories)
+    .where(gte(stories.updatedAt, cutoff))
+    .orderBy(desc(stories.updatedAt))
+    .limit(limit)
+    .offset(offset);
+
+  if (tag) {
+    return rows.filter((row) => {
+      const tags: string[] = JSON.parse(row.tags);
+      return tags.includes(tag);
+    });
+  }
+
+  return rows;
+}
+
+export async function getStoryBySlug(db: Db, slug: string) {
+  const rows = await db
+    .select()
+    .from(stories)
+    .where(eq(stories.id, slug))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getArticlesByStoryId(db: Db, storyId: string) {
+  return db
+    .select()
+    .from(articles)
+    .where(eq(articles.storyId, storyId))
+    .orderBy(desc(articles.publishedAt));
+}
+
+export async function getRecentStories(db: Db, days: number) {
+  const cutoff = new Date(
+    Date.now() - days * 24 * 60 * 60 * 1000
+  ).toISOString();
+  return db
+    .select()
+    .from(stories)
+    .where(gte(stories.updatedAt, cutoff))
+    .orderBy(desc(stories.updatedAt));
+}
+
+export async function updateStoryEnrichment(
+  db: Db,
+  storyId: string,
+  data: { summary: string; angles: string; relatedMetrics: string }
+) {
+  await db
+    .update(stories)
+    .set({
+      summary: data.summary,
+      angles: data.angles,
+      relatedMetrics: data.relatedMetrics,
+    })
+    .where(eq(stories.id, storyId));
+}
+
+export async function deleteOldArticles(db: Db, beforeDate: string) {
+  await db.delete(articles).where(lte(articles.publishedAt, beforeDate));
+}
+
+export async function deleteOrphanedStories(db: Db) {
+  const allStoryRows = await db.select({ id: stories.id }).from(stories);
+  for (const row of allStoryRows) {
+    const articleCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(articles)
+      .where(eq(articles.storyId, row.id));
+    if (articleCount[0]!.count === 0) {
+      await db.delete(stories).where(eq(stories.id, row.id));
+    }
+  }
 }
