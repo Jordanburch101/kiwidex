@@ -1,9 +1,11 @@
 import {
   getAllLatestQuotes,
-  getLatestArticles,
+  getArticlesByStoryId,
   getLatestSummary,
   getLatestValue,
   getStockTimeSeries,
+  getStories,
+  getStoryBySlug,
   getTimeSeries,
   METRIC_META,
   type MetricKey,
@@ -711,9 +713,80 @@ async function _getCurrencyChartData() {
 }
 
 async function _getNewsData() {
-  const { pickLeadAndRest } = await import("@/lib/score-articles");
-  const articles = await getLatestArticles(db, 2);
-  return pickLeadAndRest(articles);
+  const stories = await getStories(db, { days: 7, limit: 7 });
+  if (stories.length === 0) {
+    return null;
+  }
+
+  return {
+    lead: stories[0]!,
+    rest: stories.slice(1),
+  };
+}
+
+async function _getNewsPageData() {
+  const stories = await getStories(db, { days: 30, limit: 50 });
+  if (stories.length === 0) {
+    return null;
+  }
+
+  const lead = stories[0]!;
+  const rest = stories.slice(1);
+
+  return { lead, rest };
+}
+
+async function _getStoryPageData(slug: string) {
+  const story = await getStoryBySlug(db, slug);
+  if (!story) {
+    return null;
+  }
+
+  const articles = await getArticlesByStoryId(db, story.id);
+
+  let relatedMetricData: {
+    metric: string;
+    label: string;
+    value: string;
+    change: string;
+    changeType: string;
+    sparklineData: number[];
+  }[] = [];
+
+  if (story.relatedMetrics) {
+    const metricKeys: MetricKey[] = JSON.parse(story.relatedMetrics);
+    const from = getOneYearAgo();
+    const to = getToday();
+
+    relatedMetricData = await Promise.all(
+      metricKeys.slice(0, 5).map(async (metric) => {
+        const [latest, series] = await Promise.all([
+          getLatestValue(db, metric),
+          getTimeSeries(db, metric, from, to),
+        ]);
+        const values = toValues(series);
+        const chartPoints = toChartPoints(series);
+        const change =
+          chartPoints.length >= 2
+            ? computeChange(chartPoints, getPeriodDays(metric))
+            : { label: "\u2014", type: "neutral" as const };
+
+        return {
+          metric,
+          label: METRIC_META[metric].label,
+          value:
+            latest?.value === undefined || latest?.value === null
+              ? "\u2014"
+              : formatValue(metric, latest.value),
+          change: change.label,
+          changeType: change.type,
+          sparklineData: values,
+        };
+      })
+    );
+  }
+
+  return { story, articles, relatedMetrics: relatedMetricData };
 }
 
 async function _getMarketData() {
@@ -806,6 +879,18 @@ export const getCurrencyChartData = unstable_cache(
   CACHE_OPTS
 );
 export const getNewsData = unstable_cache(_getNewsData, ["news"], CACHE_OPTS);
+export const getNewsPageData = unstable_cache(
+  _getNewsPageData,
+  ["news-page"],
+  CACHE_OPTS
+);
+export function getStoryPageData(slug: string) {
+  return unstable_cache(
+    () => _getStoryPageData(slug),
+    [`story-${slug}`],
+    CACHE_OPTS
+  )();
+}
 export const getMarketData = unstable_cache(
   _getMarketData,
   ["market"],
