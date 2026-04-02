@@ -1,11 +1,24 @@
-import { db, insertArticles, type NewArticle } from "@workspace/db";
+import {
+  db,
+  deleteOldArticles,
+  deleteOrphanedStories,
+  getArticlesByStoryId,
+  getRecentStories,
+  insertArticles,
+  type NewArticle,
+  updateStoryEnrichment,
+  upsertStory,
+} from "@workspace/db";
 import type { CollectorResult } from "../types";
+import { matchArticlesToStories, tagArticles } from "./ai";
+import { enrichStory } from "./enrich";
 import { matchesEconomyKeywords } from "./keywords";
 import { parse1NewsRss } from "./parse-1news";
 import { parseStuffAtom } from "./parse-atom";
 import { parseHeraldRss } from "./parse-herald";
 import { type ParsedArticle, parseRnzRss } from "./parse-rss";
 import { scoreArticles } from "./score";
+import { slugifyHeadline } from "./slugify";
 
 const FEEDS = {
   rnz: "https://www.rnz.co.nz/rss/business.xml",
@@ -132,15 +145,17 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     `[news] ${filtered.length}/${allArticles.length} articles match economy keywords`
   );
 
-  // Score articles
+  // Score articles — keep top 18 for AI pipeline
   const scored = scoreArticles(filtered);
   scored.sort((a, b) => b.score - a.score);
-  const top5 = scored.slice(0, 5);
-  console.log(`[news] Top ${top5.length} scored:`);
-  top5.forEach((a) => console.log(`  [${a.score}] [${a.source}] ${a.title}`));
+  const topArticles = scored.slice(0, 18);
+  console.log(`[news] Top ${topArticles.length} scored:`);
+  for (const a of topArticles) {
+    console.log(`  [${a.score}] [${a.source}] ${a.title}`);
+  }
 
   // Enrich articles without images via og:image fetch (batched to avoid OOM)
-  const toEnrich = filtered.filter((a) => !a.imageUrl);
+  const toEnrich = topArticles.filter((a) => !a.imageUrl);
   if (toEnrich.length > 0) {
     console.log(
       `[news] Fetching og:image for ${toEnrich.length} articles without images...`
@@ -154,24 +169,234 @@ export default async function collectNews(): Promise<CollectorResult[]> {
         })
       );
     }
-    const enriched = toEnrich.filter((a) => a.imageUrl).length;
+    const enrichedCount = toEnrich.filter((a) => a.imageUrl).length;
     console.log(
-      `[news] Got images for ${enriched}/${toEnrich.length} articles`
+      `[news] Got images for ${enrichedCount}/${toEnrich.length} articles`
     );
   }
 
-  // Insert into articles table
-  const rows: NewArticle[] = filtered.map((a) => ({
+  // --- AI Pipeline (resilient — failures don't block article insertion) ---
+
+  // Track per-article tags and storyId
+  const articleTags: string[][] = topArticles.map(() => []);
+  const articleStoryIds: (string | null)[] = topArticles.map(() => null);
+
+  // Step 1: Tag articles with Haiku
+  try {
+    console.log("[news] Tagging articles with AI...");
+    const tags = await tagArticles(
+      topArticles.map((a) => ({
+        title: a.title,
+        excerpt: a.excerpt,
+        source: a.source ?? "unknown",
+      }))
+    );
+    for (let i = 0; i < tags.length; i++) {
+      articleTags[i] = tags[i]!;
+    }
+    console.log(`[news] Tagged ${tags.length} articles`);
+  } catch (e) {
+    console.warn("[news] AI tagging failed, proceeding without tags:", e);
+    for (let i = 0; i < topArticles.length; i++) {
+      articleTags[i] = ["general-economy"];
+    }
+  }
+
+  // Step 2: Match articles to stories with Haiku
+  const storiesNeedingEnrichment: {
+    id: string;
+    headline: string;
+    articleIndices: number[];
+  }[] = [];
+
+  try {
+    console.log("[news] Matching articles to stories with AI...");
+    const existingStories = await getRecentStories(db, 3);
+    const { matches, newClusters } = await matchArticlesToStories(
+      topArticles.map((a) => ({
+        title: a.title,
+        excerpt: a.excerpt,
+        source: a.source ?? "unknown",
+      })),
+      existingStories
+    );
+    console.log(
+      `[news] Story matching: ${matches.length} results, ${newClusters.length} new clusters`
+    );
+
+    const now = new Date().toISOString();
+
+    // Process matches
+    for (const m of matches) {
+      const idx = m.index - 1; // AI uses 1-based indices
+      if (idx < 0 || idx >= topArticles.length) {
+        continue;
+      }
+
+      if (m.match.startsWith("existing:")) {
+        const storyId = m.match.replace("existing:", "");
+        articleStoryIds[idx] = storyId;
+
+        // Update the existing story's sourceCount and updatedAt
+        const existing = existingStories.find((s) => s.id === storyId);
+        if (existing) {
+          const existingArticles = await getArticlesByStoryId(db, storyId);
+          await upsertStory(db, {
+            id: storyId,
+            headline: existing.headline,
+            tags: existing.tags,
+            sourceCount: existingArticles.length + 1,
+            imageUrl: existing.imageUrl,
+            firstReportedAt: existing.firstReportedAt,
+            updatedAt: now,
+          });
+          storiesNeedingEnrichment.push({
+            id: storyId,
+            headline: existing.headline,
+            articleIndices: [idx],
+          });
+        }
+      }
+      // "new" and "standalone" handled below
+    }
+
+    // Process new clusters — group articles into stories
+    const newMatchIndices = new Set(
+      matches.filter((m) => m.match === "new").map((m) => m.index - 1)
+    );
+
+    for (const cluster of newClusters) {
+      const clusterIndices = cluster.articles
+        .map((i) => i - 1)
+        .filter((i) => i >= 0 && i < topArticles.length);
+      if (clusterIndices.length === 0) {
+        continue;
+      }
+
+      const firstArticle = topArticles[clusterIndices[0]!]!;
+      const headline = cluster.headline ?? firstArticle.title;
+      const storyId = slugifyHeadline(headline, new Date());
+      const storyTags = articleTags[clusterIndices[0]!] ?? ["general-economy"];
+
+      await upsertStory(db, {
+        id: storyId,
+        headline,
+        tags: JSON.stringify(storyTags),
+        sourceCount: clusterIndices.length,
+        imageUrl: firstArticle.imageUrl ?? null,
+        firstReportedAt: firstArticle.publishedAt,
+        updatedAt: now,
+      });
+
+      for (const ci of clusterIndices) {
+        articleStoryIds[ci] = storyId;
+        newMatchIndices.delete(ci); // Mark as handled
+      }
+
+      storiesNeedingEnrichment.push({
+        id: storyId,
+        headline,
+        articleIndices: clusterIndices,
+      });
+    }
+
+    // Handle remaining "new" articles not in any cluster — single-article stories
+    for (const idx of newMatchIndices) {
+      if (idx < 0 || idx >= topArticles.length) {
+        continue;
+      }
+      const article = topArticles[idx]!;
+      const storyId = slugifyHeadline(article.title, new Date());
+      const storyTags = articleTags[idx] ?? ["general-economy"];
+
+      await upsertStory(db, {
+        id: storyId,
+        headline: article.title,
+        tags: JSON.stringify(storyTags),
+        sourceCount: 1,
+        imageUrl: article.imageUrl ?? null,
+        firstReportedAt: article.publishedAt,
+        updatedAt: now,
+      });
+
+      articleStoryIds[idx] = storyId;
+      storiesNeedingEnrichment.push({
+        id: storyId,
+        headline: article.title,
+        articleIndices: [idx],
+      });
+    }
+  } catch (e) {
+    console.warn(
+      "[news] AI story matching failed, proceeding without stories:",
+      e
+    );
+  }
+
+  // Step 3: Enrich stories with Sonnet (summary + angles)
+  if (storiesNeedingEnrichment.length > 0) {
+    console.log(
+      `[news] Enriching ${storiesNeedingEnrichment.length} stories with AI...`
+    );
+    for (const story of storiesNeedingEnrichment) {
+      try {
+        const storyArticles = story.articleIndices
+          .map((i) => topArticles[i])
+          .filter((a): a is ParsedArticle => a != null)
+          .map((a) => ({
+            title: a.title,
+            excerpt: a.excerpt,
+            source: a.source ?? "unknown",
+          }));
+
+        if (storyArticles.length === 0) {
+          continue;
+        }
+
+        const enrichment = await enrichStory(story.headline, storyArticles);
+        if (enrichment) {
+          await updateStoryEnrichment(db, story.id, {
+            summary: enrichment.summary,
+            angles: JSON.stringify(enrichment.angles),
+            relatedMetrics: JSON.stringify(enrichment.relatedMetrics),
+          });
+          console.log(`[news] Enriched story: ${story.headline}`);
+        }
+      } catch (e) {
+        console.warn(`[news] Failed to enrich story "${story.headline}":`, e);
+      }
+    }
+  }
+
+  // Step 4: Insert articles with tags and storyIds
+  const rows: NewArticle[] = topArticles.map((a, i) => ({
     url: a.url,
     title: a.title,
     excerpt: a.excerpt,
     imageUrl: a.imageUrl,
     source: a.source ?? "unknown",
     publishedAt: a.publishedAt,
+    tags:
+      articleTags[i] && articleTags[i]!.length > 0
+        ? JSON.stringify(articleTags[i])
+        : null,
+    storyId: articleStoryIds[i] ?? null,
   }));
 
   await insertArticles(db, rows);
   console.log(`[news] Inserted/updated ${rows.length} articles`);
+
+  // Step 5: Cleanup — delete old articles and orphaned stories
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0]!;
+    await deleteOldArticles(db, thirtyDaysAgo);
+    await deleteOrphanedStories(db);
+    console.log("[news] Cleanup complete");
+  } catch (e) {
+    console.warn("[news] Cleanup failed:", e);
+  }
 
   return [];
 }
