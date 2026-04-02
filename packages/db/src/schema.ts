@@ -94,6 +94,22 @@ export const summaries = sqliteTable("summaries", {
     .$defaultFn(() => new Date().toISOString()),
 });
 
+export const stories = sqliteTable("stories", {
+  id: text("id").primaryKey(),
+  headline: text("headline").notNull(),
+  summary: text("summary"),
+  tags: text("tags").notNull(),
+  angles: text("angles"),
+  relatedMetrics: text("related_metrics"),
+  sourceCount: integer("source_count").notNull(),
+  imageUrl: text("image_url"),
+  firstReportedAt: text("first_reported_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
 export const articles = sqliteTable("articles", {
   url: text("url").primaryKey(),
   title: text("title").notNull(),
@@ -101,6 +117,8 @@ export const articles = sqliteTable("articles", {
   imageUrl: text("image_url"),
   source: text("source").notNull(),
   publishedAt: text("published_at").notNull(),
+  tags: text("tags"),
+  storyId: text("story_id"),
   createdAt: text("created_at")
     .notNull()
     .$defaultFn(() => new Date().toISOString()),
