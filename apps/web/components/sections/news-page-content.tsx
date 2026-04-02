@@ -126,9 +126,11 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
             <div className="flex flex-col justify-center px-7 py-6">
               <div className="mb-2 flex items-center gap-2">
                 <OutletCount count={lead.sourceCount} />
-                {parseTags(lead.tags).slice(0, 2).map((tag) => (
-                  <TagPill key={tag} tag={tag} />
-                ))}
+                {parseTags(lead.tags)
+                  .slice(0, 2)
+                  .map((tag) => (
+                    <TagPill key={tag} tag={tag} />
+                  ))}
                 <span className="font-sans text-[#998] text-[11px]">
                   {timeAgo(lead.updatedAt)}
                 </span>

@@ -402,18 +402,30 @@ export default async function collectNews(): Promise<CollectorResult[]> {
 
         // Deduplicate by URL (DB articles + new articles)
         const seen = new Set<string>();
-        const storyArticles: { title: string; excerpt: string; source: string }[] = [];
+        const storyArticles: {
+          title: string;
+          excerpt: string;
+          source: string;
+        }[] = [];
 
         for (const a of dbArticles) {
           if (!seen.has(a.url)) {
             seen.add(a.url);
-            storyArticles.push({ title: a.title, excerpt: a.excerpt, source: a.source });
+            storyArticles.push({
+              title: a.title,
+              excerpt: a.excerpt,
+              source: a.source,
+            });
           }
         }
         for (const a of newRunArticles) {
           if (!seen.has(a.url)) {
             seen.add(a.url);
-            storyArticles.push({ title: a.title, excerpt: a.excerpt, source: a.source ?? "unknown" });
+            storyArticles.push({
+              title: a.title,
+              excerpt: a.excerpt,
+              source: a.source ?? "unknown",
+            });
           }
         }
 

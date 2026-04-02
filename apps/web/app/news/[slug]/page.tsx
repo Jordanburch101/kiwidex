@@ -106,17 +106,13 @@ function Breadcrumb({ headline }: { headline: string }) {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="flex items-center gap-1.5 font-sans text-[12px] text-[#998]"
+      className="flex items-center gap-2 font-sans text-[12px] text-[#998]"
     >
-      <Link className="hover:text-[#555] transition-colors" href="/">
-        Home
-      </Link>
-      <span>/</span>
-      <Link className="hover:text-[#555] transition-colors" href="/news">
+      <Link className="transition-colors hover:text-[#555]" href="/news">
         News
       </Link>
-      <span>/</span>
-      <span className="truncate max-w-[300px] text-[#555]">{headline}</span>
+      <span className="text-[#d5d0c5]">/</span>
+      <span className="max-w-[400px] truncate text-[#777]">{headline}</span>
     </nav>
   );
 }
@@ -125,14 +121,14 @@ function SourceBadge({ source }: { source: string }) {
   const badge = BADGE_COLORS[source.toLowerCase()];
   if (!badge) {
     return (
-      <span className="rounded bg-[#555] px-2 py-0.5 font-sans font-semibold text-[10px] text-white">
+      <span className="rounded bg-[#555] px-2 py-0.5 font-sans font-bold text-[9px] text-white tracking-wide">
         {source}
       </span>
     );
   }
   return (
     <span
-      className="rounded px-2 py-0.5 font-sans font-semibold text-[10px] text-white"
+      className="rounded px-2 py-0.5 font-sans font-bold text-[9px] text-white tracking-wide"
       style={{ backgroundColor: badge.bg }}
     >
       {badge.label}
@@ -144,7 +140,7 @@ function AngleTag({ angle }: { angle: string }) {
   const style = ANGLE_STYLES[angle] ?? "bg-[#f0f0f0] text-[#555]";
   return (
     <span
-      className={`rounded-full px-2.5 py-0.5 font-sans font-medium text-[10px] ${style}`}
+      className={`rounded px-2 py-0.5 font-sans font-semibold text-[10px] ${style}`}
     >
       {angle}
     </span>
@@ -153,7 +149,7 @@ function AngleTag({ angle }: { angle: string }) {
 
 function TagPill({ tag }: { tag: string }) {
   return (
-    <span className="rounded bg-[#e8e3d9] px-2 py-0.5 font-sans text-[10px] text-[#555]">
+    <span className="rounded-full bg-[#e8e3d9] px-3 py-1 font-sans font-medium text-[11px] text-[#555]">
       {tag}
     </span>
   );
@@ -187,94 +183,103 @@ export default async function StoryPage({
 
       {/* Hero image */}
       {story.imageUrl ? (
-        <div className="relative mx-6 h-[280px] overflow-hidden rounded-lg sm:h-[360px]">
+        <div className="relative h-[300px] overflow-hidden sm:h-[400px]">
           <Image
             alt={story.headline}
             className="object-cover"
             fill
             priority
-            sizes="(max-width: 1200px) 100vw, 1152px"
+            sizes="(max-width: 1200px) 100vw, 1200px"
             src={story.imageUrl}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
         </div>
       ) : null}
 
       {/* Story header */}
-      <header className="px-6 pt-6 pb-4">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+      <header className="border-[#e5e0d5] border-b px-6 pt-8 pb-6">
+        <div className="mb-4 flex flex-wrap items-center gap-2.5">
+          {story.sourceCount > 1 && (
+            <span className="rounded bg-[#2a2520] px-2.5 py-1 font-sans font-bold text-[10px] text-white tracking-wide">
+              {story.sourceCount} OUTLETS
+            </span>
+          )}
           {tags.map((tag) => (
             <TagPill key={tag} tag={tag} />
           ))}
-          <span className="font-sans text-[11px] text-[#998]">
-            {story.sourceCount} outlet{story.sourceCount === 1 ? "" : "s"}
-          </span>
         </div>
-        <h1 className="text-balance font-bold font-heading text-2xl text-[#2a2520] leading-tight sm:text-3xl">
+        <h1 className="max-w-[720px] text-balance font-bold font-heading text-[28px] text-[#2a2520] leading-[1.2] sm:text-[36px]">
           {story.headline}
         </h1>
-        <p className="mt-2 font-sans text-[13px] text-[#998]">
-          First reported {timeAgo(story.firstReportedAt)} &middot; Updated{" "}
-          {timeAgo(story.updatedAt)}
-        </p>
+        <div className="mt-3 flex items-center gap-1.5 font-sans text-[12px] text-[#998]">
+          <span>First reported {timeAgo(story.firstReportedAt)}</span>
+          <span className="text-[#d5d0c5]">&middot;</span>
+          <span>Updated {timeAgo(story.updatedAt)}</span>
+        </div>
       </header>
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 gap-8 px-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-0 px-6 pt-2 lg:grid-cols-[1fr_340px]">
         {/* Main column */}
-        <div className="min-w-0 space-y-8">
+        <div className="min-w-0 space-y-10 py-6 lg:border-[#e5e0d5] lg:border-r lg:pr-8">
           {/* AI Summary */}
           {summaryBullets.length > 0 ? (
-            <section className="rounded-lg border border-[#e5e0d5] bg-[#faf9f6] p-5">
-              <div className="mb-3 flex items-center gap-2">
-                <span className="rounded bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-2 py-0.5 font-sans font-semibold text-[10px] text-white">
+            <section>
+              <div className="mb-4 flex items-center gap-2 border-[#e5e0d5] border-b pb-3">
+                <h2 className="font-semibold font-heading text-[11px] text-[#998] uppercase tracking-[0.15em]">
+                  Story Summary
+                </h2>
+                <span className="rounded bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-2 py-0.5 font-sans font-bold text-[9px] text-white tracking-wide">
                   AI
                 </span>
-                <h2 className="font-heading font-semibold text-[15px] text-[#2a2520]">
-                  Summary
-                </h2>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-0">
                 {summaryBullets.map((bullet) => (
                   <p
-                    className="font-sans text-[14px] text-[#444] leading-relaxed"
+                    className="border-[#f0ecdf] border-b py-3 pl-5 font-sans text-[14.5px] text-[#333] leading-[1.7] last:border-0"
                     key={bullet}
                   >
-                    <span className="mr-2 text-[#998]">&bull;</span>
+                    <span className="-ml-5 mr-2 font-bold text-[#bbb]">
+                      &bull;
+                    </span>
                     {bullet}
                   </p>
                 ))}
               </div>
-              <p className="mt-3 font-sans text-[10px] text-[#bbb] italic">
-                This summary was generated by AI and may contain inaccuracies.
+              <p className="mt-4 font-sans text-[10px] text-[#ccc] italic">
+                Summary generated by AI from source articles. May contain
+                inaccuracies.
               </p>
             </section>
           ) : null}
 
           {/* Source Coverage */}
           <section>
-            <h2 className="mb-4 font-heading font-semibold text-[17px] text-[#2a2520]">
-              Source Coverage
-            </h2>
-            <div className="space-y-4">
+            <div className="mb-5 border-[#e5e0d5] border-b pb-3">
+              <h2 className="font-semibold font-heading text-[11px] text-[#998] uppercase tracking-[0.15em]">
+                Source Coverage
+              </h2>
+            </div>
+            <div className="space-y-3">
               {articles.map((article) => {
                 const articleAngle = getAngleForSource(angles, article.source);
+                const badge = BADGE_COLORS[article.source.toLowerCase()];
                 return (
                   <a
-                    className="group flex gap-4 overflow-hidden rounded-lg border border-[#e5e0d5] transition-colors hover:bg-[#f5f3ee]"
+                    className="group grid overflow-hidden rounded-lg border border-[#e5e0d5] transition-colors hover:bg-[#faf8f3] sm:grid-cols-[200px_1fr]"
                     href={article.url}
                     key={article.url}
                     rel="noopener noreferrer"
                     target="_blank"
                   >
                     {/* Thumbnail */}
-                    <div className="relative hidden w-[180px] shrink-0 overflow-hidden sm:block">
+                    <div className="relative h-[160px] overflow-hidden sm:h-full">
                       {article.imageUrl ? (
                         <Image
                           alt={article.title}
                           className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                           fill
-                          sizes="180px"
+                          sizes="200px"
                           src={article.imageUrl}
                         />
                       ) : (
@@ -289,27 +294,28 @@ export default async function StoryPage({
                     </div>
 
                     {/* Text */}
-                    <div className="flex min-w-0 flex-col justify-center py-4 pr-4 sm:py-3">
-                      <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <div className="flex min-w-0 flex-col px-5 py-4">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         <SourceBadge source={article.source} />
+                        <span className="font-sans font-semibold text-[13px] text-[#2a2520]">
+                          {badge?.label ?? article.source}
+                        </span>
                         {articleAngle ? (
                           <AngleTag angle={articleAngle.angle} />
                         ) : null}
-                        <span className="font-sans text-[10px] text-[#998]">
+                        <span className="ml-auto font-sans text-[10px] text-[#998]">
                           {timeAgo(article.publishedAt)}
                         </span>
                       </div>
-                      <h3 className="mb-1 font-heading font-semibold text-[15px] text-[#2a2520] leading-snug group-hover:underline">
+                      <h3 className="mb-1.5 font-heading font-bold text-[16px] text-[#2a2520] leading-snug">
                         {article.title}
                       </h3>
-                      <p className="line-clamp-2 font-sans text-[13px] text-[#666] leading-relaxed">
+                      <p className="line-clamp-2 font-sans text-[13px] text-[#666] leading-[1.6]">
                         {article.excerpt}
                       </p>
-                      <span className="mt-2 font-sans font-medium text-[12px] text-[#0054A6]">
-                        Read on{" "}
-                        {BADGE_COLORS[article.source.toLowerCase()]?.label ??
-                          article.source}{" "}
-                        &rarr;
+                      <span className="mt-3 inline-flex items-center gap-1 border-[#d5d0c5] border-b pb-0.5 font-sans font-medium text-[12px] text-[#998] transition-colors group-hover:border-[#2a2520] group-hover:text-[#2a2520]">
+                        Read on {badge?.label ?? article.source}
+                        <span className="text-[14px]">→</span>
                       </span>
                     </div>
                   </a>
@@ -320,47 +326,47 @@ export default async function StoryPage({
         </div>
 
         {/* Sidebar */}
-        <aside className="space-y-6">
+        <aside className="space-y-5 py-6 lg:pl-6">
           {/* Coverage Details */}
-          <div className="rounded-lg border border-[#e5e0d5] p-4">
-            <h3 className="mb-3 font-heading font-semibold text-[14px] text-[#2a2520]">
+          <div className="rounded-lg border border-[#e5e0d5] p-5">
+            <h3 className="mb-4 border-[#e5e0d5] border-b pb-2.5 font-semibold font-heading text-[11px] text-[#998] uppercase tracking-[0.15em]">
               Coverage Details
             </h3>
-            <div className="space-y-2 font-sans text-[13px]">
-              <div className="flex justify-between">
-                <span className="text-[#998]">Sources</span>
-                <span className="font-medium text-[#2a2520]">
+            <div className="space-y-0 font-sans text-[13px]">
+              <div className="flex justify-between border-[#f5f2ec] border-b py-2.5">
+                <span className="text-[#777]">Sources</span>
+                <span className="font-bold text-[#2a2520]">
                   {story.sourceCount} outlet
                   {story.sourceCount === 1 ? "" : "s"}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#998]">First reported</span>
-                <span className="font-medium text-[#2a2520]">
+              <div className="flex justify-between border-[#f5f2ec] border-b py-2.5">
+                <span className="text-[#777]">First reported</span>
+                <span className="font-medium text-[#2a2520] text-[12px]">
                   {formatDate(story.firstReportedAt)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#998]">Last updated</span>
-                <span className="font-medium text-[#2a2520]">
+              <div className="flex justify-between py-2.5">
+                <span className="text-[#777]">Last updated</span>
+                <span className="font-medium text-[#2a2520] text-[12px]">
                   {formatDate(story.updatedAt)}
                 </span>
               </div>
             </div>
             {/* Source logo squares */}
-            <div className="mt-3 flex gap-2">
+            <div className="mt-4 flex gap-2">
               {articles.map((article) => {
                 const badge = BADGE_COLORS[article.source.toLowerCase()];
                 return (
                   <div
-                    className="flex h-8 w-8 items-center justify-center rounded font-sans font-bold text-[9px] text-white"
+                    className="flex h-9 w-9 items-center justify-center rounded-md font-sans font-extrabold text-[8px] text-white tracking-wide"
                     key={`logo-${article.url}`}
                     style={{
                       backgroundColor: badge?.bg ?? "#555",
                     }}
                     title={badge?.label ?? article.source}
                   >
-                    {(badge?.label ?? article.source).slice(0, 2).toUpperCase()}
+                    {badge?.label ?? article.source}
                   </div>
                 );
               })}
@@ -369,18 +375,24 @@ export default async function StoryPage({
 
           {/* How Sources Report It */}
           {angles.length > 1 ? (
-            <div className="rounded-lg border border-[#e5e0d5] p-4">
-              <h3 className="mb-3 font-heading font-semibold text-[14px] text-[#2a2520]">
+            <div className="rounded-lg border border-[#e5e0d5] p-5">
+              <h3 className="mb-4 flex items-center gap-2 border-[#e5e0d5] border-b pb-2.5 font-semibold font-heading text-[11px] text-[#998] uppercase tracking-[0.15em]">
                 How Sources Report It
+                <span className="rounded bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-2 py-0.5 font-sans font-bold text-[9px] text-white normal-case tracking-wide">
+                  AI
+                </span>
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-0">
                 {angles.map((a) => (
-                  <div key={a.source}>
-                    <div className="mb-1 flex items-center gap-2">
+                  <div
+                    className="border-[#f5f2ec] border-b py-3 last:border-0"
+                    key={a.source}
+                  >
+                    <div className="mb-1.5 flex items-center gap-2">
                       <SourceBadge source={a.source} />
                       <AngleTag angle={a.angle} />
                     </div>
-                    <p className="font-sans text-[12px] text-[#666] leading-relaxed">
+                    <p className="font-sans text-[12.5px] text-[#666] leading-[1.6]">
                       {a.description}
                     </p>
                   </div>
@@ -391,28 +403,31 @@ export default async function StoryPage({
 
           {/* Related Metrics */}
           {relatedMetrics.length > 0 ? (
-            <div className="rounded-lg border border-[#e5e0d5] p-4">
-              <h3 className="mb-3 font-heading font-semibold text-[14px] text-[#2a2520]">
+            <div className="rounded-lg border border-[#e5e0d5] p-5">
+              <h3 className="mb-4 border-[#e5e0d5] border-b pb-2.5 font-semibold font-heading text-[11px] text-[#998] uppercase tracking-[0.15em]">
                 Related Metrics
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-0">
                 {relatedMetrics.map((m) => (
-                  <div className="flex items-center gap-3" key={m.metric}>
+                  <div
+                    className="flex items-center gap-3 border-[#f5f2ec] border-b py-3 last:border-0"
+                    key={m.metric}
+                  >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-sans text-[12px] text-[#998]">
+                      <p className="font-sans text-[11px] text-[#998] uppercase tracking-wide">
                         {m.label}
                       </p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-heading font-semibold text-[16px] text-[#2a2520]">
+                      <div className="mt-0.5 flex items-baseline gap-2">
+                        <span className="font-heading font-bold text-[17px] text-[#2a2520]">
                           {m.value}
                         </span>
                         <span
-                          className={`font-sans font-medium text-[11px] ${
+                          className={`rounded px-1.5 py-0.5 font-sans font-semibold text-[10px] ${
                             m.changeType === "up"
-                              ? "text-[#16a34a]"
+                              ? "bg-[#dcfce7] text-[#166534]"
                               : m.changeType === "down"
-                                ? "text-[#dc2626]"
-                                : "text-[#998]"
+                                ? "bg-[#fee2e2] text-[#991b1b]"
+                                : "bg-[#f3f4f6] text-[#6b7280]"
                           }`}
                         >
                           {m.change}
