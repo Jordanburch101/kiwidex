@@ -4,7 +4,7 @@ import { SectionHeader } from "@workspace/ui/components/section-header";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { timeAgo } from "@/lib/data";
+import { timeAgo } from "@/lib/time";
 
 function parseTags(json: string): string[] {
   try {
