@@ -25,28 +25,51 @@ interface Em6Response {
   items: Em6PriceItem[];
 }
 
+async function fetchWithRetry(
+  attempts = 3,
+  delayMs = 10_000
+): Promise<Em6PriceItem[]> {
+  for (let i = 1; i <= attempts; i++) {
+    const response = await fetch(API_URL, {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`em6 API: HTTP ${response.status}`);
+    }
+
+    const data: Em6Response = await response.json();
+
+    if (data.items && data.items.length > 0) {
+      return data.items;
+    }
+
+    if (i < attempts) {
+      console.warn(
+        `[electricity-wholesale] em6 API returned no data, retrying in ${delayMs / 1000}s (${i}/${attempts})`
+      );
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+
+  console.warn(
+    `[electricity-wholesale] em6 API returned no data after ${attempts} attempts — skipping`
+  );
+  return [];
+}
+
 export default async function collectElectricityWholesale(): Promise<
   CollectorResult[]
 > {
-  const response = await fetch(API_URL, {
-    headers: {
-      Accept: "application/json",
-    },
-  });
+  const items = await fetchWithRetry();
 
-  if (!response.ok) {
-    throw new Error(`em6 API: HTTP ${response.status}`);
-  }
-
-  const data: Em6Response = await response.json();
-
-  if (!data.items || data.items.length === 0) {
-    throw new Error("em6 API: no price data returned");
+  if (items.length === 0) {
+    return [];
   }
 
   // Compute national average across all grid zones
-  const totalPrice = data.items.reduce((sum, item) => sum + item.price, 0);
-  const avgPrice = Math.round((totalPrice / data.items.length) * 100) / 100;
+  const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
+  const avgPrice = Math.round((totalPrice / items.length) * 100) / 100;
 
   // Use today's date (NZ timezone)
   const nzDate = new Date()
@@ -54,7 +77,7 @@ export default async function collectElectricityWholesale(): Promise<
     .split("T")[0]!;
 
   console.log(
-    `[electricity-wholesale] $${avgPrice.toFixed(2)}/MWh (${(avgPrice / 10).toFixed(2)}c/kWh) across ${data.items.length} regions`
+    `[electricity-wholesale] $${avgPrice.toFixed(2)}/MWh (${(avgPrice / 10).toFixed(2)}c/kWh) across ${items.length} regions`
   );
 
   return [
@@ -65,9 +88,9 @@ export default async function collectElectricityWholesale(): Promise<
       date: nzDate,
       source: API_URL,
       metadata: JSON.stringify({
-        regions: data.items.length,
-        timestamp: data.items[0]?.timestamp,
-        trading_period: data.items[0]?.trading_period,
+        regions: items.length,
+        timestamp: items[0]?.timestamp,
+        trading_period: items[0]?.trading_period,
       }),
     },
   ];
