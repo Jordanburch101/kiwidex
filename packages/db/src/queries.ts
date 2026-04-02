@@ -418,22 +418,18 @@ export async function getStories(
     .toISOString()
     .split("T")[0]!;
 
-  const rows = await db
+  const conditions = [gte(stories.updatedAt, cutoff)];
+  if (tag) {
+    conditions.push(sql`${stories.tags} LIKE ${'%"' + tag + '"%'}`);
+  }
+
+  return db
     .select()
     .from(stories)
-    .where(gte(stories.updatedAt, cutoff))
+    .where(and(...conditions))
     .orderBy(desc(stories.updatedAt))
     .limit(limit)
     .offset(offset);
-
-  if (tag) {
-    return rows.filter((row) => {
-      const tags: string[] = JSON.parse(row.tags);
-      return tags.includes(tag);
-    });
-  }
-
-  return rows;
 }
 
 export async function getStoryBySlug(db: Db, slug: string) {
@@ -484,14 +480,9 @@ export async function deleteOldArticles(db: Db, beforeDate: string) {
 }
 
 export async function deleteOrphanedStories(db: Db) {
-  const allStoryRows = await db.select({ id: stories.id }).from(stories);
-  for (const row of allStoryRows) {
-    const articleCount = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(articles)
-      .where(eq(articles.storyId, row.id));
-    if (articleCount[0]!.count === 0) {
-      await db.delete(stories).where(eq(stories.id, row.id));
-    }
-  }
+  await db.run(sql`
+    DELETE FROM stories WHERE id NOT IN (
+      SELECT DISTINCT story_id FROM articles WHERE story_id IS NOT NULL
+    )
+  `);
 }

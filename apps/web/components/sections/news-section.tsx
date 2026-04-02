@@ -51,7 +51,12 @@ export async function NewsSection() {
 
   const { lead, rest } = result;
   const displayRest = rest.slice(0, 6);
-  const leadTags: string[] = JSON.parse(lead.tags);
+  let leadTags: string[] = [];
+  try {
+    leadTags = JSON.parse(lead.tags) as string[];
+  } catch {
+    // fallback to empty tags
+  }
 
   return (
     <section className="px-6 py-10">
@@ -104,7 +109,12 @@ export async function NewsSection() {
       {displayRest.length > 0 && (
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {displayRest.map((story) => {
-            const tags: string[] = JSON.parse(story.tags);
+            let tags: string[] = [];
+            try {
+              tags = JSON.parse(story.tags) as string[];
+            } catch {
+              // fallback to empty tags
+            }
             return (
               <Link
                 className="group/card block overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"

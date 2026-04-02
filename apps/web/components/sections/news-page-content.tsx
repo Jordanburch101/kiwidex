@@ -6,6 +6,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { timeAgo } from "@/lib/data";
 
+function parseTags(json: string): string[] {
+  try {
+    return JSON.parse(json) as string[];
+  } catch {
+    return [];
+  }
+}
+
 interface Story {
   headline: string;
   id: string;
@@ -26,6 +34,7 @@ const TAGS = [
   { label: "Inflation", value: "inflation" },
   { label: "Currency", value: "currency" },
   { label: "Trade", value: "trade" },
+  { label: "Government", value: "government" },
 ];
 
 function TagPill({ tag }: { tag: string }) {
@@ -54,7 +63,7 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
     activeFilter === "all"
       ? stories
       : stories.filter((s) => {
-          const tags: string[] = JSON.parse(s.tags);
+          const tags: string[] = parseTags(s.tags);
           return tags.includes(activeFilter);
         });
 
@@ -117,7 +126,7 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
             <div className="flex flex-col justify-center px-7 py-6">
               <div className="mb-2 flex items-center gap-2">
                 <OutletCount count={lead.sourceCount} />
-                {(JSON.parse(lead.tags) as string[]).slice(0, 2).map((tag) => (
+                {parseTags(lead.tags).slice(0, 2).map((tag) => (
                   <TagPill key={tag} tag={tag} />
                 ))}
                 <span className="font-sans text-[#998] text-[11px]">
