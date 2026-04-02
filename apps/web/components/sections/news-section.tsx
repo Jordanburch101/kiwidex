@@ -1,5 +1,6 @@
 import { SectionHeader } from "@workspace/ui/components/section-header";
 import Image from "next/image";
+import Link from "next/link";
 import { timeAgo } from "@/lib/data";
 import { getNewsData } from "@/lib/queries";
 
@@ -22,6 +23,25 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
+function TagPill({ tag }: { tag: string }) {
+  return (
+    <span className="rounded bg-[#e8e3d9] px-2 py-0.5 font-sans text-[10px] text-[#555]">
+      {tag}
+    </span>
+  );
+}
+
+function OutletCount({ count }: { count: number }) {
+  if (count <= 1) {
+    return null;
+  }
+  return (
+    <span className="rounded bg-[#2a2520] px-2 py-0.5 font-sans font-semibold text-[10px] text-white">
+      {count} outlets
+    </span>
+  );
+}
+
 export async function NewsSection() {
   const result = await getNewsData();
 
@@ -31,6 +51,7 @@ export async function NewsSection() {
 
   const { lead, rest } = result;
   const displayRest = rest.slice(0, 6);
+  const leadTags: string[] = JSON.parse(lead.tags);
 
   return (
     <section className="px-6 py-10">
@@ -39,17 +60,15 @@ export async function NewsSection() {
         title="In the News"
       />
 
-      {/* Lead story — horizontal card (image left, text right) */}
-      <a
+      {/* Lead story — horizontal card */}
+      <Link
         className="group grid grid-cols-1 overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf] sm:grid-cols-2"
-        href={lead.url}
-        rel="noopener noreferrer"
-        target="_blank"
+        href={`/news/${lead.id}`}
       >
         <div className="relative h-[200px] overflow-hidden sm:h-[240px]">
           {lead.imageUrl ? (
             <Image
-              alt={lead.title}
+              alt={lead.headline}
               className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               fill
               sizes="(max-width: 1200px) 50vw, 576px"
@@ -67,67 +86,79 @@ export async function NewsSection() {
         </div>
         <div className="flex flex-col justify-center px-7 py-6">
           <div className="mb-2 flex items-center gap-2">
-            <SourceBadge source={lead.source} />
+            <OutletCount count={lead.sourceCount} />
+            {leadTags.slice(0, 2).map((tag) => (
+              <TagPill key={tag} tag={tag} />
+            ))}
             <span className="font-sans text-[#998] text-[11px]">
-              {timeAgo(lead.publishedAt)}
+              {timeAgo(lead.updatedAt)}
             </span>
           </div>
           <h3 className="text-balance font-bold font-heading text-[#2a2520] text-xl leading-tight">
-            {lead.title}
+            {lead.headline}
           </h3>
-          {lead.excerpt && (
-            <p className="mt-3 text-[#5a5550] text-[13.5px] leading-[1.7]">
-              {lead.excerpt}
-            </p>
-          )}
         </div>
-      </a>
+      </Link>
 
-      {/* 6 small image cards — 2 rows of 3 */}
+      {/* Story grid */}
       {displayRest.length > 0 && (
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {displayRest.map((article) => (
-            <a
-              className="group/card block overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
-              href={article.url}
-              key={article.url}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <div className="relative h-[120px] w-full overflow-hidden">
-                {article.imageUrl ? (
-                  <Image
-                    alt={article.title}
-                    className="object-cover transition-transform duration-300 group-hover/card:scale-[1.02]"
-                    fill
-                    sizes="(max-width: 1200px) 33vw, 370px"
-                    src={article.imageUrl}
-                  />
-                ) : (
-                  <div
-                    className="h-full w-full"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #c4bfb4, #a89f8f, #8a8070)",
-                    }}
-                  />
-                )}
-              </div>
-              <div className="px-3 py-3">
-                <div className="mb-1 flex items-center gap-1.5">
-                  <SourceBadge source={article.source} />
-                  <span className="font-sans text-[#998] text-[9px]">
-                    {timeAgo(article.publishedAt)}
-                  </span>
+          {displayRest.map((story) => {
+            const tags: string[] = JSON.parse(story.tags);
+            return (
+              <Link
+                className="group/card block overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
+                href={`/news/${story.id}`}
+                key={story.id}
+              >
+                <div className="relative h-[120px] w-full overflow-hidden">
+                  {story.imageUrl ? (
+                    <Image
+                      alt={story.headline}
+                      className="object-cover transition-transform duration-300 group-hover/card:scale-[1.02]"
+                      fill
+                      sizes="(max-width: 1200px) 33vw, 370px"
+                      src={story.imageUrl}
+                    />
+                  ) : (
+                    <div
+                      className="h-full w-full"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #c4bfb4, #a89f8f, #8a8070)",
+                      }}
+                    />
+                  )}
                 </div>
-                <h4 className="text-balance font-heading font-semibold text-[#2a2520] text-[15px] leading-snug">
-                  {article.title}
-                </h4>
-              </div>
-            </a>
-          ))}
+                <div className="px-3 py-3">
+                  <div className="mb-1 flex items-center gap-1.5">
+                    <OutletCount count={story.sourceCount} />
+                    {tags.slice(0, 1).map((tag) => (
+                      <TagPill key={tag} tag={tag} />
+                    ))}
+                    <span className="font-sans text-[#998] text-[9px]">
+                      {timeAgo(story.updatedAt)}
+                    </span>
+                  </div>
+                  <h4 className="text-balance font-heading font-semibold text-[#2a2520] text-[15px] leading-snug">
+                    {story.headline}
+                  </h4>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
+
+      {/* View all link */}
+      <div className="mt-4 text-center">
+        <Link
+          className="border-[#d5d0c5] border-b font-sans text-[#555] text-[13px] no-underline transition-colors hover:border-[#2a2520] hover:text-[#2a2520]"
+          href="/news"
+        >
+          View all stories →
+        </Link>
+      </div>
     </section>
   );
 }
