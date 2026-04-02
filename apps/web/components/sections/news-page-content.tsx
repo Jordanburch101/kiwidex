@@ -39,19 +39,19 @@ const TAGS = [
 
 function TagPill({ tag }: { tag: string }) {
   return (
-    <span className="rounded bg-[#e8e3d9] px-2 py-0.5 font-sans text-[10px] text-[#555]">
+    <span className="rounded-full bg-[#e8e3d9] px-2.5 py-0.5 font-sans font-medium text-[10px] text-[#666]">
       {tag}
     </span>
   );
 }
 
-function OutletCount({ count }: { count: number }) {
+function OutletBadge({ count }: { count: number }) {
   if (count <= 1) {
     return null;
   }
   return (
-    <span className="rounded bg-[#2a2520] px-2 py-0.5 font-sans font-semibold text-[10px] text-white">
-      {count} outlets
+    <span className="rounded bg-[#2a2520] px-2 py-0.5 font-sans font-bold text-[9px] text-white tracking-wide">
+      {count} OUTLETS
     </span>
   );
 }
@@ -63,8 +63,7 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
     activeFilter === "all"
       ? stories
       : stories.filter((s) => {
-          const tags: string[] = parseTags(s.tags);
-          return tags.includes(activeFilter);
+          return parseTags(s.tags).includes(activeFilter);
         });
 
   const lead = filtered[0];
@@ -72,7 +71,7 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
 
   return (
     <>
-      <div className="px-6 pt-8">
+      <div className="px-6 pt-8 pb-2">
         <SectionHeader
           subtitle="NZ economy reporting from RNZ, Stuff, Herald &amp; 1News — grouped by story"
           title="In the News"
@@ -83,10 +82,10 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
       <div className="flex flex-wrap gap-2 border-[#e5e0d5] border-b px-6 py-4">
         {TAGS.map((tag) => (
           <button
-            className={`rounded-full px-3.5 py-1 font-sans text-[12px] font-medium transition-colors ${
+            className={`rounded-full px-3.5 py-1.5 font-sans text-[12px] font-medium transition-all ${
               activeFilter === tag.value
                 ? "bg-[#2a2520] text-white"
-                : "border border-[#d5d0c5] text-[#555] hover:bg-[#f0ecdf]"
+                : "border border-[#d5d0c5] text-[#666] hover:border-[#999] hover:bg-[#f5f2ec]"
             }`}
             key={tag.value}
             onClick={() => setActiveFilter(tag.value)}
@@ -101,10 +100,10 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
         <>
           {/* Lead story */}
           <Link
-            className="group mx-6 mt-6 grid grid-cols-1 overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf] sm:grid-cols-2"
+            className="group mx-6 mt-6 grid grid-cols-1 overflow-hidden rounded-lg border border-[#e5e0d5] transition-colors hover:bg-[#faf8f3] sm:grid-cols-2"
             href={`/news/${lead.id}`}
           >
-            <div className="relative h-[200px] overflow-hidden sm:h-[260px]">
+            <div className="relative h-[220px] overflow-hidden sm:h-[280px]">
               {lead.imageUrl ? (
                 <Image
                   alt={lead.headline}
@@ -124,18 +123,18 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
               )}
             </div>
             <div className="flex flex-col justify-center px-7 py-6">
-              <div className="mb-2 flex items-center gap-2">
-                <OutletCount count={lead.sourceCount} />
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <OutletBadge count={lead.sourceCount} />
                 {parseTags(lead.tags)
                   .slice(0, 2)
                   .map((tag) => (
                     <TagPill key={tag} tag={tag} />
                   ))}
-                <span className="font-sans text-[#998] text-[11px]">
+                <span className="font-sans text-[10px] text-[#998]">
                   {timeAgo(lead.updatedAt)}
                 </span>
               </div>
-              <h3 className="text-balance font-bold font-heading text-[#2a2520] text-xl leading-tight">
+              <h3 className="text-balance font-bold font-heading text-[22px] text-[#2a2520] leading-[1.25]">
                 {lead.headline}
               </h3>
             </div>
@@ -143,17 +142,17 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
 
           {/* Story grid */}
           {rest.length > 0 && (
-            <div className="mx-6 mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mx-6 mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {rest.map((story) => {
-                const tags: string[] = JSON.parse(story.tags);
+                const tags = parseTags(story.tags);
                 return (
                   <Link
-                    className="group/card block overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
+                    className="group/card block overflow-hidden rounded-lg border border-[#e5e0d5] transition-colors hover:bg-[#faf8f3]"
                     href={`/news/${story.id}`}
                     key={story.id}
                   >
                     {story.imageUrl ? (
-                      <div className="relative h-[120px] w-full overflow-hidden">
+                      <div className="relative h-[140px] w-full overflow-hidden">
                         <Image
                           alt={story.headline}
                           className="object-cover transition-transform duration-300 group-hover/card:scale-[1.02]"
@@ -163,17 +162,17 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
                         />
                       </div>
                     ) : null}
-                    <div className="px-3 py-3">
-                      <div className="mb-1 flex items-center gap-1.5">
-                        <OutletCount count={story.sourceCount} />
+                    <div className="px-4 py-3.5">
+                      <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                        <OutletBadge count={story.sourceCount} />
                         {tags.slice(0, 1).map((tag) => (
                           <TagPill key={tag} tag={tag} />
                         ))}
-                        <span className="font-sans text-[#998] text-[9px]">
+                        <span className="font-sans text-[9px] text-[#998]">
                           {timeAgo(story.updatedAt)}
                         </span>
                       </div>
-                      <h4 className="text-balance font-heading font-semibold text-[#2a2520] text-[15px] leading-snug">
+                      <h4 className="text-balance font-heading font-semibold text-[15px] text-[#2a2520] leading-snug">
                         {story.headline}
                       </h4>
                     </div>
@@ -185,11 +184,13 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
         </>
       ) : (
         <div className="px-6 py-20 text-center">
-          <p className="text-[#998]">No stories match this filter.</p>
+          <p className="font-sans text-[14px] text-[#998]">
+            No stories match this filter.
+          </p>
         </div>
       )}
 
-      <div className="py-8" />
+      <div className="py-10" />
     </>
   );
 }

@@ -4,40 +4,29 @@ import Link from "next/link";
 import { timeAgo } from "@/lib/data";
 import { getNewsData } from "@/lib/queries";
 
-const BADGE_COLORS: Record<string, { bg: string; label: string }> = {
-  rnz: { bg: "#D42C21", label: "RNZ" },
-  stuff: { bg: "#0054A6", label: "Stuff" },
-  herald: { bg: "#0D0D0D", label: "Herald" },
-  "1news": { bg: "#00274e", label: "1News" },
-};
-
-function SourceBadge({ source }: { source: string }) {
-  const config = BADGE_COLORS[source] ?? { bg: "#666", label: source };
-  return (
-    <span
-      className="rounded px-1.5 py-0.5 font-sans font-semibold text-[9px] text-white tracking-wide"
-      style={{ backgroundColor: config.bg }}
-    >
-      {config.label}
-    </span>
-  );
+function parseTags(json: string): string[] {
+  try {
+    return JSON.parse(json) as string[];
+  } catch {
+    return [];
+  }
 }
 
 function TagPill({ tag }: { tag: string }) {
   return (
-    <span className="rounded bg-[#e8e3d9] px-2 py-0.5 font-sans text-[10px] text-[#555]">
+    <span className="rounded-full bg-[#e8e3d9] px-2.5 py-0.5 font-sans font-medium text-[10px] text-[#666]">
       {tag}
     </span>
   );
 }
 
-function OutletCount({ count }: { count: number }) {
+function OutletBadge({ count }: { count: number }) {
   if (count <= 1) {
     return null;
   }
   return (
-    <span className="rounded bg-[#2a2520] px-2 py-0.5 font-sans font-semibold text-[10px] text-white">
-      {count} outlets
+    <span className="rounded bg-[#2a2520] px-2 py-0.5 font-sans font-bold text-[9px] text-white tracking-wide">
+      {count} OUTLETS
     </span>
   );
 }
@@ -51,12 +40,7 @@ export async function NewsSection() {
 
   const { lead, rest } = result;
   const displayRest = rest.slice(0, 6);
-  let leadTags: string[] = [];
-  try {
-    leadTags = JSON.parse(lead.tags) as string[];
-  } catch {
-    // fallback to empty tags
-  }
+  const leadTags = parseTags(lead.tags);
 
   return (
     <section className="px-6 py-10">
@@ -67,7 +51,7 @@ export async function NewsSection() {
 
       {/* Lead story — horizontal card */}
       <Link
-        className="group grid grid-cols-1 overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf] sm:grid-cols-2"
+        className="group grid grid-cols-1 overflow-hidden rounded-lg border border-[#e5e0d5] transition-colors hover:bg-[#faf8f3] sm:grid-cols-2"
         href={`/news/${lead.id}`}
       >
         <div className="relative h-[200px] overflow-hidden sm:h-[240px]">
@@ -90,16 +74,16 @@ export async function NewsSection() {
           )}
         </div>
         <div className="flex flex-col justify-center px-7 py-6">
-          <div className="mb-2 flex items-center gap-2">
-            <OutletCount count={lead.sourceCount} />
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <OutletBadge count={lead.sourceCount} />
             {leadTags.slice(0, 2).map((tag) => (
               <TagPill key={tag} tag={tag} />
             ))}
-            <span className="font-sans text-[#998] text-[11px]">
+            <span className="font-sans text-[10px] text-[#998]">
               {timeAgo(lead.updatedAt)}
             </span>
           </div>
-          <h3 className="text-balance font-bold font-heading text-[#2a2520] text-xl leading-tight">
+          <h3 className="text-balance font-bold font-heading text-[20px] text-[#2a2520] leading-[1.25]">
             {lead.headline}
           </h3>
         </div>
@@ -109,15 +93,10 @@ export async function NewsSection() {
       {displayRest.length > 0 && (
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {displayRest.map((story) => {
-            let tags: string[] = [];
-            try {
-              tags = JSON.parse(story.tags) as string[];
-            } catch {
-              // fallback to empty tags
-            }
+            const tags = parseTags(story.tags);
             return (
               <Link
-                className="group/card block overflow-hidden rounded border border-[#e5e0d5] transition-colors hover:bg-[#f0ecdf]"
+                className="group/card block overflow-hidden rounded-lg border border-[#e5e0d5] transition-colors hover:bg-[#faf8f3]"
                 href={`/news/${story.id}`}
                 key={story.id}
               >
@@ -140,17 +119,17 @@ export async function NewsSection() {
                     />
                   )}
                 </div>
-                <div className="px-3 py-3">
-                  <div className="mb-1 flex items-center gap-1.5">
-                    <OutletCount count={story.sourceCount} />
+                <div className="px-4 py-3">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                    <OutletBadge count={story.sourceCount} />
                     {tags.slice(0, 1).map((tag) => (
                       <TagPill key={tag} tag={tag} />
                     ))}
-                    <span className="font-sans text-[#998] text-[9px]">
+                    <span className="font-sans text-[9px] text-[#998]">
                       {timeAgo(story.updatedAt)}
                     </span>
                   </div>
-                  <h4 className="text-balance font-heading font-semibold text-[#2a2520] text-[15px] leading-snug">
+                  <h4 className="text-balance font-heading font-semibold text-[15px] text-[#2a2520] leading-snug">
                     {story.headline}
                   </h4>
                 </div>
@@ -161,12 +140,13 @@ export async function NewsSection() {
       )}
 
       {/* View all link */}
-      <div className="mt-4 text-center">
+      <div className="mt-6 text-center">
         <Link
-          className="border-[#d5d0c5] border-b font-sans text-[#555] text-[13px] no-underline transition-colors hover:border-[#2a2520] hover:text-[#2a2520]"
+          className="inline-flex items-center gap-1 border-[#d5d0c5] border-b pb-0.5 font-sans text-[13px] text-[#666] no-underline transition-colors hover:border-[#2a2520] hover:text-[#2a2520]"
           href="/news"
         >
-          View all stories →
+          View all stories
+          <span className="text-[14px]">→</span>
         </Link>
       </div>
     </section>
