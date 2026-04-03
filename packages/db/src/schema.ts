@@ -94,6 +94,36 @@ export const summaries = sqliteTable("summaries", {
     .$defaultFn(() => new Date().toISOString()),
 });
 
+export const stories = sqliteTable("stories", {
+  id: text("id").primaryKey(),
+  headline: text("headline").notNull(),
+  summary: text("summary"),
+  tags: text("tags").notNull(),
+  angles: text("angles"),
+  relatedMetrics: text("related_metrics"),
+  sourceCount: integer("source_count").notNull(),
+  imageUrl: text("image_url"),
+  firstReportedAt: text("first_reported_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  status: text("status").notNull().default("open"),
+  parentStoryId: text("parent_story_id"),
+  closedReason: text("closed_reason"),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
+export const storySummaries = sqliteTable("story_summaries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  storyId: text("story_id").notNull(),
+  summary: text("summary").notNull(),
+  sources: text("sources").notNull(),
+  articleCount: integer("article_count").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
 export const articles = sqliteTable("articles", {
   url: text("url").primaryKey(),
   title: text("title").notNull(),
@@ -101,6 +131,9 @@ export const articles = sqliteTable("articles", {
   imageUrl: text("image_url"),
   source: text("source").notNull(),
   publishedAt: text("published_at").notNull(),
+  tags: text("tags"),
+  storyId: text("story_id"),
+  content: text("content"),
   createdAt: text("created_at")
     .notNull()
     .$defaultFn(() => new Date().toISOString()),

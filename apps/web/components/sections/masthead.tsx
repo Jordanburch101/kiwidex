@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Masthead() {
   const today = new Date().toLocaleDateString("en-NZ", {
     weekday: "long",
@@ -16,6 +18,19 @@ export function Masthead() {
       </h1>
       <div className="mt-2 flex items-center justify-center gap-4 text-[#998] text-xs">
         <span>{today}</span>
+        <span className="text-[#ccc]">·</span>
+        <Link
+          className="border-transparent border-b text-[#998] no-underline transition-colors hover:border-[#998]"
+          href="/"
+        >
+          Dashboard
+        </Link>
+        <Link
+          className="border-transparent border-b text-[#998] no-underline transition-colors hover:border-[#998]"
+          href="/news"
+        >
+          News
+        </Link>
       </div>
     </header>
   );

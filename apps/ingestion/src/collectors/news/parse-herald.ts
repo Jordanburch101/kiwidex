@@ -1,3 +1,4 @@
+import { stripHtml as stripHtmlFull } from "./content-extractor";
 import type { ParsedArticle } from "./parse-rss";
 
 /**
@@ -26,12 +27,18 @@ export function parseHeraldRss(xml: string): ParsedArticle[] {
       continue;
     }
 
+    const contentMatch = item.match(
+      /<content:encoded>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/content:encoded>/i
+    );
+    const content = contentMatch?.[1] ? stripHtmlFull(contentMatch[1]) : null;
+
     articles.push({
       url: link,
       title: stripCdata(title).trim(),
       excerpt: stripHtml(stripCdata(description ?? ""))
         .slice(0, 400)
         .trim(),
+      content,
       imageUrl,
       publishedAt: pubDate
         ? new Date(pubDate).toISOString()

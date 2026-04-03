@@ -8,6 +8,8 @@ import {
   products,
   scraperRuns,
   stocks,
+  stories,
+  storySummaries,
   summaries,
 } from "./schema";
 
@@ -272,7 +274,10 @@ export async function insertArticles(db: Db, items: NewArticle[]) {
           imageUrl: sql`excluded.image_url`,
           source: sql`excluded.source`,
           publishedAt: sql`excluded.published_at`,
-          createdAt: new Date().toISOString(),
+          tags: sql`excluded.tags`,
+          storyId: sql`excluded.story_id`,
+          content: sql`excluded.content`,
+          createdAt: sql`datetime('now')`,
         },
       });
   }
@@ -383,4 +388,173 @@ export async function getAllLatestQuotes(db: Db, tickers: string[]) {
     tickers.map((ticker) => getLatestStockQuote(db, ticker))
   );
   return results.filter((r): r is NonNullable<typeof r> => r !== null);
+}
+
+// --- Story queries ---
+
+export type NewStory = typeof stories.$inferInsert;
+
+export async function upsertStory(db: Db, story: NewStory) {
+  await db
+    .insert(stories)
+    .values(story)
+    .onConflictDoUpdate({
+      target: [stories.id],
+      set: {
+        headline: story.headline,
+        tags: story.tags,
+        sourceCount: story.sourceCount,
+        imageUrl: story.imageUrl,
+        parentStoryId: story.parentStoryId,
+        firstReportedAt: story.firstReportedAt,
+        updatedAt: story.updatedAt,
+      },
+    });
+}
+
+export async function getStories(
+  db: Db,
+  opts: { days?: number; tag?: string; limit?: number; offset?: number }
+) {
+  const { days = 30, tag, limit = 50, offset = 0 } = opts;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0]!;
+
+  const conditions = [gte(stories.updatedAt, cutoff)];
+  if (tag) {
+    conditions.push(sql`${stories.tags} LIKE ${`%"${tag}"%`}`);
+  }
+
+  return db
+    .select()
+    .from(stories)
+    .where(and(...conditions))
+    .orderBy(desc(stories.updatedAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getStoryBySlug(db: Db, slug: string) {
+  const rows = await db
+    .select()
+    .from(stories)
+    .where(eq(stories.id, slug))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getExistingArticleStoryIds(
+  db: Db,
+  urls: string[]
+): Promise<Map<string, string | null>> {
+  const result = new Map<string, string | null>();
+  if (urls.length === 0) {
+    return result;
+  }
+  const rows = await db
+    .select({ url: articles.url, storyId: articles.storyId })
+    .from(articles)
+    .where(inArray(articles.url, urls));
+  for (const row of rows) {
+    result.set(row.url, row.storyId);
+  }
+  return result;
+}
+
+export async function getArticlesByStoryId(db: Db, storyId: string) {
+  return db
+    .select()
+    .from(articles)
+    .where(eq(articles.storyId, storyId))
+    .orderBy(desc(articles.publishedAt));
+}
+
+export async function getRecentStories(db: Db, days: number) {
+  const cutoff = new Date(
+    Date.now() - days * 24 * 60 * 60 * 1000
+  ).toISOString();
+  return db
+    .select()
+    .from(stories)
+    .where(gte(stories.updatedAt, cutoff))
+    .orderBy(desc(stories.updatedAt));
+}
+
+export async function updateStoryEnrichment(
+  db: Db,
+  storyId: string,
+  data: { summary: string; angles: string; relatedMetrics: string }
+) {
+  await db
+    .update(stories)
+    .set({
+      summary: data.summary,
+      angles: data.angles,
+      relatedMetrics: data.relatedMetrics,
+    })
+    .where(eq(stories.id, storyId));
+}
+
+export async function deleteOldArticles(db: Db, beforeDate: string) {
+  await db.delete(articles).where(lte(articles.publishedAt, beforeDate));
+}
+
+export async function deleteOrphanedStories(db: Db) {
+  await db.run(sql`
+    DELETE FROM stories WHERE id NOT IN (
+      SELECT DISTINCT story_id FROM articles WHERE story_id IS NOT NULL
+    )
+    AND closed_reason IS NOT 'superseded'
+  `);
+}
+
+export async function closeStory(
+  db: Db,
+  storyId: string,
+  reason: "expired" | "cap_reached" | "superseded"
+) {
+  await db
+    .update(stories)
+    .set({ status: "closed", closedReason: reason })
+    .where(eq(stories.id, storyId));
+}
+
+export async function getOpenStories(db: Db) {
+  return db
+    .select()
+    .from(stories)
+    .where(eq(stories.status, "open"))
+    .orderBy(desc(stories.updatedAt));
+}
+
+export async function getChildStory(db: Db, parentStoryId: string) {
+  const rows = await db
+    .select()
+    .from(stories)
+    .where(eq(stories.parentStoryId, parentStoryId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export type NewStorySummary = typeof storySummaries.$inferInsert;
+
+export async function insertStorySummary(db: Db, entry: NewStorySummary) {
+  await db.insert(storySummaries).values(entry);
+}
+
+export async function getStorySummaries(db: Db, storyId: string) {
+  return db
+    .select()
+    .from(storySummaries)
+    .where(eq(storySummaries.storyId, storyId))
+    .orderBy(desc(storySummaries.createdAt));
+}
+
+export async function getStorySummaryCount(db: Db, storyId: string) {
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(storySummaries)
+    .where(eq(storySummaries.storyId, storyId));
+  return result[0]!.count;
 }

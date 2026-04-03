@@ -1,11 +1,53 @@
-import { db, insertArticles, type NewArticle } from "@workspace/db";
+import {
+  closeStory,
+  db,
+  deleteOldArticles,
+  deleteOrphanedStories,
+  getArticlesByStoryId,
+  getExistingArticleStoryIds,
+  getOpenStories,
+  getStoryBySlug,
+  getStorySummaryCount,
+  insertArticles,
+  insertStorySummary,
+  type NewArticle,
+  updateStoryEnrichment,
+  upsertStory,
+} from "@workspace/db";
 import type { CollectorResult } from "../types";
+import { matchArticleToStory, tagArticles } from "./ai";
+import { extractArticleContent } from "./content-extractor";
+import { enrichStory } from "./enrich";
 import { matchesEconomyKeywords } from "./keywords";
+import { categorizeArticle, findStoriesToClose } from "./lifecycle";
 import { parse1NewsRss } from "./parse-1news";
 import { parseStuffAtom } from "./parse-atom";
 import { parseHeraldRss } from "./parse-herald";
 import { type ParsedArticle, parseRnzRss } from "./parse-rss";
 import { scoreArticles } from "./score";
+import { slugifyHeadline } from "./slugify";
+
+const TAG_TO_METRICS: Record<string, string[]> = {
+  fuel: ["petrol_91", "petrol_95", "petrol_diesel"],
+  groceries: ["milk", "eggs", "bread", "butter", "cheese", "bananas"],
+  housing: ["house_price_median", "mortgage_1yr"],
+  employment: ["unemployment", "wage_growth"],
+  "interest-rates": ["ocr", "mortgage_1yr", "mortgage_floating"],
+  inflation: ["cpi"],
+  currency: ["nzd_usd", "nzd_aud"],
+  markets: ["nzx_50"],
+  "general-economy": ["cpi", "gdp_growth"],
+};
+
+function deriveMetricsFromTags(tags: string[]): string[] {
+  const metrics = new Set<string>();
+  for (const tag of tags) {
+    for (const m of TAG_TO_METRICS[tag] ?? []) {
+      metrics.add(m);
+    }
+  }
+  return [...metrics].slice(0, 5);
+}
 
 const FEEDS = {
   rnz: "https://www.rnz.co.nz/rss/business.xml",
@@ -132,15 +174,17 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     `[news] ${filtered.length}/${allArticles.length} articles match economy keywords`
   );
 
-  // Score articles
+  // Score articles — keep top 18 for AI pipeline
   const scored = scoreArticles(filtered);
   scored.sort((a, b) => b.score - a.score);
-  const top5 = scored.slice(0, 5);
-  console.log(`[news] Top ${top5.length} scored:`);
-  top5.forEach((a) => console.log(`  [${a.score}] [${a.source}] ${a.title}`));
+  const topArticles = scored.slice(0, 18);
+  console.log(`[news] Top ${topArticles.length} scored:`);
+  for (const a of topArticles) {
+    console.log(`  [${a.score}] [${a.source}] ${a.title}`);
+  }
 
   // Enrich articles without images via og:image fetch (batched to avoid OOM)
-  const toEnrich = filtered.filter((a) => !a.imageUrl);
+  const toEnrich = topArticles.filter((a) => !a.imageUrl);
   if (toEnrich.length > 0) {
     console.log(
       `[news] Fetching og:image for ${toEnrich.length} articles without images...`
@@ -154,24 +198,426 @@ export default async function collectNews(): Promise<CollectorResult[]> {
         })
       );
     }
-    const enriched = toEnrich.filter((a) => a.imageUrl).length;
+    const enrichedCount = toEnrich.filter((a) => a.imageUrl).length;
     console.log(
-      `[news] Got images for ${enriched}/${toEnrich.length} articles`
+      `[news] Got images for ${enrichedCount}/${toEnrich.length} articles`
     );
   }
 
-  // Insert into articles table
-  const rows: NewArticle[] = filtered.map((a) => ({
+  // Extract article body for sources without content:encoded (RNZ, Stuff)
+  const needContent = topArticles.filter((a) => !a.content);
+  if (needContent.length > 0) {
+    console.log(
+      `[news] Extracting body text for ${needContent.length} articles...`
+    );
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < needContent.length; i += BATCH_SIZE) {
+      const batch = needContent.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map(async (article) => {
+          try {
+            const response = await fetch(article.url, {
+              headers: { "User-Agent": USER_AGENT },
+              signal: AbortSignal.timeout(8000),
+            });
+            if (response.ok) {
+              const html = await response.text();
+              article.content = extractArticleContent(html);
+            }
+          } catch {
+            // Content extraction is best-effort
+          }
+        })
+      );
+    }
+    const extracted = needContent.filter((a) => a.content).length;
+    console.log(
+      `[news] Extracted content for ${extracted}/${needContent.length} articles`
+    );
+  }
+
+  // --- Phase 2: Pre-compute state ---
+  console.log("[news] Pre-computing story state...");
+
+  const openStories = await getOpenStories(db);
+  const storyStates = await Promise.all(
+    openStories.map(async (s) => ({
+      ...s,
+      summaryCount: await getStorySummaryCount(db, s.id),
+      parsedTags: JSON.parse(s.tags) as string[],
+    }))
+  );
+
+  // Close expired/capped stories
+  const toClose = findStoriesToClose(
+    storyStates.map((s) => ({
+      id: s.id,
+      updatedAt: s.updatedAt,
+      summaryCount: s.summaryCount,
+    }))
+  );
+  for (const { id, reason } of toClose) {
+    await closeStory(db, id, reason);
+    console.log(`[news] Closed story "${id}" (${reason})`);
+  }
+
+  // Remaining open stories are candidates for matching
+  const candidateStories = storyStates
+    .filter((s) => !toClose.some((c) => c.id === s.id))
+    .map((s) => ({ id: s.id, headline: s.headline, tags: s.parsedTags }));
+
+  console.log(
+    `[news] ${candidateStories.length} open stories as candidates, ${toClose.length} closed`
+  );
+
+  // --- Phase 3: Tag + match articles ---
+
+  // Tag all articles (1 Haiku call)
+  let articleTags: string[][] = topArticles.map(() => []);
+  try {
+    console.log("[news] Tagging articles with AI...");
+    const tags = await tagArticles(
+      topArticles.map((a) => ({
+        title: a.title,
+        excerpt: a.excerpt,
+        content: a.content,
+        source: a.source ?? "unknown",
+      }))
+    );
+    for (let i = 0; i < tags.length; i++) {
+      articleTags[i] = tags[i]!;
+    }
+    console.log(`[news] Tagged ${tags.length} articles`);
+  } catch (e) {
+    console.warn("[news] Tagging failed:", e);
+    articleTags = topArticles.map(() => ["general-economy"]);
+  }
+
+  // Pre-check: look up existing article assignments from DB
+  // Articles already assigned to a story should keep that assignment
+  const existingAssignments = await getExistingArticleStoryIds(
+    db,
+    topArticles.map((a) => a.url)
+  );
+
+  const articleStoryIds: (string | null)[] = topArticles.map(
+    (a) => existingAssignments.get(a.url) ?? null
+  );
+  const storiesNeedingEnrichment = new Map<
+    string,
+    { headline: string; isNew: boolean }
+  >();
+  const now = new Date().toISOString();
+
+  let deterministic = 0;
+  let aiCalls = 0;
+  let skippedExisting = 0;
+
+  for (let i = 0; i < topArticles.length; i++) {
+    // Skip articles already assigned to a story in the DB
+    if (articleStoryIds[i]) {
+      skippedExisting++;
+      continue;
+    }
+
+    const article = topArticles[i]!;
+    const tags = articleTags[i] ?? ["general-economy"];
+
+    const category = categorizeArticle(
+      { title: article.title, content: article.content, tags },
+      candidateStories
+    );
+
+    if (category.category === "NO_CANDIDATES") {
+      // Deterministic: create new story
+      const storyId = slugifyHeadline(article.title, new Date());
+      await upsertStory(db, {
+        id: storyId,
+        headline: article.title,
+        tags: JSON.stringify(tags),
+        sourceCount: 1,
+        imageUrl: article.imageUrl ?? null,
+        firstReportedAt: article.publishedAt,
+        updatedAt: now,
+      });
+      articleStoryIds[i] = storyId;
+      storiesNeedingEnrichment.set(storyId, {
+        headline: article.title,
+        isNew: true,
+      });
+      deterministic++;
+    } else if (category.category === "HIGH_CONFIDENCE") {
+      // Deterministic: auto-assign to existing story
+      articleStoryIds[i] = category.matchedStoryId;
+      deterministic++;
+    } else if (category.category === "AMBIGUOUS") {
+      // AI needed
+      try {
+        const decision = await matchArticleToStory(
+          {
+            title: article.title,
+            content: article.content,
+            source: article.source ?? "unknown",
+          },
+          category.candidates
+        );
+        aiCalls++;
+
+        if (decision.startsWith("continuation:")) {
+          const storyId = decision.replace("continuation:", "");
+          articleStoryIds[i] = storyId;
+        } else if (decision.startsWith("chapter_from:")) {
+          const parentId = decision.replace("chapter_from:", "");
+          // Close parent, create new chapter
+          await closeStory(db, parentId, "superseded");
+          // Remove from candidates so subsequent articles can't match to it
+          const parentIdx = candidateStories.findIndex(
+            (s) => s.id === parentId
+          );
+          if (parentIdx >= 0) {
+            candidateStories.splice(parentIdx, 1);
+          }
+          const storyId = slugifyHeadline(article.title, new Date());
+          await upsertStory(db, {
+            id: storyId,
+            headline: article.title,
+            tags: JSON.stringify(tags),
+            sourceCount: 1,
+            imageUrl: article.imageUrl ?? null,
+            firstReportedAt: article.publishedAt,
+            updatedAt: now,
+            parentStoryId: parentId,
+          });
+          articleStoryIds[i] = storyId;
+          storiesNeedingEnrichment.set(storyId, {
+            headline: article.title,
+            isNew: true,
+          });
+          console.log(
+            `[news] New chapter: "${article.title}" (from "${parentId}")`
+          );
+        } else {
+          // "new" or "standalone" — create new story
+          const storyId = slugifyHeadline(article.title, new Date());
+          await upsertStory(db, {
+            id: storyId,
+            headline: article.title,
+            tags: JSON.stringify(tags),
+            sourceCount: 1,
+            imageUrl: article.imageUrl ?? null,
+            firstReportedAt: article.publishedAt,
+            updatedAt: now,
+          });
+          articleStoryIds[i] = storyId;
+          storiesNeedingEnrichment.set(storyId, {
+            headline: article.title,
+            isNew: true,
+          });
+        }
+      } catch (e) {
+        console.warn(`[news] AI matching failed for "${article.title}":`, e);
+        // Fallback: create new story
+        const storyId = slugifyHeadline(article.title, new Date());
+        await upsertStory(db, {
+          id: storyId,
+          headline: article.title,
+          tags: JSON.stringify(tags),
+          sourceCount: 1,
+          imageUrl: article.imageUrl ?? null,
+          firstReportedAt: article.publishedAt,
+          updatedAt: now,
+        });
+        articleStoryIds[i] = storyId;
+        storiesNeedingEnrichment.set(storyId, {
+          headline: article.title,
+          isNew: true,
+        });
+      }
+    }
+  }
+
+  console.log(
+    `[news] Matching: ${skippedExisting} already assigned, ${deterministic} deterministic, ${aiCalls} AI calls`
+  );
+
+  // Update existing stories that gained new articles
+  const existingStoryUpdates = new Map<string, number[]>(); // storyId -> article indices
+  for (let i = 0; i < topArticles.length; i++) {
+    const storyId = articleStoryIds[i];
+    if (storyId && !storiesNeedingEnrichment.has(storyId)) {
+      // This is an existing story that got a new article
+      const indices = existingStoryUpdates.get(storyId) ?? [];
+      indices.push(i);
+      existingStoryUpdates.set(storyId, indices);
+    }
+  }
+
+  for (const [storyId, indices] of existingStoryUpdates) {
+    const existingArticles = await getArticlesByStoryId(db, storyId);
+    const existingUrls = new Set(existingArticles.map((a) => a.url));
+    const existingSources = new Set(existingArticles.map((a) => a.source));
+
+    // Check if any of the matched articles are genuinely new (not already in DB)
+    let hasNewArticles = false;
+    let gainedNewSource = false;
+
+    for (const idx of indices) {
+      const article = topArticles[idx]!;
+      if (!existingUrls.has(article.url)) {
+        hasNewArticles = true;
+        const source = article.source ?? "unknown";
+        if (!existingSources.has(source)) {
+          gainedNewSource = true;
+        }
+        existingSources.add(source);
+      }
+    }
+
+    // Only update story if it actually gained new articles
+    if (!hasNewArticles) {
+      continue;
+    }
+
+    const story = candidateStories.find((s) => s.id === storyId);
+    if (story) {
+      const allTags = new Set([...story.tags]);
+      for (const idx of indices) {
+        for (const tag of articleTags[idx] ?? []) {
+          allTags.add(tag);
+        }
+      }
+      const newestArticle = topArticles[indices.at(-1)!]!;
+      await upsertStory(db, {
+        id: storyId,
+        headline: story.headline,
+        tags: JSON.stringify([...allTags]),
+        sourceCount: existingSources.size,
+        imageUrl: newestArticle.imageUrl ?? null,
+        firstReportedAt: existingArticles.at(-1)?.publishedAt ?? now,
+        updatedAt: now,
+      });
+
+      if (gainedNewSource) {
+        storiesNeedingEnrichment.set(storyId, {
+          headline: story.headline,
+          isNew: false,
+        });
+      }
+    }
+  }
+
+  // --- Phase 4: Enrich stories with Sonnet ---
+  if (storiesNeedingEnrichment.size > 0) {
+    console.log(
+      `[news] Enriching ${storiesNeedingEnrichment.size} stories with Sonnet...`
+    );
+    for (const [storyId, { headline }] of storiesNeedingEnrichment) {
+      try {
+        // Get all articles for this story (DB + new)
+        const dbArticles = await getArticlesByStoryId(db, storyId);
+        const newArticles = topArticles.filter(
+          (_, i) => articleStoryIds[i] === storyId
+        );
+
+        const seen = new Set<string>();
+        const storyArticles: {
+          title: string;
+          content: string | null;
+          excerpt: string;
+          source: string;
+        }[] = [];
+
+        for (const a of dbArticles) {
+          if (!seen.has(a.url)) {
+            seen.add(a.url);
+            storyArticles.push({
+              title: a.title,
+              content: a.content,
+              excerpt: a.excerpt,
+              source: a.source,
+            });
+          }
+        }
+        for (const a of newArticles) {
+          if (!seen.has(a.url)) {
+            seen.add(a.url);
+            storyArticles.push({
+              title: a.title,
+              content: a.content,
+              excerpt: a.excerpt,
+              source: a.source ?? "unknown",
+            });
+          }
+        }
+
+        if (storyArticles.length === 0) {
+          continue;
+        }
+
+        const enrichment = await enrichStory(headline, storyArticles);
+        if (enrichment) {
+          // Fallback: if AI returned no metrics, derive from story tags
+          if (enrichment.relatedMetrics.length === 0) {
+            const storyRow = await getStoryBySlug(db, storyId);
+            if (storyRow) {
+              const storyTags: string[] = JSON.parse(storyRow.tags);
+              enrichment.relatedMetrics = deriveMetricsFromTags(storyTags);
+            }
+          }
+
+          // Update story enrichment fields
+          await updateStoryEnrichment(db, storyId, {
+            summary: enrichment.summary,
+            angles: JSON.stringify(enrichment.angles),
+            relatedMetrics: JSON.stringify(enrichment.relatedMetrics),
+          });
+
+          // Insert into story_summaries timeline
+          const sources = [...new Set(storyArticles.map((a) => a.source))];
+          await insertStorySummary(db, {
+            storyId,
+            summary: enrichment.summary,
+            sources: JSON.stringify(sources),
+            articleCount: storyArticles.length,
+          });
+
+          console.log(
+            `[news] Enriched: "${headline}" (${sources.length} sources, ${storyArticles.length} articles)`
+          );
+        }
+      } catch (e) {
+        console.warn(`[news] Enrichment failed for "${headline}":`, e);
+      }
+    }
+  }
+
+  // Insert articles
+  const rows: NewArticle[] = topArticles.map((a, i) => ({
     url: a.url,
     title: a.title,
     excerpt: a.excerpt,
+    content: a.content ?? null,
     imageUrl: a.imageUrl,
     source: a.source ?? "unknown",
     publishedAt: a.publishedAt,
+    tags: articleTags[i]?.length ? JSON.stringify(articleTags[i]) : null,
+    storyId: articleStoryIds[i] ?? null,
   }));
 
   await insertArticles(db, rows);
   console.log(`[news] Inserted/updated ${rows.length} articles`);
+
+  // Cleanup
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0]!;
+    await deleteOldArticles(db, thirtyDaysAgo);
+    await deleteOrphanedStories(db);
+    console.log("[news] Cleanup complete");
+  } catch (e) {
+    console.warn("[news] Cleanup failed:", e);
+  }
 
   return [];
 }

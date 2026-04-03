@@ -1,7 +1,7 @@
 # SEO Pass — The Kiwidex
 
 **Date**: 2026-03-31
-**Domain**: `kiwidex.co.nz`
+**Domain**: `thekiwidex.co.nz`
 **Scope**: Full SEO setup for a single-page Next.js 16 economy dashboard
 
 ---
@@ -12,7 +12,7 @@ Export a `metadata` object from `layout.tsx` with:
 
 ```ts
 export const metadata: Metadata = {
-  metadataBase: new URL("https://kiwidex.co.nz"),
+  metadataBase: new URL("https://thekiwidex.co.nz"),
   title: "The Kiwidex — New Zealand Economy Dashboard",
   description:
     "Live NZ economic indicators updated daily: CPI, fuel prices, groceries, housing, exchange rates, and employment. Data from RBNZ, Stats NZ, REINZ, and more.",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_NZ",
-    url: "https://kiwidex.co.nz",
+    url: "https://thekiwidex.co.nz",
     siteName: "The Kiwidex",
     title: "The Kiwidex — New Zealand Economy Dashboard",
     description:
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
       "Live NZ economic indicators updated daily: CPI, fuel, groceries, housing, FX, employment.",
   },
   alternates: {
-    canonical: "https://kiwidex.co.nz",
+    canonical: "https://thekiwidex.co.nz",
   },
   robots: {
     index: true,
@@ -74,7 +74,7 @@ A route-level `opengraph-image.tsx` file using `ImageResponse` from `next/og`. N
   - OCR, CPI, NZD/USD (top row)
   - Petrol 91, Unemployment, Median House Price (bottom row)
 - Each cell: metric name (small, muted), value (large, bold `#2a2520`), change arrow + percentage (green up / red down using `INDICATOR` colors).
-- **Footer line**: `kiwidex.co.nz` in small muted text.
+- **Footer line**: `thekiwidex.co.nz` in small muted text.
 
 **Data source**: Import DB query helpers from `@workspace/db` to fetch latest values at render time.
 
@@ -96,7 +96,7 @@ Add a `<script type="application/ld+json">` in `layout.tsx` (or `page.tsx`) with
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "The Kiwidex",
-  "url": "https://kiwidex.co.nz",
+  "url": "https://thekiwidex.co.nz",
   "description": "Live New Zealand economic indicators dashboard"
 }
 ```
@@ -108,7 +108,7 @@ Add a `<script type="application/ld+json">` in `layout.tsx` (or `page.tsx`) with
   "@type": "Dataset",
   "name": "New Zealand Economic Indicators",
   "description": "Daily-updated collection of NZ economic metrics including CPI, fuel prices, grocery prices, housing, exchange rates, and employment data.",
-  "url": "https://kiwidex.co.nz",
+  "url": "https://thekiwidex.co.nz",
   "creator": {
     "@type": "Person",
     "name": "Jordan Burch",
@@ -144,7 +144,7 @@ Single-page sitemap:
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: "https://kiwidex.co.nz",
+      url: "https://thekiwidex.co.nz",
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1,
@@ -161,7 +161,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: { userAgent: "*", allow: "/" },
-    sitemap: "https://kiwidex.co.nz/sitemap.xml",
+    sitemap: "https://thekiwidex.co.nz/sitemap.xml",
   };
 }
 ```
