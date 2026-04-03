@@ -9,6 +9,7 @@ import {
   scraperRuns,
   stocks,
   stories,
+  storySummaries,
   summaries,
 } from "./schema";
 
@@ -275,6 +276,7 @@ export async function insertArticles(db: Db, items: NewArticle[]) {
           publishedAt: sql`excluded.published_at`,
           tags: sql`excluded.tags`,
           storyId: sql`excluded.story_id`,
+          content: sql`excluded.content`,
           createdAt: sql`datetime('now')`,
         },
       });
@@ -485,4 +487,54 @@ export async function deleteOrphanedStories(db: Db) {
       SELECT DISTINCT story_id FROM articles WHERE story_id IS NOT NULL
     )
   `);
+}
+
+export async function closeStory(
+  db: Db,
+  storyId: string,
+  reason: "expired" | "cap_reached" | "superseded"
+) {
+  await db
+    .update(stories)
+    .set({ status: "closed", closedReason: reason })
+    .where(eq(stories.id, storyId));
+}
+
+export async function getOpenStories(db: Db) {
+  return db
+    .select()
+    .from(stories)
+    .where(eq(stories.status, "open"))
+    .orderBy(desc(stories.updatedAt));
+}
+
+export async function getChildStory(db: Db, parentStoryId: string) {
+  const rows = await db
+    .select()
+    .from(stories)
+    .where(eq(stories.parentStoryId, parentStoryId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export type NewStorySummary = typeof storySummaries.$inferInsert;
+
+export async function insertStorySummary(db: Db, entry: NewStorySummary) {
+  await db.insert(storySummaries).values(entry);
+}
+
+export async function getStorySummaries(db: Db, storyId: string) {
+  return db
+    .select()
+    .from(storySummaries)
+    .where(eq(storySummaries.storyId, storyId))
+    .orderBy(desc(storySummaries.createdAt));
+}
+
+export async function getStorySummaryCount(db: Db, storyId: string) {
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(storySummaries)
+    .where(eq(storySummaries.storyId, storyId));
+  return result[0]!.count;
 }

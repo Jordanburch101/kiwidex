@@ -13,12 +13,18 @@ import { createClient } from "@libsql/client";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import {
+  closeStory,
   deleteOldArticles,
   deleteOrphanedStories,
   getArticlesByStoryId,
+  getChildStory,
+  getOpenStories,
   getStories,
+  getStorySummaries,
+  getStorySummaryCount,
   getStoryBySlug,
   insertArticles,
+  insertStorySummary,
   updateStoryEnrichment,
   upsertStory,
 } from "../queries";
@@ -52,6 +58,9 @@ describe("story query helpers", () => {
         image_url TEXT,
         first_reported_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open',
+        parent_story_id TEXT,
+        closed_reason TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     `);
@@ -66,12 +75,25 @@ describe("story query helpers", () => {
         published_at TEXT NOT NULL,
         tags TEXT,
         story_id TEXT,
+        content TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+
+    await testDb.run(sql`
+      CREATE TABLE IF NOT EXISTS story_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        story_id TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        sources TEXT NOT NULL,
+        article_count INTEGER NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     `);
   });
 
   beforeEach(async () => {
+    await testDb.run(sql`DELETE FROM story_summaries`);
     await testDb.run(sql`DELETE FROM articles`);
     await testDb.run(sql`DELETE FROM stories`);
   });
@@ -284,6 +306,122 @@ describe("story query helpers", () => {
         JSON.stringify(["consumer impact", "RBNZ response"])
       );
       expect(result?.relatedMetrics).toBe(JSON.stringify(["cpi", "ocr"]));
+    });
+  });
+
+  describe("closeStory", () => {
+    test("closes a story with reason", async () => {
+      await upsertStory(testDb, {
+        id: "test-story",
+        headline: "Test",
+        tags: "[]",
+        sourceCount: 1,
+        firstReportedAt: "2026-04-01T00:00:00Z",
+        updatedAt: "2026-04-01T00:00:00Z",
+      });
+      await closeStory(testDb, "test-story", "expired");
+      const story = await getStoryBySlug(testDb, "test-story");
+      expect(story!.status).toBe("closed");
+      expect(story!.closedReason).toBe("expired");
+    });
+  });
+
+  describe("getOpenStories", () => {
+    test("excludes closed stories", async () => {
+      await upsertStory(testDb, {
+        id: "open-story",
+        headline: "Open",
+        tags: "[]",
+        sourceCount: 1,
+        firstReportedAt: "2026-04-01T00:00:00Z",
+        updatedAt: "2026-04-01T00:00:00Z",
+      });
+      await upsertStory(testDb, {
+        id: "closed-story",
+        headline: "Closed",
+        tags: "[]",
+        sourceCount: 1,
+        firstReportedAt: "2026-04-01T00:00:00Z",
+        updatedAt: "2026-04-01T00:00:00Z",
+      });
+      await closeStory(testDb, "closed-story", "expired");
+      const open = await getOpenStories(testDb);
+      expect(open).toHaveLength(1);
+      expect(open[0]!.id).toBe("open-story");
+    });
+  });
+
+  describe("insertStorySummary + getStorySummaries + getStorySummaryCount", () => {
+    test("inserts and retrieves story summaries newest first", async () => {
+      await upsertStory(testDb, {
+        id: "test-story",
+        headline: "Test",
+        tags: "[]",
+        sourceCount: 1,
+        firstReportedAt: "2026-04-01T00:00:00Z",
+        updatedAt: "2026-04-01T00:00:00Z",
+      });
+      await insertStorySummary(testDb, {
+        storyId: "test-story",
+        summary: "First",
+        sources: JSON.stringify(["rnz"]),
+        articleCount: 1,
+      });
+      // Small delay to ensure different createdAt
+      await new Promise((r) => setTimeout(r, 10));
+      await insertStorySummary(testDb, {
+        storyId: "test-story",
+        summary: "Second",
+        sources: JSON.stringify(["rnz", "stuff"]),
+        articleCount: 3,
+      });
+      const result = await getStorySummaries(testDb, "test-story");
+      expect(result).toHaveLength(2);
+      expect(result[0]!.summary).toBe("Second");
+    });
+
+    test("counts story summaries", async () => {
+      await upsertStory(testDb, {
+        id: "test-story",
+        headline: "Test",
+        tags: "[]",
+        sourceCount: 1,
+        firstReportedAt: "2026-04-01T00:00:00Z",
+        updatedAt: "2026-04-01T00:00:00Z",
+      });
+      await insertStorySummary(testDb, {
+        storyId: "test-story",
+        summary: "s1",
+        sources: "[]",
+        articleCount: 1,
+      });
+      await insertStorySummary(testDb, {
+        storyId: "test-story",
+        summary: "s2",
+        sources: "[]",
+        articleCount: 2,
+      });
+      const count = await getStorySummaryCount(testDb, "test-story");
+      expect(count).toBe(2);
+    });
+  });
+
+  describe("getChildStory", () => {
+    test("finds child story by parentStoryId", async () => {
+      await upsertStory(testDb, {
+        id: "parent",
+        headline: "Parent",
+        tags: "[]",
+        sourceCount: 1,
+        firstReportedAt: "2026-04-01T00:00:00Z",
+        updatedAt: "2026-04-01T00:00:00Z",
+      });
+      // Insert child with parentStoryId — use raw SQL since upsertStory doesn't include parentStoryId in conflict set
+      await testDb.run(sql`INSERT INTO stories (id, headline, tags, source_count, first_reported_at, updated_at, created_at, status, parent_story_id)
+        VALUES ('child', 'Child', '[]', 1, '2026-04-01T00:00:00Z', '2026-04-01T00:00:00Z', datetime('now'), 'open', 'parent')`);
+      const child = await getChildStory(testDb, "parent");
+      expect(child).not.toBeNull();
+      expect(child!.id).toBe("child");
     });
   });
 
