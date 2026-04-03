@@ -792,19 +792,42 @@ async function _getStoryPageData(slug: string) {
   const summaries = await getStorySummaries(db, story.id);
 
   // Chapter links
-  let parentStory: { id: string; headline: string } | null = null;
-  let childStory: { id: string; headline: string } | null = null;
+  type ChapterLink = {
+    id: string;
+    headline: string;
+    imageUrl: string | null;
+    sourceCount: number;
+    tags: string;
+    updatedAt: string;
+  } | null;
+
+  let parentStory: ChapterLink = null;
+  let childStory: ChapterLink = null;
 
   if (story.parentStoryId) {
     const parent = await getStoryBySlug(db, story.parentStoryId);
     if (parent) {
-      parentStory = { id: parent.id, headline: parent.headline };
+      parentStory = {
+        id: parent.id,
+        headline: parent.headline,
+        imageUrl: parent.imageUrl,
+        sourceCount: parent.sourceCount,
+        tags: parent.tags,
+        updatedAt: parent.updatedAt,
+      };
     }
   }
 
   const child = await getChildStory(db, story.id);
   if (child) {
-    childStory = { id: child.id, headline: child.headline };
+    childStory = {
+      id: child.id,
+      headline: child.headline,
+      imageUrl: child.imageUrl,
+      sourceCount: child.sourceCount,
+      tags: child.tags,
+      updatedAt: child.updatedAt,
+    };
   }
 
   return {
