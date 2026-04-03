@@ -1,3 +1,4 @@
+import { CompactRow } from "@workspace/ui/components/compact-row";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -25,6 +26,67 @@ const ANGLE_STYLES: Record<string, string> = {
   "Human interest": "bg-[#fce7f3] text-[#9d174d]",
   "Data-driven": "bg-[#ecfdf5] text-[#065f46]",
   "Industry perspective": "bg-[#f5f3ff] text-[#5b21b6]",
+};
+
+const METRIC_DESCRIPTIONS: Record<string, string> = {
+  ocr: "Official Cash Rate set by the RBNZ — influences mortgage and savings rates.",
+  cpi: "Consumer Price Index — annual change in prices for a basket of goods.",
+  gdp_growth: "Quarterly GDP growth rate — total economic output change.",
+  unemployment: "Percentage of the labour force actively seeking work.",
+  wage_growth: "Annual change in average hourly earnings.",
+  median_income:
+    "Average annual income from Stats NZ Quarterly Employment Survey.",
+  house_price_median:
+    "National median house price from REINZ, published monthly.",
+  house_price_index: "REINZ House Price Index — tracks property value changes.",
+  mortgage_floating: "Average floating mortgage rate across major NZ banks.",
+  mortgage_1yr:
+    "Average 1-year fixed mortgage rate, published weekly by the RBNZ.",
+  mortgage_2yr: "Average 2-year fixed mortgage rate across major NZ banks.",
+  nzd_usd:
+    "NZ dollar against US dollar — weaker Kiwi makes imports more expensive.",
+  nzd_aud: "NZ dollar against Australian dollar.",
+  nzd_eur: "NZ dollar against Euro.",
+  petrol_91: "Average 91 octane petrol price per litre from Gaspy.",
+  petrol_95: "Average 95 octane petrol price per litre from Gaspy.",
+  petrol_diesel: "Average diesel price per litre from Gaspy.",
+  electricity_wholesale: "National average wholesale electricity spot price.",
+  milk: "Average price of 2L standard milk across NZ supermarkets.",
+  eggs: "Average price of a dozen eggs across NZ supermarkets.",
+  bread: "Average price of a 600g white loaf across NZ supermarkets.",
+  butter: "Average price of 500g salted butter across NZ supermarkets.",
+  cheese: "Average price of 1kg mild cheddar across NZ supermarkets.",
+  bananas: "Average price of bananas per kg across NZ supermarkets.",
+  nzx_50: "NZX 50 Index — benchmark for the NZ share market.",
+  minimum_wage: "NZ minimum wage per hour, updated annually on 1 April.",
+};
+
+const METRIC_SENTIMENT: Record<string, "up_is_good" | "down_is_good"> = {
+  petrol_91: "down_is_good",
+  petrol_95: "down_is_good",
+  petrol_diesel: "down_is_good",
+  electricity_wholesale: "down_is_good",
+  milk: "down_is_good",
+  eggs: "down_is_good",
+  bread: "down_is_good",
+  butter: "down_is_good",
+  cheese: "down_is_good",
+  bananas: "down_is_good",
+  cpi: "down_is_good",
+  unemployment: "down_is_good",
+  mortgage_1yr: "down_is_good",
+  mortgage_2yr: "down_is_good",
+  mortgage_floating: "down_is_good",
+  house_price_median: "down_is_good",
+  ocr: "down_is_good",
+  nzd_usd: "up_is_good",
+  nzd_aud: "up_is_good",
+  nzd_eur: "up_is_good",
+  nzx_50: "up_is_good",
+  gdp_growth: "up_is_good",
+  wage_growth: "up_is_good",
+  median_income: "up_is_good",
+  minimum_wage: "up_is_good",
 };
 
 // ---------- Metadata ----------
@@ -583,35 +645,25 @@ export default async function StoryPage({
 
           {/* Related Metrics */}
           {relatedMetrics.length > 0 ? (
-            <div className="rounded-lg border border-[#e8e4dc] overflow-hidden">
-              <h3 className="px-3.5 py-2.5 font-heading font-semibold text-[#2a2520] text-sm border-[#e8e4dc] border-b">
+            <div className="overflow-hidden rounded-lg border border-[#e8e4dc]">
+              <h3 className="border-[#e8e4dc] border-b px-3.5 py-2.5 font-heading font-semibold text-[#2a2520] text-sm">
                 Related Metrics
               </h3>
               <div className="flex flex-col">
                 {relatedMetrics.map((m, i) => (
                   <div
-                    className={`flex items-center gap-3 px-3.5 py-2.5 ${
-                      i % 2 === 1 ? "bg-[#faf8f4]" : "bg-white"
-                    } ${i < relatedMetrics.length - 1 ? "border-[#f0ece4] border-b" : ""}`}
+                    className={`${i % 2 === 1 ? "bg-[#faf8f4]" : "bg-white"} ${i < relatedMetrics.length - 1 ? "border-[#f0ece4] border-b" : ""}`}
                     key={m.metric}
                   >
-                    <span className="flex-1 font-sans text-[#776] text-xs">
-                      {m.label}
-                    </span>
-                    <span className="font-mono font-semibold text-[#2a2520] text-sm">
-                      {m.value}
-                    </span>
-                    <span
-                      className={`min-w-[56px] rounded-full px-2 py-0.5 text-center font-sans font-medium text-[10px] ${
-                        m.changeType === "up"
-                          ? "bg-[#f0fdf4] text-[#2ea85a]"
-                          : m.changeType === "down"
-                            ? "bg-[#fef2f2] text-[#e24b35]"
-                            : "bg-[#f4f2ed] text-[#888]"
-                      }`}
-                    >
-                      {m.change}
-                    </span>
+                    <CompactRow
+                      change={m.change}
+                      changeType={m.changeType as "up" | "down" | "neutral"}
+                      description={METRIC_DESCRIPTIONS[m.metric]}
+                      label={m.label}
+                      sentiment={METRIC_SENTIMENT[m.metric]}
+                      sparklineData={m.sparklineData}
+                      value={m.value}
+                    />
                   </div>
                 ))}
               </div>
