@@ -55,9 +55,9 @@ cd apps/ingestion && bun run collect # Run all collectors
 ## Database
 
 - **ORM**: Drizzle with libSQL
-- **Tables**: `metrics` (time-series data points) + `products` (individual grocery product prices)
-- **Schema**: `metrics` has unified schema (metric key, value, unit, date, source, metadata). Unique on (metric, date). `products` tracks individual product prices with brand, store, size. Unique on (productId, store, date).
-- **Query helpers**: `getLatestValue`, `getTimeSeries`, `getLatestByCategory`, `bulkInsert`, `insertProducts`, `getProductsByCategory` — all accept a `db` parameter for testability.
+- **Tables**: `metrics` (time-series data points) + `products` (individual grocery product prices) + `articles` (news articles) + `stories` (clustered story entities) + `story_summaries` (versioned AI summaries) + `stocks` (OHLCV) + `summaries` (daily AI dashboard summary) + `scraperRuns` (collector health)
+- **Schema**: `metrics` has unified schema (metric key, value, unit, date, source, metadata). Unique on (metric, date). `products` tracks individual product prices with brand, store, size. Unique on (productId, store, date). `stories` has lifecycle fields (status: open/closed, parentStoryId for chapter linking, closedReason). `articles` link to stories via `storyId` and store full `content`.
+- **Query helpers**: `getLatestValue`, `getTimeSeries`, `getLatestByCategory`, `bulkInsert`, `insertProducts`, `getProductsByCategory`, `upsertStory`, `getOpenStories`, `closeStory`, `getStorySummaries`, `insertStorySummary`, `getExistingArticleStoryIds` — all accept a `db` parameter for testability.
 
 ## Ingestion Service
 
@@ -77,6 +77,9 @@ cd apps/ingestion && bun run collect # Run all collectors
 | `minimum-wage` | Minimum wage | Static history | Hardcoded |
 | `rent-vs-buy` | Rent-to-price ratio | Derived from DB | Calculation |
 | `groceries` | Milk, eggs, bread, butter, cheese | Woolworths + Pak'nSave + New World | Playwright scraping |
+| `news` | Story aggregation + AI summaries | RNZ, Stuff, Herald, 1News RSS | RSS + Haiku/Sonnet |
+| `stocks` | NZX50, bellwether stocks | Yahoo Finance | API |
+| `summary` | Daily AI dashboard narrative | Derived from metrics + news | Sonnet |
 
 ### Adding a new collector
 
@@ -93,6 +96,27 @@ cd apps/ingestion && bun run collect # Run all collectors
 - `foodstuffs-scraper.ts` — Shared Chromium + stealth scraper for Pak'nSave + New World
 - `paknsave.ts` / `newworld.ts` — Thin wrappers over foodstuffs-scraper
 - `index.ts` — Aggregator: runs all 3, writes products to `products` table, averages to `metrics`
+
+### News collector architecture
+
+The news collector uses a multi-phase pipeline designed to minimise AI token usage:
+
+```
+Phase 1: Collect — RSS fetch → keyword filter → score → content extraction (no AI)
+Phase 2: Pre-compute — fetch open stories, close expired/capped, categorize articles deterministically (no AI)
+Phase 3: Match — only AMBIGUOUS articles get Haiku calls (typically 1-2 per run)
+Phase 4: Enrich — Sonnet summaries only when a story gains a NEW source outlet
+Phase 5: Write — insert articles + story_summaries, cleanup old data
+```
+
+Key files:
+- `ai.ts` — Haiku tagging (batch) + per-article story matching
+- `enrich.ts` — Sonnet prose summary + angle analysis + related metrics
+- `lifecycle.ts` — Rules engine: 5-day expiry, 5-summary cap, word similarity scoring, article categorization
+- `content-extractor.ts` — Extract article body from HTML pages (RNZ/Stuff)
+- `slugify.ts` — Story ID generation from headlines
+
+Story lifecycle: `open` → `closed` (expired | cap_reached | superseded). Superseded stories link to child chapters via `parentStoryId`.
 
 ## Development Environment — cmux
 
@@ -133,16 +157,27 @@ cmux list-panes
 app/
   page.tsx                — thin shell composing section components
   layout.tsx              — root layout (Playfair Display, Noto Sans, Geist Mono)
+  news/
+    page.tsx              — /news grid page (Server Component, passes stories to client)
+    layout.tsx            — shared news layout (masthead + footer)
+    [slug]/page.tsx       — story detail page (summary timeline, source coverage, sidebar)
 components/
   theme-provider.tsx      — dark mode toggle (app-specific)
+  news/
+    tag-pill.tsx          — shared TagPill component (links to /news?tag=X, tooltip descriptions)
   sections/               — async Server Components (fetch own data)
     masthead.tsx, ticker.tsx, overview.tsx, *-deep-dive.tsx, footer.tsx
+    news-section.tsx      — homepage news preview (stories, not articles)
+    news-page-content.tsx — "use client" grid + filter pills for /news
   charts/                 — "use client" Recharts wrappers
     area-chart.tsx, multi-line-chart.tsx
 lib/
-  data.ts                 — formatters (formatValue, computeChange, etc.)
+  data.ts                 — formatters (formatValue, computeChange, etc.) — re-exports timeAgo from time.ts
+  time.ts                 — client-safe timeAgo (no DB imports — safe for "use client")
   queries.ts              — centralised DB fetching functions
 ```
+
+**Client/Server boundary gotcha:** `@/lib/data` imports `@workspace/db`. Any `"use client"` component importing from `data.ts` will pull libSQL into the browser bundle. Use `@/lib/time` for client-safe utilities.
 
 **UI primitives** live in `@workspace/ui` (sparkline, metric-card, compact-row, marquee, section-header). Import as `@workspace/ui/components/sparkline`.
 
