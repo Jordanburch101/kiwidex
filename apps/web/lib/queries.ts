@@ -1,11 +1,13 @@
 import {
   getAllLatestQuotes,
   getArticlesByStoryId,
+  getChildStory,
   getLatestSummary,
   getLatestValue,
   getStockTimeSeries,
   getStories,
   getStoryBySlug,
+  getStorySummaries,
   getTimeSeries,
   METRIC_META,
   type MetricKey,
@@ -786,7 +788,33 @@ async function _getStoryPageData(slug: string) {
     );
   }
 
-  return { story, articles, relatedMetrics: relatedMetricData };
+  // Fetch summary timeline
+  const summaries = await getStorySummaries(db, story.id);
+
+  // Chapter links
+  let parentStory: { id: string; headline: string } | null = null;
+  let childStory: { id: string; headline: string } | null = null;
+
+  if (story.parentStoryId) {
+    const parent = await getStoryBySlug(db, story.parentStoryId);
+    if (parent) {
+      parentStory = { id: parent.id, headline: parent.headline };
+    }
+  }
+
+  const child = await getChildStory(db, story.id);
+  if (child) {
+    childStory = { id: child.id, headline: child.headline };
+  }
+
+  return {
+    story,
+    articles,
+    summaries,
+    relatedMetrics: relatedMetricData,
+    parentStory,
+    childStory,
+  };
 }
 
 async function _getMarketData() {
