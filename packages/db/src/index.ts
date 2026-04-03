@@ -15,6 +15,7 @@ export {
   getAllLatestQuotes,
   getArticlesByStoryId,
   getChildStory,
+  getExistingArticleStoryIds,
   getLastSuccessDate,
   getLatestArticles,
   getLatestByCategory,

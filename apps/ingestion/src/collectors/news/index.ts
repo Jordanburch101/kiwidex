@@ -4,6 +4,7 @@ import {
   deleteOldArticles,
   deleteOrphanedStories,
   getArticlesByStoryId,
+  getExistingArticleStoryIds,
   getOpenStories,
   getStoryBySlug,
   getStorySummaryCount,
@@ -292,8 +293,16 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     articleTags = topArticles.map(() => ["general-economy"]);
   }
 
-  // Categorize each article deterministically
-  const articleStoryIds: (string | null)[] = topArticles.map(() => null);
+  // Pre-check: look up existing article assignments from DB
+  // Articles already assigned to a story should keep that assignment
+  const existingAssignments = await getExistingArticleStoryIds(
+    db,
+    topArticles.map((a) => a.url)
+  );
+
+  const articleStoryIds: (string | null)[] = topArticles.map(
+    (a) => existingAssignments.get(a.url) ?? null
+  );
   const storiesNeedingEnrichment = new Map<
     string,
     { headline: string; isNew: boolean }
@@ -302,8 +311,15 @@ export default async function collectNews(): Promise<CollectorResult[]> {
 
   let deterministic = 0;
   let aiCalls = 0;
+  let skippedExisting = 0;
 
   for (let i = 0; i < topArticles.length; i++) {
+    // Skip articles already assigned to a story in the DB
+    if (articleStoryIds[i]) {
+      skippedExisting++;
+      continue;
+    }
+
     const article = topArticles[i]!;
     const tags = articleTags[i] ?? ["general-economy"];
 
@@ -421,7 +437,7 @@ export default async function collectNews(): Promise<CollectorResult[]> {
   }
 
   console.log(
-    `[news] Matching: ${deterministic} deterministic, ${aiCalls} AI calls`
+    `[news] Matching: ${skippedExisting} already assigned, ${deterministic} deterministic, ${aiCalls} AI calls`
   );
 
   // Update existing stories that gained new articles

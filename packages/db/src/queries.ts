@@ -443,6 +443,24 @@ export async function getStoryBySlug(db: Db, slug: string) {
   return rows[0] ?? null;
 }
 
+export async function getExistingArticleStoryIds(
+  db: Db,
+  urls: string[]
+): Promise<Map<string, string | null>> {
+  const result = new Map<string, string | null>();
+  if (urls.length === 0) {
+    return result;
+  }
+  const rows = await db
+    .select({ url: articles.url, storyId: articles.storyId })
+    .from(articles)
+    .where(inArray(articles.url, urls));
+  for (const row of rows) {
+    result.set(row.url, row.storyId);
+  }
+  return result;
+}
+
 export async function getArticlesByStoryId(db: Db, storyId: string) {
   return db
     .select()
