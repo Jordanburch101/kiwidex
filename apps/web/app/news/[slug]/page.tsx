@@ -231,6 +231,7 @@ export default async function StoryPage({
               <div className="flex items-center gap-2.5 border-[#e5e0d5] border-b px-5 py-3.5">
                 <span className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-[#6366f1] to-[#8b5cf6]">
                   <svg
+                    aria-hidden="true"
                     className="h-3 w-3 text-white"
                     fill="none"
                     stroke="currentColor"

@@ -422,7 +422,7 @@ export async function getStories(
 
   const conditions = [gte(stories.updatedAt, cutoff)];
   if (tag) {
-    conditions.push(sql`${stories.tags} LIKE ${'%"' + tag + '"%'}`);
+    conditions.push(sql`${stories.tags} LIKE ${`%"${tag}"%`}`);
   }
 
   return db

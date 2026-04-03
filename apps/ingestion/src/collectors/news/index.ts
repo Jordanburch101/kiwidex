@@ -11,6 +11,7 @@ import {
 } from "@workspace/db";
 import type { CollectorResult } from "../types";
 import { matchArticlesToStories, tagArticles } from "./ai";
+import { extractArticleContent } from "./content-extractor";
 import { enrichStory } from "./enrich";
 import { matchesEconomyKeywords } from "./keywords";
 import { parse1NewsRss } from "./parse-1news";
@@ -172,6 +173,38 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     const enrichedCount = toEnrich.filter((a) => a.imageUrl).length;
     console.log(
       `[news] Got images for ${enrichedCount}/${toEnrich.length} articles`
+    );
+  }
+
+  // Extract article body for sources without content:encoded (RNZ, Stuff)
+  const needContent = topArticles.filter((a) => !a.content);
+  if (needContent.length > 0) {
+    console.log(
+      `[news] Extracting body text for ${needContent.length} articles...`
+    );
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < needContent.length; i += BATCH_SIZE) {
+      const batch = needContent.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map(async (article) => {
+          try {
+            const response = await fetch(article.url, {
+              headers: { "User-Agent": USER_AGENT },
+              signal: AbortSignal.timeout(8000),
+            });
+            if (response.ok) {
+              const html = await response.text();
+              article.content = extractArticleContent(html);
+            }
+          } catch {
+            // Content extraction is best-effort
+          }
+        })
+      );
+    }
+    const extracted = needContent.filter((a) => a.content).length;
+    console.log(
+      `[news] Extracted content for ${extracted}/${needContent.length} articles`
     );
   }
 
@@ -453,6 +486,7 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     url: a.url,
     title: a.title,
     excerpt: a.excerpt,
+    content: a.content ?? null,
     imageUrl: a.imageUrl,
     source: a.source ?? "unknown",
     publishedAt: a.publishedAt,
