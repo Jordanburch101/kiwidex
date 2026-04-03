@@ -567,54 +567,95 @@ export default async function StoryPage({
         <aside className="space-y-5 py-6 lg:pl-6">
           {/* Coverage Details */}
           <div className="rounded-lg border border-[#e5e0d5] p-5">
-            <h3 className="mb-4 border-[#e5e0d5] border-b pb-2.5 font-semibold font-heading text-[11px] text-[#998] uppercase tracking-[0.15em]">
-              Coverage Details
-            </h3>
-            <div className="space-y-0 font-sans text-[13px]">
-              <div className="flex justify-between border-[#f5f2ec] border-b py-2.5">
-                <span className="text-[#777]">Sources</span>
-                <span className="font-bold text-[#2a2520]">
-                  {story.sourceCount} outlet
-                  {story.sourceCount === 1 ? "" : "s"}
-                </span>
-              </div>
-              <div className="flex justify-between border-[#f5f2ec] border-b py-2.5">
-                <span className="text-[#777]">First reported</span>
-                <span className="font-medium text-[#2a2520] text-[12px]">
-                  {formatDate(story.firstReportedAt)}
-                </span>
-              </div>
-              <div className="flex justify-between py-2.5">
-                <span className="text-[#777]">Last updated</span>
-                <span className="font-medium text-[#2a2520] text-[12px]">
-                  {formatDate(story.updatedAt)}
-                </span>
-              </div>
-            </div>
-            {/* Source logos */}
-            <div className="mt-4 flex gap-2">
-              {articles.map((article) => {
-                const badge = BADGE_COLORS[article.source.toLowerCase()];
-                if (!badge) {
-                  return null;
+            {/* Per-source rows */}
+            {(() => {
+              // Group articles by source, track first appearance
+              const sourceMap = new Map<
+                string,
+                { count: number; earliest: string }
+              >();
+              for (const a of articles) {
+                const existing = sourceMap.get(a.source);
+                if (existing) {
+                  existing.count++;
+                  if (a.publishedAt < existing.earliest) {
+                    existing.earliest = a.publishedAt;
+                  }
+                } else {
+                  sourceMap.set(a.source, {
+                    count: 1,
+                    earliest: a.publishedAt,
+                  });
                 }
-                return (
-                  <div
-                    className="relative h-10 w-10 overflow-hidden rounded-lg"
-                    key={`logo-${article.url}`}
-                    title={badge.label}
-                  >
-                    <Image
-                      alt={badge.label}
-                      className="object-contain"
-                      fill
-                      sizes="40px"
-                      src={badge.logo}
-                    />
+              }
+              // Sort by earliest first
+              const sources = [...sourceMap.entries()].sort((a, b) =>
+                a[1].earliest.localeCompare(b[1].earliest)
+              );
+              const isFirst = (src: string) => sources[0]?.[0] === src;
+
+              return (
+                <>
+                  <div>
+                    {sources.map(([source, { count, earliest }], i) => {
+                      const badge = BADGE_COLORS[source.toLowerCase()];
+                      return (
+                        <div
+                          className={`flex items-center gap-2.5 px-1 py-2.5 ${i < sources.length - 1 ? "border-[#f0ecdf] border-b" : ""}`}
+                          key={source}
+                        >
+                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg">
+                            {badge ? (
+                              <Image
+                                alt={badge.label}
+                                className="object-contain"
+                                fill
+                                sizes="40px"
+                                src={badge.logo}
+                              />
+                            ) : null}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-sans font-semibold text-[12px] text-[#2a2520]">
+                              {badge?.label ?? source}
+                            </div>
+                            <div className="font-sans text-[10px] text-[#998]">
+                              {timeAgo(earliest)}
+                            </div>
+                          </div>
+                          {isFirst(source) && (
+                            <span className="rounded bg-[#e8e3d9] px-1.5 py-0.5 font-sans font-bold text-[8px] text-[#2a2520] uppercase tracking-wide">
+                              First
+                            </span>
+                          )}
+                          <span className="font-sans text-[10px] text-[#bbb]">
+                            {count} {count === 1 ? "article" : "articles"}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                  <div className="mt-2.5 flex items-center justify-between border-[#e5e0d5] border-t pt-2.5 font-sans text-[10px] text-[#998]">
+                    <span>
+                      <strong className="font-semibold text-[#555]">
+                        {sources.length}
+                      </strong>{" "}
+                      {sources.length === 1 ? "outlet" : "outlets"} ·{" "}
+                      <strong className="font-semibold text-[#555]">
+                        {articles.length}
+                      </strong>{" "}
+                      {articles.length === 1 ? "article" : "articles"}
+                    </span>
+                    <span>
+                      First reported{" "}
+                      <strong className="font-semibold text-[#555]">
+                        {timeAgo(story.firstReportedAt)}
+                      </strong>
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           {/* How Sources Report It */}
