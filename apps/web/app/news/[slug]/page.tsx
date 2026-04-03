@@ -286,23 +286,31 @@ export default async function StoryPage({
 
       {/* Story header */}
       <header className="border-[#e5e0d5] border-b px-6 pt-8 pb-6">
-        <div className="mb-4 flex flex-wrap items-center gap-2.5">
-          {story.sourceCount > 1 && (
-            <span className="rounded bg-[#2a2520] px-2.5 py-1 font-sans font-bold text-[10px] text-white tracking-wide">
-              {story.sourceCount} OUTLETS
-            </span>
-          )}
-          {tags.map((tag) => (
-            <TagPill key={tag} tag={tag} />
-          ))}
-        </div>
-        <h1 className="max-w-[720px] text-balance font-bold font-heading text-[28px] text-[#2a2520] leading-[1.2] sm:text-[36px]">
-          {story.headline}
-        </h1>
-        <div className="mt-3 flex items-center gap-1.5 font-sans text-[12px] text-[#998]">
-          <span>First reported {timeAgo(story.firstReportedAt)}</span>
-          <span className="text-[#d5d0c5]">&middot;</span>
-          <span>Updated {timeAgo(story.updatedAt)}</span>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          {/* Left: headline + meta */}
+          <div className="min-w-0 flex-1">
+            <h1 className="text-balance font-bold font-heading text-[28px] text-[#2a2520] leading-[1.15] sm:text-[34px]">
+              {story.headline}
+            </h1>
+            <div className="mt-3 flex items-center gap-1.5 font-sans text-[12px] text-[#998]">
+              <span>First reported {timeAgo(story.firstReportedAt)}</span>
+              <span className="text-[#d5d0c5]">&middot;</span>
+              <span>Updated {timeAgo(story.updatedAt)}</span>
+            </div>
+          </div>
+          {/* Right: tags + outlet count */}
+          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end sm:gap-2.5">
+            {story.sourceCount > 1 && (
+              <span className="rounded bg-[#2a2520] px-2.5 py-1 font-sans font-bold text-[10px] text-white tracking-wide">
+                {story.sourceCount} OUTLETS
+              </span>
+            )}
+            <div className="flex gap-1.5">
+              {tags.map((tag) => (
+                <TagPill key={tag} tag={tag} />
+              ))}
+            </div>
+          </div>
         </div>
       </header>
 
