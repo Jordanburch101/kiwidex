@@ -5,6 +5,7 @@ import {
   deleteOrphanedStories,
   getArticlesByStoryId,
   getOpenStories,
+  getStoryBySlug,
   getStorySummaryCount,
   insertArticles,
   insertStorySummary,
@@ -24,6 +25,28 @@ import { parseHeraldRss } from "./parse-herald";
 import { type ParsedArticle, parseRnzRss } from "./parse-rss";
 import { scoreArticles } from "./score";
 import { slugifyHeadline } from "./slugify";
+
+const TAG_TO_METRICS: Record<string, string[]> = {
+  fuel: ["petrol_91", "petrol_95", "petrol_diesel"],
+  groceries: ["milk", "eggs", "bread", "butter", "cheese", "bananas"],
+  housing: ["house_price_median", "mortgage_1yr"],
+  employment: ["unemployment", "wage_growth"],
+  "interest-rates": ["ocr", "mortgage_1yr", "mortgage_floating"],
+  inflation: ["cpi"],
+  currency: ["nzd_usd", "nzd_aud"],
+  markets: ["nzx_50"],
+  "general-economy": ["cpi", "gdp_growth"],
+};
+
+function deriveMetricsFromTags(tags: string[]): string[] {
+  const metrics = new Set<string>();
+  for (const tag of tags) {
+    for (const m of TAG_TO_METRICS[tag] ?? []) {
+      metrics.add(m);
+    }
+  }
+  return [...metrics].slice(0, 5);
+}
 
 const FEEDS = {
   rnz: "https://www.rnz.co.nz/rss/business.xml",
@@ -507,6 +530,15 @@ export default async function collectNews(): Promise<CollectorResult[]> {
 
         const enrichment = await enrichStory(headline, storyArticles);
         if (enrichment) {
+          // Fallback: if AI returned no metrics, derive from story tags
+          if (enrichment.relatedMetrics.length === 0) {
+            const storyRow = await getStoryBySlug(db, storyId);
+            if (storyRow) {
+              const storyTags: string[] = JSON.parse(storyRow.tags);
+              enrichment.relatedMetrics = deriveMetricsFromTags(storyTags);
+            }
+          }
+
           // Update story enrichment fields
           await updateStoryEnrichment(db, storyId, {
             summary: enrichment.summary,

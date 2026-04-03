@@ -53,7 +53,7 @@ Generate:
 
 ${anglesInstruction}
 
-3. **relatedMetrics**: Which dashboard metrics does this story directly relate to? Pick from: ocr, cpi, gdp_growth, unemployment, wage_growth, median_income, house_price_median, house_price_index, mortgage_floating, mortgage_1yr, mortgage_2yr, nzd_usd, nzd_aud, nzd_eur, petrol_91, petrol_95, petrol_diesel, electricity_wholesale, milk, eggs, bread, butter, cheese, bananas, nzx_50, minimum_wage
+3. **relatedMetrics**: Which dashboard metrics does this story relate to — directly OR indirectly? Think broadly about economic impact. A story about household budgets relates to grocery prices (milk, eggs, bread, etc.) and CPI. A story about fuel supply relates to petrol_91, petrol_95, petrol_diesel. A story about jobs relates to unemployment and wage_growth. Always include at least 1-2 metrics. Pick from: ocr, cpi, gdp_growth, unemployment, wage_growth, median_income, house_price_median, house_price_index, mortgage_floating, mortgage_1yr, mortgage_2yr, nzd_usd, nzd_aud, nzd_eur, petrol_91, petrol_95, petrol_diesel, electricity_wholesale, milk, eggs, bread, butter, cheese, bananas, nzx_50, minimum_wage
 
 Return ONLY valid JSON:
 {
