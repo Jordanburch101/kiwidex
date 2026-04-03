@@ -1,6 +1,7 @@
 import { SectionHeader } from "@workspace/ui/components/section-header";
 import Image from "next/image";
 import Link from "next/link";
+import { TagPill } from "@/components/news/tag-pill";
 import { timeAgo } from "@/lib/data";
 import { getNewsData } from "@/lib/queries";
 
@@ -10,14 +11,6 @@ function parseTags(json: string): string[] {
   } catch {
     return [];
   }
-}
-
-function TagPill({ tag }: { tag: string }) {
-  return (
-    <span className="rounded-full bg-[#e8e3d9] px-2.5 py-0.5 font-sans font-medium text-[10px] text-[#666]">
-      {tag}
-    </span>
-  );
 }
 
 function OutletBadge({ count }: { count: number }) {

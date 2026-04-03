@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TagPill } from "@/components/news/tag-pill";
 import { timeAgo } from "@/lib/data";
 import { getStoryPageData } from "@/lib/queries";
 
@@ -156,14 +157,6 @@ function AiBadge() {
       <span className="font-sans font-bold text-[8px] text-white tracking-wider">
         AI
       </span>
-    </span>
-  );
-}
-
-function TagPill({ tag }: { tag: string }) {
-  return (
-    <span className="rounded-full bg-[#e8e3d9] px-3 py-1 font-sans font-medium text-[11px] text-[#555]">
-      {tag}
     </span>
   );
 }

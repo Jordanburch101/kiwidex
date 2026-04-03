@@ -8,7 +8,12 @@ export const metadata: Metadata = {
     "NZ economy reporting from RNZ, Stuff, Herald & 1News — grouped by story",
 };
 
-export default async function NewsPage() {
+export default async function NewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tag?: string }>;
+}) {
+  const { tag } = await searchParams;
   const data = await getNewsPageData();
 
   if (!data) {
@@ -19,5 +24,10 @@ export default async function NewsPage() {
     );
   }
 
-  return <NewsPageContent stories={[data.lead, ...data.rest]} />;
+  return (
+    <NewsPageContent
+      initialTag={tag ?? "all"}
+      stories={[data.lead, ...data.rest]}
+    />
+  );
 }

@@ -4,6 +4,7 @@ import { SectionHeader } from "@workspace/ui/components/section-header";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { TagPill } from "@/components/news/tag-pill";
 import { timeAgo } from "@/lib/time";
 
 function parseTags(json: string): string[] {
@@ -37,14 +38,6 @@ const TAGS = [
   { label: "Government", value: "government" },
 ];
 
-function TagPill({ tag }: { tag: string }) {
-  return (
-    <span className="rounded-full bg-[#e8e3d9] px-2.5 py-0.5 font-sans font-medium text-[10px] text-[#666]">
-      {tag}
-    </span>
-  );
-}
-
 function OutletBadge({ count }: { count: number }) {
   if (count <= 1) {
     return null;
@@ -56,8 +49,14 @@ function OutletBadge({ count }: { count: number }) {
   );
 }
 
-export function NewsPageContent({ stories }: { stories: Story[] }) {
-  const [activeFilter, setActiveFilter] = useState("all");
+export function NewsPageContent({
+  stories,
+  initialTag = "all",
+}: {
+  stories: Story[];
+  initialTag?: string;
+}) {
+  const [activeFilter, setActiveFilter] = useState(initialTag);
 
   const filtered =
     activeFilter === "all"
