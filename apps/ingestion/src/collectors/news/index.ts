@@ -438,18 +438,30 @@ export default async function collectNews(): Promise<CollectorResult[]> {
 
   for (const [storyId, indices] of existingStoryUpdates) {
     const existingArticles = await getArticlesByStoryId(db, storyId);
+    const existingUrls = new Set(existingArticles.map((a) => a.url));
     const existingSources = new Set(existingArticles.map((a) => a.source));
+
+    // Check if any of the matched articles are genuinely new (not already in DB)
+    let hasNewArticles = false;
     let gainedNewSource = false;
 
     for (const idx of indices) {
-      const source = topArticles[idx]!.source ?? "unknown";
-      if (!existingSources.has(source)) {
-        gainedNewSource = true;
+      const article = topArticles[idx]!;
+      if (!existingUrls.has(article.url)) {
+        hasNewArticles = true;
+        const source = article.source ?? "unknown";
+        if (!existingSources.has(source)) {
+          gainedNewSource = true;
+        }
+        existingSources.add(source);
       }
-      existingSources.add(source);
     }
 
-    // Update story metadata
+    // Only update story if it actually gained new articles
+    if (!hasNewArticles) {
+      continue;
+    }
+
     const story = candidateStories.find((s) => s.id === storyId);
     if (story) {
       const allTags = new Set([...story.tags]);
@@ -458,7 +470,6 @@ export default async function collectNews(): Promise<CollectorResult[]> {
           allTags.add(tag);
         }
       }
-      // Use newest article's image
       const newestArticle = topArticles[indices.at(-1)!]!;
       await upsertStory(db, {
         id: storyId,
@@ -470,7 +481,6 @@ export default async function collectNews(): Promise<CollectorResult[]> {
         updatedAt: now,
       });
 
-      // Only re-enrich if a NEW source outlet joined
       if (gainedNewSource) {
         storiesNeedingEnrichment.set(storyId, {
           headline: story.headline,
