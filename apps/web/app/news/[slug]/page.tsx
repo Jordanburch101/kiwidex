@@ -8,11 +8,14 @@ import { getStoryPageData } from "@/lib/queries";
 
 // ---------- Constants ----------
 
-const BADGE_COLORS: Record<string, { bg: string; label: string }> = {
-  rnz: { bg: "#D42C21", label: "RNZ" },
-  stuff: { bg: "#0054A6", label: "Stuff" },
-  herald: { bg: "#0D0D0D", label: "Herald" },
-  "1news": { bg: "#00274e", label: "1News" },
+const BADGE_COLORS: Record<
+  string,
+  { bg: string; label: string; logo: string }
+> = {
+  rnz: { bg: "#D42C21", label: "RNZ", logo: "/sources/rnz.svg" },
+  stuff: { bg: "#6443AB", label: "Stuff", logo: "/sources/stuff.png" },
+  herald: { bg: "#0D0D0D", label: "Herald", logo: "/sources/herald.svg" },
+  "1news": { bg: "#00274e", label: "1News", logo: "/sources/1news.svg" },
 };
 
 const ANGLE_STYLES: Record<string, string> = {
@@ -364,20 +367,26 @@ export default async function StoryPage({
                 </span>
               </div>
             </div>
-            {/* Source logo squares */}
+            {/* Source logos */}
             <div className="mt-4 flex gap-2">
               {articles.map((article) => {
                 const badge = BADGE_COLORS[article.source.toLowerCase()];
+                if (!badge) {
+                  return null;
+                }
                 return (
                   <div
-                    className="flex h-9 w-9 items-center justify-center rounded-md font-sans font-extrabold text-[8px] text-white tracking-wide"
+                    className="relative h-10 w-10 overflow-hidden rounded-lg"
                     key={`logo-${article.url}`}
-                    style={{
-                      backgroundColor: badge?.bg ?? "#555",
-                    }}
-                    title={badge?.label ?? article.source}
+                    title={badge.label}
                   >
-                    {badge?.label ?? article.source}
+                    <Image
+                      alt={badge.label}
+                      className="object-contain"
+                      fill
+                      sizes="40px"
+                      src={badge.logo}
+                    />
                   </div>
                 );
               })}
