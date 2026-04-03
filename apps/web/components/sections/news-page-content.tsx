@@ -3,7 +3,7 @@
 import { SectionHeader } from "@workspace/ui/components/section-header";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TagPill } from "@/components/news/tag-pill";
 import { timeAgo } from "@/lib/time";
 
@@ -49,14 +49,21 @@ function OutletBadge({ count }: { count: number }) {
   );
 }
 
-export function NewsPageContent({
-  stories,
-  initialTag = "all",
-}: {
-  stories: Story[];
-  initialTag?: string;
-}) {
-  const [activeFilter, setActiveFilter] = useState(initialTag);
+export function NewsPageContent({ stories }: { stories: Story[] }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeFilter = searchParams.get("tag") ?? "all";
+
+  function setFilter(tag: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (tag === "all") {
+      params.delete("tag");
+    } else {
+      params.set("tag", tag);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/news?${qs}` : "/news", { scroll: false });
+  }
 
   const filtered =
     activeFilter === "all"
@@ -87,7 +94,7 @@ export function NewsPageContent({
                 : "border border-[#d5d0c5] text-[#666] hover:border-[#999] hover:bg-[#f5f2ec]"
             }`}
             key={tag.value}
-            onClick={() => setActiveFilter(tag.value)}
+            onClick={() => setFilter(tag.value)}
             type="button"
           >
             {tag.label}

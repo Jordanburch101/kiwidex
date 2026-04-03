@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  revalidateTag("metrics", {});
+  revalidateTag("metrics", "max");
+  revalidateTag("news", "max");
 
-  return NextResponse.json({ revalidated: true, tag: "metrics" });
+  return NextResponse.json({ revalidated: true, tags: ["metrics", "news"] });
 }

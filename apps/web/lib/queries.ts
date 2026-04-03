@@ -876,8 +876,9 @@ async function _getMarketData() {
   };
 }
 
-// Cached exports — data is cached indefinitely and invalidated via revalidateTag("metrics")
+// Cached exports — data is cached indefinitely and invalidated via revalidateTag
 const CACHE_OPTS = { tags: ["metrics"] };
+const NEWS_CACHE_OPTS = { tags: ["news"] };
 
 export const getTickerData = unstable_cache(
   _getTickerData,
@@ -929,18 +930,27 @@ export const getCurrencyChartData = unstable_cache(
   ["currency-chart"],
   CACHE_OPTS
 );
-export const getNewsData = unstable_cache(_getNewsData, ["news"], CACHE_OPTS);
+export const getNewsData = unstable_cache(
+  _getNewsData,
+  ["news"],
+  NEWS_CACHE_OPTS
+);
 export const getNewsPageData = unstable_cache(
   _getNewsPageData,
   ["news-page"],
-  CACHE_OPTS
+  NEWS_CACHE_OPTS
 );
 export function getStoryPageData(slug: string) {
   return unstable_cache(
     () => _getStoryPageData(slug),
     [`story-${slug}`],
-    CACHE_OPTS
+    NEWS_CACHE_OPTS
   )();
+}
+
+export async function getAllStorySlugs(): Promise<string[]> {
+  const allStories = await getStories(db, { days: 30, limit: 200 });
+  return allStories.map((s) => s.id);
 }
 export const getMarketData = unstable_cache(
   _getMarketData,

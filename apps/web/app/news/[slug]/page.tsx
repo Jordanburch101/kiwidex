@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TagPill } from "@/components/news/tag-pill";
 import { timeAgo } from "@/lib/data";
-import { getStoryPageData } from "@/lib/queries";
+import { getAllStorySlugs, getStoryPageData } from "@/lib/queries";
 
 // ---------- Constants ----------
 
@@ -88,6 +88,15 @@ const METRIC_SENTIMENT: Record<string, "up_is_good" | "down_is_good"> = {
   median_income: "up_is_good",
   minimum_wage: "up_is_good",
 };
+
+// ---------- Static params ----------
+
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  const slugs = await getAllStorySlugs();
+  return slugs.map((slug) => ({ slug }));
+}
 
 // ---------- Metadata ----------
 

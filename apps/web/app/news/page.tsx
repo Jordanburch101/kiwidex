@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { NewsPageContent } from "@/components/sections/news-page-content";
 import { getNewsPageData } from "@/lib/queries";
 
@@ -8,12 +9,7 @@ export const metadata: Metadata = {
     "NZ economy reporting from RNZ, Stuff, Herald & 1News — grouped by story",
 };
 
-export default async function NewsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tag?: string }>;
-}) {
-  const { tag } = await searchParams;
+export default async function NewsPage() {
   const data = await getNewsPageData();
 
   if (!data) {
@@ -25,9 +21,8 @@ export default async function NewsPage({
   }
 
   return (
-    <NewsPageContent
-      initialTag={tag ?? "all"}
-      stories={[data.lead, ...data.rest]}
-    />
+    <Suspense>
+      <NewsPageContent stories={[data.lead, ...data.rest]} />
+    </Suspense>
   );
 }
