@@ -447,22 +447,7 @@ export default async function StoryPage({
           {/* Summary Timeline */}
           {summaries.length > 0 ? (
             <section>
-              <div className="mb-4 flex items-center gap-2.5">
-                <span className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-[#6366f1] to-[#8b5cf6]">
-                  <svg
-                    aria-hidden="true"
-                    className="h-3 w-3 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" />
-                    <path d="M19 14l.9 2.7 2.7.9-2.7.9-.9 2.7-.9-2.7L15.4 18l2.7-.9z" />
-                  </svg>
-                </span>
+              <div className="mb-5 flex items-center gap-2.5 border-[#e5e0d5] border-b pb-3">
                 <h2 className="font-heading font-semibold text-[11px] text-[#998] uppercase tracking-[0.15em]">
                   Story Summary
                 </h2>
@@ -485,7 +470,7 @@ export default async function StoryPage({
                     <div className="mb-4 flex items-center gap-3">
                       <div className="flex shrink-0 items-center gap-2">
                         {isLatest && (
-                          <span className="rounded bg-[#8b5cf6]/10 px-1.5 py-0.5 font-sans font-semibold text-[9px] text-[#8b5cf6] uppercase tracking-wide">
+                          <span className="rounded bg-[#2a2520] px-1.5 py-0.5 font-sans font-bold text-[8px] text-white uppercase tracking-wide">
                             Latest
                           </span>
                         )}
