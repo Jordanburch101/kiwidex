@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { METRIC_META, type MetricKey } from "@workspace/db";
 
 interface StoryArticle {
+  content: string | null;
   excerpt: string;
   source: string;
   title: string;
@@ -30,8 +31,11 @@ export async function enrichStory(
   const isMultiSource = articles.length > 1;
 
   const articleList = articles
-    .map((a) => `- [${a.source.toUpperCase()}] "${a.title}" — "${a.excerpt}"`)
-    .join("\n");
+    .map((a) => {
+      const body = a.content ? a.content.slice(0, 1500) : a.excerpt;
+      return `- [${a.source.toUpperCase()}] "${a.title}" — ${body}`;
+    })
+    .join("\n\n");
 
   const anglesInstruction = isMultiSource
     ? `2. **angles**: For each source, a short label (2-3 words) and one-sentence description of their reporting angle. Categories like "Policy focus", "Consumer impact", "Market analysis", "Human interest", "Data-driven", "Industry perspective".`
@@ -45,7 +49,7 @@ Source articles:
 ${articleList}
 
 Generate:
-1. **summary**: ${isMultiSource ? "3-6" : "2-3"} bullet points synthesising the story${isMultiSource ? " across all sources" : ""}. Be factual and neutral. Include specific numbers/data points mentioned. Each bullet should be 1-2 sentences. Format as markdown list (- Bullet).
+1. **summary**: 2-4 paragraphs synthesising the story${isMultiSource ? " across all sources" : ""}. Write as flowing editorial prose, like a newspaper brief. Highlight key facts, figures, and data points. Do not use bullet points or markdown lists. Separate paragraphs with double newlines.
 
 ${anglesInstruction}
 
@@ -53,7 +57,7 @@ ${anglesInstruction}
 
 Return ONLY valid JSON:
 {
-  "summary": "- Bullet one\\n- Bullet two",
+  "summary": "First paragraph of prose.\\n\\nSecond paragraph of prose.",
   "angles": [{"source": "rnz", "angle": "Policy focus", "description": "..."}],
   "relatedMetrics": ["ocr", "mortgage_1yr"]
 }`;

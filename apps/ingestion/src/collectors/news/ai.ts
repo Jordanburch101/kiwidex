@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { getRecentStories } from "@workspace/db";
 
 export const TAG_TAXONOMY = [
   "housing",
@@ -18,19 +17,10 @@ export const TAG_TAXONOMY = [
 export type Tag = (typeof TAG_TAXONOMY)[number];
 
 interface ArticleInput {
+  content: string | null;
   excerpt: string;
   source: string;
   title: string;
-}
-
-interface MatchResult {
-  index: number;
-  match: string; // "existing:<id>" | "new" | "standalone"
-}
-
-interface ClusterGroup {
-  articles: number[];
-  headline: string | null;
 }
 
 function getClient(): Anthropic {
@@ -70,10 +60,10 @@ function parseJsonFromResponse<T>(text: string): T | null {
 
 export async function tagArticles(articles: ArticleInput[]): Promise<Tag[][]> {
   const articleList = articles
-    .map(
-      (a, i) =>
-        `${i + 1}. Title: "${a.title}" | Excerpt: "${a.excerpt.slice(0, 200)}"`
-    )
+    .map((a, i) => {
+      const text = a.content ? a.content.slice(0, 400) : a.excerpt;
+      return `${i + 1}. Title: "${a.title}" | Content: "${text}"`;
+    })
     .join("\n");
 
   const prompt = `You are tagging NZ economic news articles. For each article, assign 1-3 tags from this taxonomy:
@@ -103,158 +93,66 @@ ${articleList}`;
   return sanitizeTags(parsed);
 }
 
-function sanitizeTags(tagArrays: string[][]): Tag[][] {
+export function sanitizeTags(tagArrays: string[][]): Tag[][] {
   const validTags = new Set<string>(TAG_TAXONOMY);
   return tagArrays
     .map((tags) => tags.filter((t) => validTags.has(t)) as Tag[])
     .map((tags) => (tags.length > 0 ? tags : ["general-economy" as Tag]));
 }
 
-// --- Story Matching ---
+// --- Per-Article Story Matching ---
 
-type ExistingStory = Awaited<ReturnType<typeof getRecentStories>>[number];
-
-export async function matchArticlesToStories(
-  articles: ArticleInput[],
-  existingStories: ExistingStory[]
-): Promise<{ matches: MatchResult[]; newClusters: ClusterGroup[] }> {
-  const matches = await matchAgainstExisting(articles, existingStories);
-
-  const newIndices = matches
-    .filter((m) => m.match === "new")
-    .map((m) => m.index);
-
-  let newClusters: ClusterGroup[] = [];
-  if (newIndices.length >= 2) {
-    const newArticles = newIndices.map((i) => ({
-      ...articles[i - 1]!,
-      originalIndex: i,
-    }));
-    newClusters = await clusterNewArticles(newArticles);
-  }
-
-  return { matches, newClusters };
-}
-
-async function matchAgainstExisting(
-  articles: ArticleInput[],
-  existingStories: ExistingStory[]
-): Promise<MatchResult[]> {
-  if (existingStories.length === 0) {
-    return articles.map((_, i) => ({ index: i + 1, match: "new" }));
-  }
-
-  const storyList = existingStories
-    .map(
-      (s) => `{"id": "${s.id}", "headline": "${s.headline}", "tags": ${s.tags}}`
-    )
-    .join(",\n  ");
-
-  const articleList = articles
-    .map(
-      (a, i) =>
-        `${i + 1}. Title: "${a.title}" | Excerpt: "${a.excerpt.slice(0, 200)}" | Source: ${a.source}`
-    )
+export async function matchArticleToStory(
+  article: { title: string; content: string | null; source: string },
+  candidates: { id: string; headline: string; tags: string[] }[]
+): Promise<
+  "new" | "standalone" | `continuation:${string}` | `chapter_from:${string}`
+> {
+  const articleContent = (article.content ?? "").slice(0, 300);
+  const candidateList = candidates
+    .map((c, i) => `${i + 1}. "${c.headline}" (tags: ${c.tags.join(", ")})`)
     .join("\n");
 
-  const prompt = `You are matching new NZ economic news articles to existing stories. A "story" is a real-world event or development covered by multiple outlets.
+  const prompt = `You are matching a new NZ economic news article to existing stories.
 
-Existing stories (may be matched):
-[
-  ${storyList}
-]
+Article: "${article.title}"
+Content: "${articleContent}"
+Source: ${article.source}
 
-New articles to classify:
-${articleList}
+Existing stories this MIGHT belong to:
+${candidateList}
 
-For each article, respond with:
-- "existing:<story_id>" if it belongs to an existing story
-- "new" if it's a genuinely new story not covered by any existing one
-- "standalone" if it's a one-off article unlikely to get multi-outlet coverage
+Respond with ONE of:
+- "continuation:N" — this article is about the same development as story N
+- "chapter_from:N" — this is a MAJOR new development related to story N (e.g., government response to an ongoing crisis). Warrants its own story but linked to N.
+- "new" — this is unrelated to any listed story
+- "standalone" — this is a one-off article unlikely to develop further
 
 Rules:
-- Only match if the articles are about the SAME specific event or development, not just the same broad topic
-- "Housing costs rise" and "REINZ median price up 3%" might be the same story; "Housing costs rise" and "Government announces first-home grant" are NOT
-- When uncertain, prefer "new" over forcing a match to an existing story
-- An article can only belong to one story
+- "continuation" = same event, same development, just another outlet covering it
+- "chapter_from" = a significant escalation, response, or shift in an ongoing story
+- When uncertain, prefer "new" over forcing a match
+- Only use "chapter_from" for genuinely major developments, not routine follow-ups
 
-Return ONLY a JSON array: [{"index": 1, "match": "existing:rbnz-ocr-hold-apr-2026"}, {"index": 2, "match": "new"}, ...]`;
-
-  const response = await callHaiku(prompt);
-  const parsed = parseJsonFromResponse<MatchResult[]>(response);
-
-  if (!parsed || parsed.length !== articles.length) {
-    const retryResponse = await callHaiku(prompt);
-    const retryParsed = parseJsonFromResponse<MatchResult[]>(retryResponse);
-
-    if (!retryParsed || retryParsed.length !== articles.length) {
-      console.warn(
-        "[news/ai] Story matching failed after retry, treating all as standalone"
-      );
-      return articles.map((_, i) => ({ index: i + 1, match: "standalone" }));
-    }
-    return validateMatches(retryParsed, existingStories);
-  }
-
-  return validateMatches(parsed, existingStories);
-}
-
-function validateMatches(
-  matches: MatchResult[],
-  existingStories: ExistingStory[]
-): MatchResult[] {
-  const validIds = new Set(existingStories.map((s) => s.id));
-  return matches.map((m) => {
-    if (m.match.startsWith("existing:")) {
-      const storyId = m.match.replace("existing:", "");
-      if (!validIds.has(storyId)) {
-        console.warn(
-          `[news/ai] Invalid story ID "${storyId}", treating as new`
-        );
-        return { ...m, match: "new" };
-      }
-    }
-    return m;
-  });
-}
-
-async function clusterNewArticles(
-  articles: {
-    title: string;
-    excerpt: string;
-    source: string;
-    originalIndex: number;
-  }[]
-): Promise<ClusterGroup[]> {
-  const articleList = articles
-    .map(
-      (a, i) =>
-        `${i + 1}. Title: "${a.title}" | Excerpt: "${a.excerpt.slice(0, 200)}" | Source: ${a.source}`
-    )
-    .join("\n");
-
-  const prompt = `These articles were all marked as new stories. Group any that are about the same event or development.
-
-Articles:
-${articleList}
-
-Return ONLY a JSON array of groups:
-[{"articles": [1, 2], "headline": "Neutral headline for this story"}, {"articles": [3], "headline": null}]
-- Generate a neutral, factual headline for groups of 2+ articles
-- Single articles get headline: null (we'll use the article's own title)`;
+Return ONLY the decision string, nothing else.`;
 
   const response = await callHaiku(prompt);
-  const parsed = parseJsonFromResponse<ClusterGroup[]>(response);
+  const cleaned = response.trim().toLowerCase();
 
-  if (!parsed) {
-    return articles.map((a) => ({
-      articles: [a.originalIndex],
-      headline: null,
-    }));
+  if (cleaned.startsWith("continuation:")) {
+    const idx = Number.parseInt(cleaned.replace("continuation:", ""), 10) - 1;
+    if (idx >= 0 && idx < candidates.length) {
+      return `continuation:${candidates[idx]!.id}`;
+    }
   }
-
-  return parsed.map((group) => ({
-    articles: group.articles.map((i) => articles[i - 1]?.originalIndex ?? i),
-    headline: group.headline,
-  }));
+  if (cleaned.startsWith("chapter_from:")) {
+    const idx = Number.parseInt(cleaned.replace("chapter_from:", ""), 10) - 1;
+    if (idx >= 0 && idx < candidates.length) {
+      return `chapter_from:${candidates[idx]!.id}`;
+    }
+  }
+  if (cleaned === "standalone") {
+    return "standalone";
+  }
+  return "new";
 }
