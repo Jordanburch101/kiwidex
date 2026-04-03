@@ -151,7 +151,8 @@ export function categorizeArticle(
   }[] = [];
 
   for (const story of openStories) {
-    const similarity = computeWordSimilarity(articleText, story.headline);
+    const storyText = `${story.headline} ${story.tags.join(" ")}`;
+    const similarity = computeWordSimilarity(articleText, storyText);
     const tagOverlap = article.tags.filter((t) =>
       story.tags.includes(t)
     ).length;

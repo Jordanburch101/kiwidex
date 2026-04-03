@@ -21,7 +21,7 @@ export function extractArticleContent(html: string): string | null {
   return stripHtml(body);
 }
 
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")

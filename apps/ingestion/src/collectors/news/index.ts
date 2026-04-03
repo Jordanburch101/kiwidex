@@ -331,6 +331,13 @@ export default async function collectNews(): Promise<CollectorResult[]> {
           const parentId = decision.replace("chapter_from:", "");
           // Close parent, create new chapter
           await closeStory(db, parentId, "superseded");
+          // Remove from candidates so subsequent articles can't match to it
+          const parentIdx = candidateStories.findIndex(
+            (s) => s.id === parentId
+          );
+          if (parentIdx >= 0) {
+            candidateStories.splice(parentIdx, 1);
+          }
           const storyId = slugifyHeadline(article.title, new Date());
           await upsertStory(db, {
             id: storyId,

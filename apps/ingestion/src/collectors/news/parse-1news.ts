@@ -1,3 +1,4 @@
+import { stripHtml as stripHtmlFull } from "./content-extractor";
 import type { ParsedArticle } from "./parse-rss";
 
 /**
@@ -31,19 +32,7 @@ export function parse1NewsRss(xml: string): ParsedArticle[] {
       /<content:encoded>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/content:encoded>/i
     );
     const content = contentMatch?.[1]
-      ? contentMatch[1]
-          .replace(/<script[\s\S]*?<\/script>/gi, "")
-          .replace(/<style[\s\S]*?<\/style>/gi, "")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/&nbsp;/g, " ")
-          .replace(/&amp;/g, "&")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 5000)
+      ? stripHtmlFull(contentMatch[1])
       : null;
 
     articles.push({

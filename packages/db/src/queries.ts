@@ -486,6 +486,7 @@ export async function deleteOrphanedStories(db: Db) {
     DELETE FROM stories WHERE id NOT IN (
       SELECT DISTINCT story_id FROM articles WHERE story_id IS NOT NULL
     )
+    AND closed_reason IS NOT 'superseded'
   `);
 }
 
