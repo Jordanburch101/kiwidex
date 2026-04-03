@@ -64,7 +64,7 @@ const STRUCTURED_DATA = [
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "The Kiwidex",
-    url: "https://kiwidex.co.nz",
+    url: "https://thekiwidex.co.nz",
     description: "Live New Zealand economic indicators dashboard",
   },
   {
@@ -73,7 +73,7 @@ const STRUCTURED_DATA = [
     name: "New Zealand Economic Indicators",
     description:
       "Daily-updated collection of NZ economic metrics including CPI, fuel prices, grocery prices, housing, exchange rates, and employment data.",
-    url: "https://kiwidex.co.nz",
+    url: "https://thekiwidex.co.nz",
     creator: {
       "@type": "Person",
       name: "Jordan Burch",

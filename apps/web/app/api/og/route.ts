@@ -41,7 +41,7 @@ export async function GET() {
   <text x="600" y="225" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-size="16" fill="#999">${escapeXml(today)}</text>
   ${metricCells}
   <rect x="56" y="565" width="1088" height="2" fill="#2a2520"/>
-  <text x="600" y="600" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-size="14" fill="#999">kiwidex.co.nz</text>
+  <text x="600" y="600" text-anchor="middle" font-family="Liberation Sans, sans-serif" font-size="14" fill="#999">thekiwidex.co.nz</text>
 </svg>`;
 
   const png = await sharp(Buffer.from(svg)).resize(1200, 630).png().toBuffer();

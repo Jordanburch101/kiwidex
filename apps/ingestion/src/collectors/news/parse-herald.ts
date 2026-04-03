@@ -30,9 +30,7 @@ export function parseHeraldRss(xml: string): ParsedArticle[] {
     const contentMatch = item.match(
       /<content:encoded>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/content:encoded>/i
     );
-    const content = contentMatch?.[1]
-      ? stripHtmlFull(contentMatch[1])
-      : null;
+    const content = contentMatch?.[1] ? stripHtmlFull(contentMatch[1]) : null;
 
     articles.push({
       url: link,
