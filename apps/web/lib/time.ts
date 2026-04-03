@@ -9,6 +9,9 @@ export function timeAgo(isoDate: string): string {
   const diffHours = Math.floor(diffMs / 3_600_000);
   const diffDays = Math.floor(diffMs / 86_400_000);
 
+  if (diffMins <= 0) {
+    return "Just now";
+  }
   if (diffMins < 60) {
     return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
   }
