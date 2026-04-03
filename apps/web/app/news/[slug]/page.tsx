@@ -143,6 +143,24 @@ function AngleTag({ angle }: { angle: string }) {
   );
 }
 
+function AiBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-2 py-0.5">
+      <svg
+        aria-hidden="true"
+        className="h-2.5 w-2.5 text-white/90"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" />
+      </svg>
+      <span className="font-sans font-bold text-[8px] text-white tracking-wider">
+        AI
+      </span>
+    </span>
+  );
+}
+
 function TagPill({ tag }: { tag: string }) {
   return (
     <span className="rounded-full bg-[#e8e3d9] px-3 py-1 font-sans font-medium text-[11px] text-[#555]">
@@ -328,9 +346,7 @@ export default async function StoryPage({
                 <h2 className="font-heading font-semibold text-[11px] text-[#998] uppercase tracking-[0.15em]">
                   Story Summary
                 </h2>
-                <span className="rounded bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-2 py-0.5 font-sans font-bold text-[9px] text-white tracking-wide">
-                  AI
-                </span>
+                <AiBadge />
               </div>
 
               {summaries.map((entry, i) => {
@@ -544,9 +560,7 @@ export default async function StoryPage({
             <div className="rounded-lg border border-[#e5e0d5] p-5">
               <h3 className="mb-4 flex items-center gap-2 border-[#e5e0d5] border-b pb-2.5 font-semibold font-heading text-[11px] text-[#998] uppercase tracking-[0.15em]">
                 How Sources Report It
-                <span className="rounded bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-2 py-0.5 font-sans font-bold text-[9px] text-white normal-case tracking-wide">
-                  AI
-                </span>
+                <AiBadge />
               </h3>
               <div className="space-y-0">
                 {angles.map((a) => (
