@@ -32,6 +32,7 @@ export function parseInterestRss(xml: string): ParsedArticle[] {
       excerpt: stripHtml(stripCdata(description ?? ""))
         .slice(0, 400)
         .trim(),
+      content: null,
       imageUrl: null,
       publishedAt: parseInterestDate(pubDate ?? ""),
     });

@@ -11,6 +11,9 @@ const nextConfig = {
       { hostname: "**.1news.co.nz" },
       { hostname: "**.tvnz.co.nz" },
       { hostname: "**.cloudfront.net" },
+      { hostname: "**.wp.com" },
+      { hostname: "**.newsroom.co.nz" },
+      { hostname: "**.interest.co.nz" },
     ],
   },
 };

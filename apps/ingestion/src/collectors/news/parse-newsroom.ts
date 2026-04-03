@@ -32,6 +32,7 @@ export function parseNewsroomRss(xml: string): ParsedArticle[] {
       excerpt: stripHtml(stripCdata(description ?? ""))
         .slice(0, 400)
         .trim(),
+      content: null,
       imageUrl,
       publishedAt: pubDate
         ? new Date(pubDate).toISOString()

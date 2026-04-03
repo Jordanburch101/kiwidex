@@ -23,6 +23,8 @@ import { categorizeArticle, findStoriesToClose } from "./lifecycle";
 import { parse1NewsRss } from "./parse-1news";
 import { parseStuffAtom } from "./parse-atom";
 import { parseHeraldRss } from "./parse-herald";
+import { parseInterestRss } from "./parse-interest";
+import { parseNewsroomRss } from "./parse-newsroom";
 import { type ParsedArticle, parseRnzRss } from "./parse-rss";
 import { scoreArticles } from "./score";
 import { slugifyHeadline } from "./slugify";
@@ -55,6 +57,8 @@ const FEEDS = {
   herald:
     "https://www.nzherald.co.nz/arc/outboundfeeds/rss/section/business/?outputType=xml",
   onenews: "https://www.1news.co.nz/arc/outboundfeeds/rss/?outputType=xml",
+  newsroom: "https://newsroom.co.nz/category/economy/feed/",
+  interest: "https://www.interest.co.nz/rss",
 } as const;
 
 const USER_AGENT =
@@ -131,14 +135,17 @@ async function fetchFeed(url: string): Promise<string | null> {
 }
 
 export default async function collectNews(): Promise<CollectorResult[]> {
-  console.log("[news] Fetching RSS feeds from 4 sources...");
+  console.log("[news] Fetching RSS feeds from 6 sources...");
 
-  const [rnzXml, stuffXml, heraldXml, onenewsXml] = await Promise.all([
-    fetchFeed(FEEDS.rnz),
-    fetchFeed(FEEDS.stuff),
-    fetchFeed(FEEDS.herald),
-    fetchFeed(FEEDS.onenews),
-  ]);
+  const [rnzXml, stuffXml, heraldXml, onenewsXml, newsroomXml, interestXml] =
+    await Promise.all([
+      fetchFeed(FEEDS.rnz),
+      fetchFeed(FEEDS.stuff),
+      fetchFeed(FEEDS.herald),
+      fetchFeed(FEEDS.onenews),
+      fetchFeed(FEEDS.newsroom),
+      fetchFeed(FEEDS.interest),
+    ]);
 
   const allArticles: ParsedArticle[] = [];
 
@@ -166,6 +173,18 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     allArticles.push(...items.map((a) => ({ ...a, source: "1news" })));
   }
 
+  if (newsroomXml) {
+    const items = parseNewsroomRss(newsroomXml);
+    console.log(`[news] Newsroom: ${items.length} items parsed`);
+    allArticles.push(...items.map((a) => ({ ...a, source: "newsroom" })));
+  }
+
+  if (interestXml) {
+    const items = parseInterestRss(interestXml);
+    console.log(`[news] Interest: ${items.length} items parsed`);
+    allArticles.push(...items.map((a) => ({ ...a, source: "interest" })));
+  }
+
   // Keyword filter — strict mode for 1News (firehose, needs tighter filtering)
   const filtered = allArticles.filter((a) =>
     matchesEconomyKeywords(a.title, a.excerpt, a.source === "1news")
@@ -174,8 +193,15 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     `[news] ${filtered.length}/${allArticles.length} articles match economy keywords`
   );
 
+  // Fetch open stories early so scoring can prioritise continuations
+  const openStoriesForScoring = await getOpenStories(db);
+  const storyHints = openStoriesForScoring.map((s) => ({
+    id: s.id,
+    headline: s.headline,
+  }));
+
   // Score articles — keep top 18 for AI pipeline
-  const scored = scoreArticles(filtered);
+  const scored = scoreArticles(filtered, storyHints);
   scored.sort((a, b) => b.score - a.score);
   const topArticles = scored.slice(0, 18);
   console.log(`[news] Top ${topArticles.length} scored:`);
@@ -239,7 +265,8 @@ export default async function collectNews(): Promise<CollectorResult[]> {
   // --- Phase 2: Pre-compute state ---
   console.log("[news] Pre-computing story state...");
 
-  const openStories = await getOpenStories(db);
+  // Reuse the open stories already fetched for scoring
+  const openStories = openStoriesForScoring;
   const storyStates = await Promise.all(
     openStories.map(async (s) => ({
       ...s,

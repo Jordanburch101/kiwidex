@@ -17,6 +17,12 @@ const BADGE_COLORS: Record<
   stuff: { bg: "#6443AB", label: "Stuff", logo: "/sources/stuff.png" },
   herald: { bg: "#0D0D0D", label: "Herald", logo: "/sources/herald.svg" },
   "1news": { bg: "#00274e", label: "1News", logo: "/sources/1news.svg" },
+  newsroom: { bg: "#000000", label: "Newsroom", logo: "/sources/newsroom.png" },
+  interest: {
+    bg: "#18468b",
+    label: "Interest",
+    logo: "/sources/interest.png",
+  },
 };
 
 const ANGLE_STYLES: Record<string, string> = {
