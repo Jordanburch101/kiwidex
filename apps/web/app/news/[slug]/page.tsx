@@ -1,4 +1,3 @@
-import { Sparkline } from "@workspace/ui/components/sparkline";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -583,51 +582,35 @@ export default async function StoryPage({
 
           {/* Related Metrics */}
           {relatedMetrics.length > 0 ? (
-            <div className="rounded-lg border border-[#e5e0d5] p-5">
-              <h3 className="mb-4 border-[#e5e0d5] border-b pb-2.5 font-semibold font-heading text-[11px] text-[#998] uppercase tracking-[0.15em]">
+            <div className="rounded-lg border border-[#e8e4dc] overflow-hidden">
+              <h3 className="px-3.5 py-2.5 font-heading font-semibold text-[#2a2520] text-sm border-[#e8e4dc] border-b">
                 Related Metrics
               </h3>
-              <div className="space-y-0">
-                {relatedMetrics.map((m) => (
+              <div className="flex flex-col">
+                {relatedMetrics.map((m, i) => (
                   <div
-                    className="flex items-center gap-3 border-[#f5f2ec] border-b py-3 last:border-0"
+                    className={`flex items-center gap-3 px-3.5 py-2.5 ${
+                      i % 2 === 1 ? "bg-[#faf8f4]" : "bg-white"
+                    } ${i < relatedMetrics.length - 1 ? "border-[#f0ece4] border-b" : ""}`}
                     key={m.metric}
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-sans text-[11px] text-[#998] uppercase tracking-wide">
-                        {m.label}
-                      </p>
-                      <div className="mt-0.5 flex items-baseline gap-2">
-                        <span className="font-heading font-bold text-[17px] text-[#2a2520]">
-                          {m.value}
-                        </span>
-                        <span
-                          className={`rounded px-1.5 py-0.5 font-sans font-semibold text-[10px] ${
-                            m.changeType === "up"
-                              ? "bg-[#dcfce7] text-[#166534]"
-                              : m.changeType === "down"
-                                ? "bg-[#fee2e2] text-[#991b1b]"
-                                : "bg-[#f3f4f6] text-[#6b7280]"
-                          }`}
-                        >
-                          {m.change}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="w-[80px] shrink-0">
-                      <Sparkline
-                        color={
-                          m.changeType === "up"
-                            ? "#16a34a"
-                            : m.changeType === "down"
-                              ? "#dc2626"
-                              : "#998"
-                        }
-                        data={m.sparklineData}
-                        height={32}
-                        width={80}
-                      />
-                    </div>
+                    <span className="flex-1 font-sans text-[#776] text-xs">
+                      {m.label}
+                    </span>
+                    <span className="font-mono font-semibold text-[#2a2520] text-sm">
+                      {m.value}
+                    </span>
+                    <span
+                      className={`min-w-[56px] rounded-full px-2 py-0.5 text-center font-sans font-medium text-[10px] ${
+                        m.changeType === "up"
+                          ? "bg-[#f0fdf4] text-[#2ea85a]"
+                          : m.changeType === "down"
+                            ? "bg-[#fef2f2] text-[#e24b35]"
+                            : "bg-[#f4f2ed] text-[#888]"
+                      }`}
+                    >
+                      {m.change}
+                    </span>
                   </div>
                 ))}
               </div>
