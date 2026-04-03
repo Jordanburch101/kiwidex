@@ -96,13 +96,6 @@ function formatDate(isoDate: string): string {
   });
 }
 
-function summaryToBullets(summary: string): string[] {
-  return summary
-    .split("\n")
-    .map((line) => line.replace(/^[-*]\s*/, "").trim())
-    .filter(Boolean);
-}
-
 // ---------- Sub-components ----------
 
 function Breadcrumb({ headline }: { headline: string }) {
@@ -172,10 +165,16 @@ export default async function StoryPage({
     notFound();
   }
 
-  const { story, articles, relatedMetrics } = data;
+  const {
+    story,
+    articles,
+    summaries,
+    relatedMetrics,
+    parentStory,
+    childStory,
+  } = data;
   const tags = parseTags(story.tags);
   const angles = parseAngles(story.angles);
-  const summaryBullets = story.summary ? summaryToBullets(story.summary) : [];
 
   return (
     <article className="pb-12">
@@ -225,10 +224,24 @@ export default async function StoryPage({
       <div className="grid grid-cols-1 gap-0 px-6 pt-2 lg:grid-cols-[1fr_340px]">
         {/* Main column */}
         <div className="min-w-0 space-y-10 py-6 lg:border-[#e5e0d5] lg:border-r lg:pr-8">
-          {/* AI Summary */}
-          {summaryBullets.length > 0 ? (
-            <section className="rounded-lg border border-[#e5e0d5] bg-[#faf9f6]">
-              <div className="flex items-center gap-2.5 border-[#e5e0d5] border-b px-5 py-3.5">
+          {/* Chapter link: parent */}
+          {parentStory && (
+            <Link
+              className="flex items-center gap-2 rounded-lg border border-[#e5e0d5] bg-[#faf9f6] px-4 py-3 font-sans text-[13px] text-[#555] transition-colors hover:bg-[#f0ecdf]"
+              href={`/news/${parentStory.id}`}
+            >
+              <span className="text-[#998]">&larr;</span>
+              <span>Continues from:</span>
+              <span className="font-semibold text-[#2a2520]">
+                {parentStory.headline}
+              </span>
+            </Link>
+          )}
+
+          {/* Summary Timeline */}
+          {summaries.length > 0 ? (
+            <section>
+              <div className="mb-4 flex items-center gap-2.5">
                 <span className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-[#6366f1] to-[#8b5cf6]">
                   <svg
                     aria-hidden="true"
@@ -244,27 +257,78 @@ export default async function StoryPage({
                     <path d="M19 14l.9 2.7 2.7.9-2.7.9-.9 2.7-.9-2.7L15.4 18l2.7-.9z" />
                   </svg>
                 </span>
-                <h2 className="font-heading font-semibold text-[14px] text-[#2a2520]">
+                <h2 className="font-heading font-semibold text-[11px] text-[#998] uppercase tracking-[0.15em]">
                   Story Summary
                 </h2>
+                <span className="rounded bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-2 py-0.5 font-sans font-bold text-[9px] text-white tracking-wide">
+                  AI
+                </span>
               </div>
-              <div className="mx-5 my-4 border-[#8b5cf6]/20 border-l-[3px] pl-4">
-                <ul className="list-none space-y-3">
-                  {summaryBullets.map((bullet) => (
-                    <li
-                      className="relative pl-3 font-sans text-[13.5px] text-[#333] leading-[1.7] before:absolute before:top-[0.6em] before:left-0 before:h-[5px] before:w-[5px] before:rounded-full before:bg-[#8b5cf6]/30 before:content-['']"
-                      key={bullet}
+
+              {summaries.map((entry, i) => {
+                const isLatest = i === 0;
+                const sources: string[] = (() => {
+                  try {
+                    return JSON.parse(entry.sources) as string[];
+                  } catch {
+                    return [];
+                  }
+                })();
+
+                return (
+                  <div key={entry.id}>
+                    {/* Segment divider */}
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="flex shrink-0 items-center gap-2">
+                        {isLatest && (
+                          <span className="rounded bg-[#8b5cf6]/10 px-1.5 py-0.5 font-sans font-semibold text-[9px] text-[#8b5cf6] uppercase tracking-wide">
+                            Latest
+                          </span>
+                        )}
+                        <span className="font-sans text-[11px] text-[#998]">
+                          {formatDate(entry.createdAt)}
+                        </span>
+                        <div className="flex gap-1">
+                          {sources.map((s) => {
+                            const badge = BADGE_COLORS[s.toLowerCase()];
+                            return badge ? (
+                              <div
+                                className="relative h-[18px] w-[18px] overflow-hidden rounded"
+                                key={s}
+                              >
+                                <Image
+                                  alt={badge.label}
+                                  className="object-cover"
+                                  fill
+                                  sizes="18px"
+                                  src={badge.logo}
+                                />
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                      <div className="h-px flex-1 bg-[#e5e0d5]" />
+                    </div>
+
+                    {/* Prose content */}
+                    <div
+                      className={`mb-8 font-serif leading-[1.8] ${isLatest ? "text-[15px] text-[#2a2520]" : "text-[14px] text-[#666]"}`}
                     >
-                      {bullet}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="border-[#e5e0d5] border-t px-5 py-2.5">
-                <p className="font-sans text-[10px] text-[#bbb]">
-                  AI-generated summary from source articles
-                </p>
-              </div>
+                      {entry.summary.split("\n\n").map((para, j) => (
+                        <p className="mb-3 last:mb-0" key={`${entry.id}-p${j}`}>
+                          {para}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <p className="border-[#e5e0d5] border-t pt-3 font-sans text-[10px] text-[#bbb]">
+                AI-generated summaries from source articles. Updated as new
+                sources are added.
+              </p>
             </section>
           ) : null}
 
@@ -338,6 +402,20 @@ export default async function StoryPage({
               })}
             </div>
           </section>
+
+          {/* Chapter link: child */}
+          {childStory && (
+            <Link
+              className="flex items-center gap-2 rounded-lg border border-[#e5e0d5] bg-[#faf9f6] px-4 py-3 font-sans text-[13px] text-[#555] transition-colors hover:bg-[#f0ecdf]"
+              href={`/news/${childStory.id}`}
+            >
+              <span>Continued in:</span>
+              <span className="font-semibold text-[#2a2520]">
+                {childStory.headline}
+              </span>
+              <span className="text-[#998]">&rarr;</span>
+            </Link>
+          )}
         </div>
 
         {/* Sidebar */}
