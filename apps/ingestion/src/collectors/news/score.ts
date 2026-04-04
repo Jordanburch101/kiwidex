@@ -1,6 +1,7 @@
 import { getKeywordTier } from "./keywords";
 import { computeWordSimilarity } from "./lifecycle";
 import type { ParsedArticle } from "./parse-rss";
+import { extractSignificantWords } from "./stop-words";
 
 export interface ScoredArticle extends ParsedArticle {
   score: number;
@@ -184,90 +185,6 @@ function buildStoryClusters(articles: ParsedArticle[]): StoryCluster[] {
   }
 
   return clusters;
-}
-
-const STOP_WORDS = new Set([
-  "a",
-  "an",
-  "the",
-  "is",
-  "are",
-  "was",
-  "were",
-  "be",
-  "been",
-  "to",
-  "of",
-  "in",
-  "for",
-  "on",
-  "with",
-  "at",
-  "by",
-  "from",
-  "as",
-  "it",
-  "its",
-  "this",
-  "that",
-  "and",
-  "or",
-  "but",
-  "not",
-  "will",
-  "would",
-  "could",
-  "should",
-  "may",
-  "can",
-  "has",
-  "have",
-  "had",
-  "do",
-  "does",
-  "did",
-  "how",
-  "why",
-  "what",
-  "when",
-  "who",
-  "which",
-  "where",
-  "than",
-  "more",
-  "most",
-  "very",
-  "just",
-  "also",
-  "says",
-  "said",
-  "new",
-  "after",
-  "over",
-  "into",
-  "up",
-  "out",
-  "about",
-  "no",
-  "all",
-  "some",
-  "if",
-  "so",
-  "we",
-  "our",
-  "they",
-  "their",
-  "nz",
-  "zealand",
-]);
-
-function extractSignificantWords(title: string): Set<string> {
-  const words = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s'-]/g, "")
-    .split(/\s+/)
-    .filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
-  return new Set(words);
 }
 
 function countOverlap(a: Set<string>, b: Set<string>): number {

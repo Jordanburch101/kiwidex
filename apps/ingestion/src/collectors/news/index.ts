@@ -7,6 +7,7 @@ import {
   getExistingArticleStoryIds,
   getOpenStories,
   getStoryBySlug,
+  getStorySummaries,
   getStorySummaryCount,
   insertArticles,
   insertStorySummary,
@@ -323,10 +324,22 @@ export default async function collectNews(): Promise<CollectorResult[]> {
     console.log(`[news] Closed story "${id}" (${reason})`);
   }
 
-  // Remaining open stories are candidates for matching
-  const candidateStories = storyStates
-    .filter((s) => !toClose.some((c) => c.id === s.id))
-    .map((s) => ({ id: s.id, headline: s.headline, tags: s.parsedTags }));
+  // Remaining open stories are candidates for matching (include article count for breadth gating)
+  const openCandidates = storyStates.filter(
+    (s) => !toClose.some((c) => c.id === s.id)
+  );
+  const candidateArticleCounts = await Promise.all(
+    openCandidates.map(async (s) => {
+      const articles = await getArticlesByStoryId(db, s.id);
+      return articles.length;
+    })
+  );
+  const candidateStories = openCandidates.map((s, i) => ({
+    id: s.id,
+    headline: s.headline,
+    tags: s.parsedTags,
+    articleCount: candidateArticleCounts[i]!,
+  }));
 
   console.log(
     `[news] ${candidateStories.length} open stories as candidates, ${toClose.length} closed`
@@ -409,11 +422,22 @@ export default async function collectNews(): Promise<CollectorResult[]> {
         isNew: true,
       });
       // Add to candidates so subsequent articles in this batch can match
-      candidateStories.push({ id: storyId, headline: article.title, tags });
+      candidateStories.push({
+        id: storyId,
+        headline: article.title,
+        tags,
+        articleCount: 1,
+      });
       deterministic++;
     } else if (category.category === "HIGH_CONFIDENCE") {
       // Deterministic: auto-assign to existing story
       articleStoryIds[i] = category.matchedStoryId;
+      const matched = candidateStories.find(
+        (s) => s.id === category.matchedStoryId
+      );
+      if (matched?.articleCount !== undefined) {
+        matched.articleCount++;
+      }
       deterministic++;
     } else if (category.category === "AMBIGUOUS") {
       // AI needed
@@ -431,6 +455,10 @@ export default async function collectNews(): Promise<CollectorResult[]> {
         if (decision.startsWith("continuation:")) {
           const storyId = decision.replace("continuation:", "");
           articleStoryIds[i] = storyId;
+          const cont = candidateStories.find((s) => s.id === storyId);
+          if (cont?.articleCount !== undefined) {
+            cont.articleCount++;
+          }
         } else if (decision.startsWith("chapter_from:")) {
           const parentId = decision.replace("chapter_from:", "");
           // Close parent, create new chapter
@@ -463,6 +491,7 @@ export default async function collectNews(): Promise<CollectorResult[]> {
             id: storyId,
             headline: article.title,
             tags,
+            articleCount: 1,
           });
           console.log(
             `[news] New chapter: "${article.title}" (from "${parentId}")`
@@ -489,6 +518,7 @@ export default async function collectNews(): Promise<CollectorResult[]> {
             id: storyId,
             headline: article.title,
             tags,
+            articleCount: 1,
           });
         }
       } catch (e) {
@@ -514,6 +544,7 @@ export default async function collectNews(): Promise<CollectorResult[]> {
           id: storyId,
           headline: article.title,
           tags,
+          articleCount: 1,
         });
       }
     }
@@ -563,23 +594,38 @@ export default async function collectNews(): Promise<CollectorResult[]> {
 
     const story = candidateStories.find((s) => s.id === storyId);
     if (story) {
-      const allTags = new Set([...story.tags]);
+      // Cap tags at 3, ranked by frequency across all articles (not story.tags to avoid double-counting)
+      const tagFreq = new Map<string, number>();
       for (const idx of indices) {
         for (const tag of articleTags[idx] ?? []) {
-          allTags.add(tag);
+          tagFreq.set(tag, (tagFreq.get(tag) ?? 0) + 1);
         }
       }
+      for (const a of existingArticles) {
+        const aTags: string[] = a.tags ? JSON.parse(a.tags) : [];
+        for (const tag of aTags) {
+          tagFreq.set(tag, (tagFreq.get(tag) ?? 0) + 1);
+        }
+      }
+      const rankedTags = [...tagFreq.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([tag]) => tag);
+
       const newestArticle = topArticles[indices.at(-1)!]!;
       await upsertStory(db, {
         id: storyId,
         headline: story.headline,
-        tags: JSON.stringify([...allTags]),
+        tags: JSON.stringify(rankedTags),
         sourceCount: existingSources.size,
         sources: JSON.stringify([...existingSources]),
         imageUrl: newestArticle.imageUrl ?? null,
         firstReportedAt: existingArticles.at(-1)?.publishedAt ?? now,
         updatedAt: now,
       });
+
+      // Update the in-memory candidate's tags so subsequent articles in this batch see the capped tags
+      story.tags = rankedTags;
 
       if (gainedNewSource) {
         storiesNeedingEnrichment.set(storyId, {
@@ -638,7 +684,15 @@ export default async function collectNews(): Promise<CollectorResult[]> {
           continue;
         }
 
-        const enrichment = await enrichStory(headline, storyArticles);
+        // Fetch previous summary so Sonnet can focus on what's genuinely new
+        const existingSummaries = await getStorySummaries(db, storyId);
+        const previousSummary = existingSummaries[0]?.summary ?? null;
+
+        const enrichment = await enrichStory(
+          headline,
+          storyArticles,
+          previousSummary
+        );
         if (enrichment) {
           // Fallback: if AI returned no metrics, derive from story tags
           if (enrichment.relatedMetrics.length === 0) {

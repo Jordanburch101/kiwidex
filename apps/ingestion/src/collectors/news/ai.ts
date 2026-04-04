@@ -100,7 +100,64 @@ export function sanitizeTags(tagArrays: string[][]): Tag[][] {
     .map((tags) => (tags.length > 0 ? tags : ["general-economy" as Tag]));
 }
 
-// --- Per-Article Story Matching ---
+// --- Per-Article Story Matching (Structured CoT via tool_use) ---
+
+interface MatchClassification {
+  article_event: string;
+  best_match_event: string;
+  confidence: "high" | "medium" | "low";
+  decision: "continuation" | "chapter_from" | "new" | "standalone";
+  match_index: number;
+  same_event_or_same_topic: "same_event" | "same_topic" | "unrelated";
+}
+
+const CLASSIFY_TOOL = {
+  name: "classify_article",
+  description: "Classify how a news article relates to an existing story",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      article_event: {
+        type: "string" as const,
+        description:
+          "The specific event/action the new article reports (one sentence)",
+      },
+      best_match_event: {
+        type: "string" as const,
+        description:
+          "The specific event/action the best candidate story covers (one sentence)",
+      },
+      same_event_or_same_topic: {
+        type: "string" as const,
+        enum: ["same_event", "same_topic", "unrelated"],
+        description:
+          "Same event = same trigger, actors, timeframe. Same topic = related subject area but different trigger.",
+      },
+      decision: {
+        type: "string" as const,
+        enum: ["continuation", "chapter_from", "new", "standalone"],
+      },
+      match_index: {
+        type: "integer" as const,
+        description:
+          "1-indexed candidate number (required for continuation/chapter_from, 0 for new/standalone)",
+      },
+      confidence: {
+        type: "string" as const,
+        enum: ["high", "medium", "low"],
+        description: "How confident are you in this classification?",
+      },
+    },
+    required: [
+      "article_event",
+      "best_match_event",
+      "same_event_or_same_topic",
+      "decision",
+      "match_index",
+      "confidence",
+    ],
+  },
+};
 
 export async function matchArticleToStory(
   article: { title: string; content: string | null; source: string },
@@ -113,46 +170,99 @@ export async function matchArticleToStory(
     .map((c, i) => `${i + 1}. "${c.headline}" (tags: ${c.tags.join(", ")})`)
     .join("\n");
 
-  const prompt = `You are matching a new NZ economic news article to existing stories.
+  const prompt = `You are classifying whether a new NZ economic news article belongs to an existing story.
 
-Article: "${article.title}"
+<article>
+Title: "${article.title}"
 Content: "${articleContent}"
 Source: ${article.source}
+</article>
 
-Existing stories this MIGHT belong to:
+<candidate_stories>
 ${candidateList}
+</candidate_stories>
 
-Respond with ONE of:
-- "continuation:N" — this article is about the same development as story N
-- "chapter_from:N" — this is a MAJOR new development related to story N (e.g., government response to an ongoing crisis). Warrants its own story but linked to N.
-- "new" — this is unrelated to any listed story
-- "standalone" — this is a one-off article unlikely to develop further
+<definitions>
+- "continuation" — This article covers the SAME EVENT as an existing story. Same triggering incident, same key actors, same timeframe. A reader who saw the existing story would say "I already know about this — this is the same news from another outlet."
+- "chapter_from" — A genuinely major NEW development caused by or in direct response to an existing story. Different trigger, new actors taking new actions. Rare — maybe 1 in 20 articles.
+- "new" — This is a DIFFERENT EVENT, even if it's in the same topic area. A reader would say "oh, that's a separate thing happening."
+- "standalone" — A one-off report (data release, survey result) unlikely to develop further.
+</definitions>
 
-Rules:
-- STRONGLY prefer "continuation" — different outlets covering the same topic/event IS a continuation
-- "continuation" = same topic, event, or theme — even if the angle or detail differs
-- "chapter_from" = ONLY for genuinely major turning points (e.g., government announces new policy in response to crisis). Almost never the right choice.
-- When an article covers the same broad topic (fuel crisis, cost of living, housing market), it is a continuation
-- When uncertain between continuation and new, prefer "continuation" if the topic overlaps
+<rules>
+- Two articles about "fuel prices" are NOT automatically the same story. One could be about a specific price hike and another about a government tax review — those are different events.
+- Different outlets covering the SAME press conference, announcement, or data release IS a continuation.
+- Articles that share a broad topic (housing, employment, inflation) but describe different actions by different actors are DIFFERENT STORIES.
+- When uncertain between continuation and new: prefer "new". It is better to have two similar stories than one bloated super-story that merges unrelated events.
+</rules>
 
-Return ONLY the decision string, nothing else.`;
+<examples>
+CONTINUATION: Article "Herald: Petrol climbs 5c as margins tighten" → Story "Petrol prices surge amid refinery squeeze"
+Why: Same price movement, same actors (fuel companies), same timeframe. Different outlet covering same event.
 
-  const response = await callHaiku(prompt);
-  const cleaned = response.trim().toLowerCase();
+NOT A CONTINUATION: Article "Stuff: Government announces fuel tax review" → Story "Petrol prices surge amid refinery squeeze"
+Why: Different trigger (policy announcement vs price movement), different actor (government vs fuel companies). This is a NEW story even though both involve fuel.
 
-  if (cleaned.startsWith("continuation:")) {
-    const idx = Number.parseInt(cleaned.replace("continuation:", ""), 10) - 1;
-    if (idx >= 0 && idx < candidates.length) {
-      return `continuation:${candidates[idx]!.id}`;
-    }
+CONTINUATION: Article "RNZ: Reserve Bank holds OCR at 4.25%, signals cuts ahead" → Story "RBNZ holds rates steady, hints at future easing"
+Why: Same OCR decision announcement, different outlet covering the same central bank decision.
+
+NOT A CONTINUATION: Article "Interest.co.nz: Mortgage rates drop as banks compete for borrowers" → Story "RBNZ holds rates steady"
+Why: Banks independently lowering mortgage rates is a separate commercial decision with different actors (banks vs RBNZ).
+</examples>
+
+Use the classify_article tool to respond.`;
+
+  const client = getClient();
+  const response = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 512,
+    tools: [CLASSIFY_TOOL],
+    tool_choice: { type: "tool" as const, name: "classify_article" },
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const toolBlock = response.content.find((b) => b.type === "tool_use");
+  if (!toolBlock || toolBlock.type !== "tool_use") {
+    return "new";
   }
-  if (cleaned.startsWith("chapter_from:")) {
-    const idx = Number.parseInt(cleaned.replace("chapter_from:", ""), 10) - 1;
-    if (idx >= 0 && idx < candidates.length) {
-      return `chapter_from:${candidates[idx]!.id}`;
-    }
+
+  const result = toolBlock.input as MatchClassification;
+
+  // Confidence gating: low confidence continuations become "new"
+  // This prevents the gravity well of broad stories absorbing everything
+  if (result.confidence === "low" && result.decision === "continuation") {
+    console.log(
+      `[news/ai] Low-confidence continuation for "${article.title}" → defaulting to "new"`
+    );
+    return "new";
   }
-  if (cleaned === "standalone") {
+
+  // Same-topic but different-event should not be a continuation
+  if (
+    result.same_event_or_same_topic === "same_topic" &&
+    result.decision === "continuation"
+  ) {
+    console.log(
+      `[news/ai] Same-topic-not-same-event for "${article.title}" → defaulting to "new"`
+    );
+    return "new";
+  }
+
+  if (
+    result.decision === "continuation" &&
+    result.match_index >= 1 &&
+    result.match_index <= candidates.length
+  ) {
+    return `continuation:${candidates[result.match_index - 1]!.id}`;
+  }
+  if (
+    result.decision === "chapter_from" &&
+    result.match_index >= 1 &&
+    result.match_index <= candidates.length
+  ) {
+    return `chapter_from:${candidates[result.match_index - 1]!.id}`;
+  }
+  if (result.decision === "standalone") {
     return "standalone";
   }
   return "new";
