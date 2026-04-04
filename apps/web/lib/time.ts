@@ -23,3 +23,14 @@ export function timeAgo(isoDate: string): string {
   }
   return `${diffDays} days ago`;
 }
+
+/** Show "first reported" only when it meaningfully differs from last update. */
+export function showFirstReported(
+  firstReported: string,
+  updated: string
+): boolean {
+  const diff = Math.abs(
+    new Date(updated).getTime() - new Date(firstReported).getTime()
+  );
+  return diff > 3_600_000;
+}
