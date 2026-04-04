@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google";
+import { Suspense } from "react";
 
 import "@workspace/ui/globals.css";
 import { cn } from "@workspace/ui/lib/utils";
+import { Footer } from "@/components/sections/footer";
+import { Masthead } from "@/components/sections/masthead";
+import { SectionNav } from "@/components/sections/section-nav";
+import { Ticker } from "@/components/sections/ticker";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
@@ -89,7 +94,21 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <div className="min-h-screen bg-[#f4f2ed]">
+            <div className="mx-auto min-h-screen max-w-[1200px] border-[#e5e0d5] border-x bg-[#faf9f6]">
+              <div className="px-6 py-6">
+                <Masthead />
+              </div>
+              <SectionNav />
+              <Suspense>
+                <Ticker />
+              </Suspense>
+              <main>{children}</main>
+              <Footer />
+            </div>
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );
