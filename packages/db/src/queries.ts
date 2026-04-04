@@ -404,6 +404,7 @@ export async function upsertStory(db: Db, story: NewStory) {
         headline: story.headline,
         tags: story.tags,
         sourceCount: story.sourceCount,
+        sources: story.sources,
         imageUrl: story.imageUrl,
         parentStoryId: story.parentStoryId,
         firstReportedAt: story.firstReportedAt,
