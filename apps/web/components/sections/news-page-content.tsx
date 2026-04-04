@@ -2,18 +2,8 @@
 
 import { SectionHeader } from "@workspace/ui/components/section-header";
 import { useRouter, useSearchParams } from "next/navigation";
-import { StoryCard } from "@/components/news/story-card";
+import { StoryCard, type StoryCardStory } from "@/components/news/story-card";
 import { parseTags } from "@/lib/news-utils";
-
-interface Story {
-  firstReportedAt: string;
-  headline: string;
-  id: string;
-  imageUrl: string | null;
-  sources: string | null;
-  tags: string;
-  updatedAt: string;
-}
 
 const TAGS = [
   { label: "All", value: "all" },
@@ -29,7 +19,7 @@ const TAGS = [
   { label: "Government", value: "government" },
 ];
 
-export function NewsPageContent({ stories }: { stories: Story[] }) {
+export function NewsPageContent({ stories }: { stories: StoryCardStory[] }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeFilter = searchParams.get("tag") ?? "all";
@@ -85,13 +75,18 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
       {lead ? (
         <>
           <div className="mx-6 mt-6">
-            <StoryCard story={lead} variant="lead" />
+            <StoryCard size="large" story={lead} variant="lead" />
           </div>
 
           {rest.length > 0 && (
             <div className="mx-6 mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {rest.map((story) => (
-                <StoryCard key={story.id} story={story} variant="grid" />
+                <StoryCard
+                  key={story.id}
+                  size="large"
+                  story={story}
+                  variant="grid"
+                />
               ))}
             </div>
           )}

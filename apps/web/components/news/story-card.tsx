@@ -5,7 +5,7 @@ import { TagPill } from "@/components/news/tag-pill";
 import { parseTags } from "@/lib/news-utils";
 import { showFirstReported, timeAgo } from "@/lib/time";
 
-interface StoryCardStory {
+export interface StoryCardStory {
   firstReportedAt: string;
   headline: string;
   id: string;
@@ -18,9 +18,11 @@ interface StoryCardStory {
 export function StoryCard({
   story,
   variant,
+  size = "default",
 }: {
   story: StoryCardStory;
   variant: "lead" | "grid";
+  size?: "default" | "large";
 }) {
   const tags = parseTags(story.tags);
 
@@ -30,7 +32,9 @@ export function StoryCard({
         className="group grid grid-cols-1 overflow-hidden rounded-lg border border-[#e5e0d5] transition-colors hover:bg-[#faf8f3] sm:grid-cols-2"
         href={`/news/${story.id}`}
       >
-        <div className="relative h-[200px] overflow-hidden sm:h-[240px]">
+        <div
+          className={`relative overflow-hidden ${size === "large" ? "h-[220px] sm:h-[280px]" : "h-[200px] sm:h-[240px]"}`}
+        >
           {story.imageUrl ? (
             <Image
               alt={story.headline}
@@ -59,7 +63,9 @@ export function StoryCard({
               {timeAgo(story.updatedAt)}
             </span>
           </div>
-          <h3 className="text-balance font-bold font-heading text-[20px] text-[#2a2520] leading-[1.25]">
+          <h3
+            className={`text-balance font-bold font-heading text-[#2a2520] leading-[1.25] ${size === "large" ? "text-[22px]" : "text-[20px]"}`}
+          >
             {story.headline}
           </h3>
           {showFirstReported(story.firstReportedAt, story.updatedAt) && (
@@ -79,7 +85,9 @@ export function StoryCard({
       className="group/card block overflow-hidden rounded-lg border border-[#e5e0d5] transition-colors hover:bg-[#faf8f3]"
       href={`/news/${story.id}`}
     >
-      <div className="relative h-[120px] w-full overflow-hidden">
+      <div
+        className={`relative w-full overflow-hidden ${size === "large" ? "h-[140px]" : "h-[120px]"}`}
+      >
         {story.imageUrl ? (
           <Image
             alt={story.headline}
@@ -97,7 +105,7 @@ export function StoryCard({
           />
         )}
       </div>
-      <div className="px-4 py-3">
+      <div className={`px-4 ${size === "large" ? "py-3.5" : "py-3"}`}>
         <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
           <SourceLogos size={18} sources={story.sources} />
           {tags.slice(0, 1).map((tag) => (
