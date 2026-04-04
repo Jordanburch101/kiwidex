@@ -61,8 +61,7 @@ export function NewsPageContent({ stories }: { stories: StoryCardStory[] }) {
           In the News
         </h2>
         <p className="mt-1.5 font-sans text-[13px] text-[#998]">
-          Economy reporting from RNZ, Stuff, Herald &amp; 1News — grouped by
-          story
+          NZ &amp; international economy reporting — grouped by story
         </p>
       </div>
 
