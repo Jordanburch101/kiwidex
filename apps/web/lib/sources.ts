@@ -13,8 +13,8 @@ export const SOURCE_INFO: Record<
   },
   interest: {
     label: "Interest",
-    logo: "/sources/interest.png",
-    bg: "#18468b",
+    logo: "/sources/interest.svg",
+    bg: "#283D6B",
   },
   guardian: {
     label: "Guardian",
@@ -28,7 +28,7 @@ export const SOURCE_INFO: Record<
   },
   scmp: { label: "SCMP", logo: "/sources/scmp.png", bg: "#001246" },
   abc: { label: "ABC AU", logo: "/sources/abc.svg", bg: "#1E5AEB" },
-  bbc: { label: "BBC", logo: "/sources/bbc.png", bg: "#BB1919" },
+  bbc: { label: "BBC", logo: "/sources/bbc.svg", bg: "#BB1919" },
 };
 
 export function parseSources(json: string | null): string[] {
