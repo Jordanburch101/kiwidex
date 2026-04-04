@@ -1,11 +1,16 @@
 "use client";
 
-import { SectionHeader } from "@workspace/ui/components/section-header";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu";
 import { useRouter, useSearchParams } from "next/navigation";
 import { StoryCard, type StoryCardStory } from "@/components/news/story-card";
 import { parseTags } from "@/lib/news-utils";
 
-const TAGS = [
+const PRIMARY_TAGS = [
   { label: "All", value: "all" },
   { label: "Housing", value: "housing" },
   { label: "Employment", value: "employment" },
@@ -13,6 +18,9 @@ const TAGS = [
   { label: "Groceries", value: "groceries" },
   { label: "Markets", value: "markets" },
   { label: "Interest Rates", value: "interest-rates" },
+];
+
+const MORE_TAGS = [
   { label: "Inflation", value: "inflation" },
   { label: "Currency", value: "currency" },
   { label: "Trade", value: "trade" },
@@ -47,21 +55,28 @@ export function NewsPageContent({ stories }: { stories: StoryCardStory[] }) {
 
   return (
     <>
-      <div className="px-6 pt-8 pb-2">
-        <SectionHeader
-          subtitle="NZ economy reporting from RNZ, Stuff, Herald &amp; 1News — grouped by story"
-          title="In the News"
-        />
+      {/* Masthead header */}
+      <div className="px-6 pt-8 pb-5">
+        <h2 className="font-heading font-semibold text-4xl text-[#2a2520]">
+          In the News
+        </h2>
+        <p className="mt-1.5 font-sans text-[13px] text-[#998]">
+          Economy reporting from RNZ, Stuff, Herald &amp; 1News — grouped by
+          story
+        </p>
       </div>
 
-      {/* Filter pills */}
-      <div className="flex flex-wrap gap-2 border-[#e5e0d5] border-b px-6 py-4">
-        {TAGS.map((tag) => (
+      {/* Heavy rule */}
+      <div className="mx-6 border-t-[2.5px] border-[#2a2520]" />
+
+      {/* Tab navigation */}
+      <div className="flex flex-wrap items-stretch border-[#e5e0d5] border-b px-6">
+        {PRIMARY_TAGS.map((tag) => (
           <button
-            className={`rounded-full px-3.5 py-1.5 font-sans text-[12px] font-medium transition-all ${
+            className={`font-sans text-[12.5px] px-4 py-2.5 transition-colors ${
               activeFilter === tag.value
-                ? "bg-[#2a2520] text-white"
-                : "border border-[#d5d0c5] text-[#666] hover:border-[#999] hover:bg-[#f5f2ec]"
+                ? "font-semibold text-[#2a2520] border-b-2 border-[#2a2520] -mb-px"
+                : "text-[#999] hover:text-[#666]"
             }`}
             key={tag.value}
             onClick={() => setFilter(tag.value)}
@@ -70,6 +85,29 @@ export function NewsPageContent({ stories }: { stories: StoryCardStory[] }) {
             {tag.label}
           </button>
         ))}
+
+        {/* More dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className={`font-sans text-[12.5px] px-4 py-2.5 transition-colors ${
+              MORE_TAGS.some((t) => t.value === activeFilter)
+                ? "font-semibold text-[#2a2520] border-b-2 border-[#2a2520] -mb-px"
+                : "text-[#999] hover:text-[#666]"
+            }`}
+          >
+            {MORE_TAGS.find((t) => t.value === activeFilter)?.label ?? "More"} ▾
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {MORE_TAGS.map((tag) => (
+              <DropdownMenuItem
+                key={tag.value}
+                onClick={() => setFilter(tag.value)}
+              >
+                {tag.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {lead ? (
