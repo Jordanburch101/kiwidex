@@ -14,6 +14,11 @@ const nextConfig = {
       { hostname: "**.wp.com" },
       { hostname: "**.newsroom.co.nz" },
       { hostname: "**.interest.co.nz" },
+      { hostname: "**.guim.co.uk" },
+      { hostname: "**.edairynews.com" },
+      { hostname: "**.i-scmp.com" },
+      { hostname: "**.abc-cdn.net.au" },
+      { hostname: "**.bbci.co.uk" },
     ],
   },
 };

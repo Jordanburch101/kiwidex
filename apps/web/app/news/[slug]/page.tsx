@@ -15,7 +15,7 @@ const BADGE_COLORS: Record<
 > = {
   rnz: { bg: "#D42C21", label: "RNZ", logo: "/sources/rnz.svg" },
   stuff: { bg: "#6443AB", label: "Stuff", logo: "/sources/stuff.png" },
-  herald: { bg: "#0D0D0D", label: "Herald", logo: "/sources/herald.svg" },
+  herald: { bg: "#0D0D0D", label: "Herald", logo: "/sources/herald.png" },
   "1news": { bg: "#00274e", label: "1News", logo: "/sources/1news.svg" },
   newsroom: { bg: "#000000", label: "Newsroom", logo: "/sources/newsroom.png" },
   interest: {
@@ -23,6 +23,15 @@ const BADGE_COLORS: Record<
     label: "Interest",
     logo: "/sources/interest.png",
   },
+  guardian: { bg: "#052962", label: "Guardian", logo: "/sources/guardian.png" },
+  edairynews: {
+    bg: "#013091",
+    label: "eDairy",
+    logo: "/sources/edairynews.png",
+  },
+  scmp: { bg: "#001246", label: "SCMP", logo: "/sources/scmp.png" },
+  abc: { bg: "#1E5AEB", label: "ABC AU", logo: "/sources/abc.svg" },
+  bbc: { bg: "#BB1919", label: "BBC", logo: "/sources/bbc.png" },
 };
 
 const ANGLE_STYLES: Record<string, string> = {

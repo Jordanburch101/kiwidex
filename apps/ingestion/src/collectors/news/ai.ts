@@ -129,10 +129,11 @@ Respond with ONE of:
 - "standalone" — this is a one-off article unlikely to develop further
 
 Rules:
-- "continuation" = same event, same development, just another outlet covering it
-- "chapter_from" = a significant escalation, response, or shift in an ongoing story
-- When uncertain, prefer "new" over forcing a match
-- Only use "chapter_from" for genuinely major developments, not routine follow-ups
+- STRONGLY prefer "continuation" — different outlets covering the same topic/event IS a continuation
+- "continuation" = same topic, event, or theme — even if the angle or detail differs
+- "chapter_from" = ONLY for genuinely major turning points (e.g., government announces new policy in response to crisis). Almost never the right choice.
+- When an article covers the same broad topic (fuel crisis, cost of living, housing market), it is a continuation
+- When uncertain between continuation and new, prefer "continuation" if the topic overlaps
 
 Return ONLY the decision string, nothing else.`;
 

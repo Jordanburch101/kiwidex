@@ -24,6 +24,7 @@ import { parse1NewsRss } from "./parse-1news";
 import { parseStuffAtom } from "./parse-atom";
 import { parseHeraldRss } from "./parse-herald";
 import { parseInterestRss } from "./parse-interest";
+import { parseInternationalRss } from "./parse-international";
 import { parseNewsroomRss } from "./parse-newsroom";
 import { type ParsedArticle, parseRnzRss } from "./parse-rss";
 import { scoreArticles } from "./score";
@@ -52,6 +53,7 @@ function deriveMetricsFromTags(tags: string[]): string[] {
 }
 
 const FEEDS = {
+  // NZ domestic
   rnz: "https://www.rnz.co.nz/rss/business.xml",
   stuff: "https://www.stuff.co.nz/rss?section=/business",
   herald:
@@ -59,7 +61,16 @@ const FEEDS = {
   onenews: "https://www.1news.co.nz/arc/outboundfeeds/rss/?outputType=xml",
   newsroom: "https://newsroom.co.nz/category/economy/feed/",
   interest: "https://www.interest.co.nz/rss",
+  // International — strict keyword filtering (broad feeds, low NZ density)
+  guardian: "https://www.theguardian.com/world/newzealand/rss",
+  edairynews: "https://en.edairynews.com/feed/",
+  scmp: "https://www.scmp.com/rss/322243/feed",
+  abc: "https://www.abc.net.au/news/feed/104217374/rss.xml",
+  bbc: "https://feeds.bbci.co.uk/news/business/rss.xml",
 } as const;
+
+/** Sources that need strict keyword filtering (firehose / low NZ density) */
+const STRICT_SOURCES = new Set(["1news", "scmp", "abc", "bbc"]);
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
@@ -135,59 +146,83 @@ async function fetchFeed(url: string): Promise<string | null> {
 }
 
 export default async function collectNews(): Promise<CollectorResult[]> {
-  console.log("[news] Fetching RSS feeds from 6 sources...");
+  const sourceCount = Object.keys(FEEDS).length;
+  console.log(`[news] Fetching RSS feeds from ${sourceCount} sources...`);
 
-  const [rnzXml, stuffXml, heraldXml, onenewsXml, newsroomXml, interestXml] =
-    await Promise.all([
-      fetchFeed(FEEDS.rnz),
-      fetchFeed(FEEDS.stuff),
-      fetchFeed(FEEDS.herald),
-      fetchFeed(FEEDS.onenews),
-      fetchFeed(FEEDS.newsroom),
-      fetchFeed(FEEDS.interest),
-    ]);
+  const [
+    rnzXml,
+    stuffXml,
+    heraldXml,
+    onenewsXml,
+    newsroomXml,
+    interestXml,
+    guardianXml,
+    edairynewsXml,
+    scmpXml,
+    abcXml,
+    bbcXml,
+  ] = await Promise.all([
+    fetchFeed(FEEDS.rnz),
+    fetchFeed(FEEDS.stuff),
+    fetchFeed(FEEDS.herald),
+    fetchFeed(FEEDS.onenews),
+    fetchFeed(FEEDS.newsroom),
+    fetchFeed(FEEDS.interest),
+    fetchFeed(FEEDS.guardian),
+    fetchFeed(FEEDS.edairynews),
+    fetchFeed(FEEDS.scmp),
+    fetchFeed(FEEDS.abc),
+    fetchFeed(FEEDS.bbc),
+  ]);
 
   const allArticles: ParsedArticle[] = [];
 
-  if (rnzXml) {
-    const items = parseRnzRss(rnzXml);
-    console.log(`[news] RNZ: ${items.length} items parsed`);
-    allArticles.push(...items.map((a) => ({ ...a, source: "rnz" })));
+  // NZ domestic — source-specific parsers
+  const domesticFeeds: [
+    string | null,
+    string,
+    (xml: string) => ParsedArticle[],
+  ][] = [
+    [rnzXml, "rnz", parseRnzRss],
+    [stuffXml, "stuff", parseStuffAtom],
+    [heraldXml, "herald", parseHeraldRss],
+    [onenewsXml, "1news", parse1NewsRss],
+    [newsroomXml, "newsroom", parseNewsroomRss],
+    [interestXml, "interest", parseInterestRss],
+  ];
+
+  for (const [xml, source, parser] of domesticFeeds) {
+    if (xml) {
+      const items = parser(xml);
+      console.log(`[news] ${source}: ${items.length} items parsed`);
+      allArticles.push(...items.map((a) => ({ ...a, source })));
+    }
   }
 
-  if (stuffXml) {
-    const items = parseStuffAtom(stuffXml);
-    console.log(`[news] Stuff: ${items.length} items parsed`);
-    allArticles.push(...items.map((a) => ({ ...a, source: "stuff" })));
+  // International — shared generic RSS parser
+  const internationalFeeds: [string | null, string][] = [
+    [guardianXml, "guardian"],
+    [edairynewsXml, "edairynews"],
+    [scmpXml, "scmp"],
+    [abcXml, "abc"],
+    [bbcXml, "bbc"],
+  ];
+
+  for (const [xml, source] of internationalFeeds) {
+    if (xml) {
+      const items = parseInternationalRss(xml);
+      console.log(`[news] ${source}: ${items.length} items parsed`);
+      allArticles.push(...items.map((a) => ({ ...a, source })));
+    }
   }
 
-  if (heraldXml) {
-    const items = parseHeraldRss(heraldXml);
-    console.log(`[news] Herald: ${items.length} items parsed`);
-    allArticles.push(...items.map((a) => ({ ...a, source: "herald" })));
-  }
-
-  if (onenewsXml) {
-    const items = parse1NewsRss(onenewsXml);
-    console.log(`[news] 1News: ${items.length} items parsed`);
-    allArticles.push(...items.map((a) => ({ ...a, source: "1news" })));
-  }
-
-  if (newsroomXml) {
-    const items = parseNewsroomRss(newsroomXml);
-    console.log(`[news] Newsroom: ${items.length} items parsed`);
-    allArticles.push(...items.map((a) => ({ ...a, source: "newsroom" })));
-  }
-
-  if (interestXml) {
-    const items = parseInterestRss(interestXml);
-    console.log(`[news] Interest: ${items.length} items parsed`);
-    allArticles.push(...items.map((a) => ({ ...a, source: "interest" })));
-  }
-
-  // Keyword filter — strict mode for 1News (firehose, needs tighter filtering)
+  // Keyword filter — strict mode for firehose / international sources
   const filtered = allArticles.filter((a) =>
-    matchesEconomyKeywords(a.title, a.excerpt, a.source === "1news")
+    matchesEconomyKeywords(
+      a.title,
+      a.excerpt,
+      STRICT_SOURCES.has(a.source ?? "")
+    )
   );
   console.log(
     `[news] ${filtered.length}/${allArticles.length} articles match economy keywords`
@@ -372,6 +407,8 @@ export default async function collectNews(): Promise<CollectorResult[]> {
         headline: article.title,
         isNew: true,
       });
+      // Add to candidates so subsequent articles in this batch can match
+      candidateStories.push({ id: storyId, headline: article.title, tags });
       deterministic++;
     } else if (category.category === "HIGH_CONFIDENCE") {
       // Deterministic: auto-assign to existing story
@@ -420,6 +457,11 @@ export default async function collectNews(): Promise<CollectorResult[]> {
             headline: article.title,
             isNew: true,
           });
+          candidateStories.push({
+            id: storyId,
+            headline: article.title,
+            tags,
+          });
           console.log(
             `[news] New chapter: "${article.title}" (from "${parentId}")`
           );
@@ -440,6 +482,11 @@ export default async function collectNews(): Promise<CollectorResult[]> {
             headline: article.title,
             isNew: true,
           });
+          candidateStories.push({
+            id: storyId,
+            headline: article.title,
+            tags,
+          });
         }
       } catch (e) {
         console.warn(`[news] AI matching failed for "${article.title}":`, e);
@@ -458,6 +505,11 @@ export default async function collectNews(): Promise<CollectorResult[]> {
         storiesNeedingEnrichment.set(storyId, {
           headline: article.title,
           isNew: true,
+        });
+        candidateStories.push({
+          id: storyId,
+          headline: article.title,
+          tags,
         });
       }
     }

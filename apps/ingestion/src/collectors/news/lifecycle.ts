@@ -168,7 +168,7 @@ export function categorizeArticle(
 
   scored.sort((a, b) => b.similarity - a.similarity);
 
-  if (scored[0]!.similarity >= 4) {
+  if (scored[0]!.similarity >= 3) {
     return {
       category: "HIGH_CONFIDENCE",
       matchedStoryId: scored[0]!.story.id,
