@@ -70,9 +70,13 @@ export function NewsPageContent({ stories }: { stories: StoryCardStory[] }) {
       <div className="mx-6 border-t-[2.5px] border-[#2a2520]" />
 
       {/* Tab navigation */}
-      <div className="flex flex-wrap items-stretch border-[#e5e0d5] border-b px-6">
+      <nav
+        aria-label="Filter stories by topic"
+        className="flex flex-wrap items-stretch border-[#e5e0d5] border-b px-6"
+      >
         {PRIMARY_TAGS.map((tag) => (
           <button
+            aria-current={activeFilter === tag.value ? "page" : undefined}
             className={`font-sans text-[12.5px] px-4 py-2.5 transition-colors ${
               activeFilter === tag.value
                 ? "font-semibold text-[#2a2520] border-b-2 border-[#2a2520] -mb-px"
@@ -108,7 +112,7 @@ export function NewsPageContent({ stories }: { stories: StoryCardStory[] }) {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </nav>
 
       {lead ? (
         <>
