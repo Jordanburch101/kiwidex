@@ -41,6 +41,7 @@ npm-debug.log*
 *.db-wal
 *.db-shm
 
-# Superpowers brainstorming
+# Superpowers
 .superpowers/
+docs/superpowers/
 .playwright-mcp/
