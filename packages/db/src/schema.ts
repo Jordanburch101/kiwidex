@@ -102,6 +102,7 @@ export const stories = sqliteTable("stories", {
   angles: text("angles"),
   relatedMetrics: text("related_metrics"),
   sourceCount: integer("source_count").notNull(),
+  sources: text("sources"),
   imageUrl: text("image_url"),
   firstReportedAt: text("first_reported_at").notNull(),
   updatedAt: text("updated_at").notNull(),
