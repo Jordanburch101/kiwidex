@@ -7,7 +7,7 @@ export function Masthead() {
   });
 
   return (
-    <header className="pb-4 text-center">
+    <header className="text-center">
       <p className="font-medium text-[#998] text-xs uppercase tracking-[0.3em]">
         The New Zealand Economy
       </p>

@@ -19,6 +19,7 @@ export function SectionNav() {
 
         return (
           <Link
+            aria-current={isActive ? "page" : undefined}
             className={`relative px-5 py-2.5 text-[12px] uppercase tracking-[0.12em] no-underline transition-colors ${
               isActive
                 ? "font-semibold text-[#2a2520]"

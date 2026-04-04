@@ -101,7 +101,7 @@ export default function RootLayout({
                 <Masthead />
               </div>
               <SectionNav />
-              <Suspense>
+              <Suspense fallback={<TickerSkeleton />}>
                 <Ticker />
               </Suspense>
               <main>{children}</main>
@@ -111,5 +111,33 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
+  );
+}
+
+function TickerSkeletonItem() {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-4">
+      <span className="h-3 w-12 animate-pulse rounded bg-[#e8e4dc]" />
+      <span className="h-3.5 w-14 animate-pulse rounded bg-[#ddd8cf]" />
+      <span className="h-4 w-12 animate-pulse rounded bg-[#e8e4dc]" />
+    </span>
+  );
+}
+
+function TickerSkeleton() {
+  return (
+    <div className="flex items-center overflow-hidden py-2">
+      {Array.from({ length: 6 }, (_, i) => (
+        <span className="inline-flex items-center" key={i}>
+          {i > 0 && (
+            <span
+              aria-hidden="true"
+              className="mx-2 inline-block h-1 w-1 rounded-full bg-[#e5e0d5]"
+            />
+          )}
+          <TickerSkeletonItem />
+        </span>
+      ))}
+    </div>
   );
 }
