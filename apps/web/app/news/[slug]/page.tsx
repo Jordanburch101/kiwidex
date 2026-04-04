@@ -6,33 +6,9 @@ import { notFound } from "next/navigation";
 import { TagPill } from "@/components/news/tag-pill";
 import { timeAgo } from "@/lib/data";
 import { getAllStorySlugs, getStoryPageData } from "@/lib/queries";
+import { SOURCE_INFO } from "@/lib/sources";
 
 // ---------- Constants ----------
-
-const BADGE_COLORS: Record<
-  string,
-  { bg: string; label: string; logo: string }
-> = {
-  rnz: { bg: "#D42C21", label: "RNZ", logo: "/sources/rnz.svg" },
-  stuff: { bg: "#6443AB", label: "Stuff", logo: "/sources/stuff.png" },
-  herald: { bg: "#0D0D0D", label: "Herald", logo: "/sources/herald.png" },
-  "1news": { bg: "#00274e", label: "1News", logo: "/sources/1news.svg" },
-  newsroom: { bg: "#000000", label: "Newsroom", logo: "/sources/newsroom.png" },
-  interest: {
-    bg: "#283D6B",
-    label: "Interest",
-    logo: "/sources/interest.svg",
-  },
-  guardian: { bg: "#052962", label: "Guardian", logo: "/sources/guardian.png" },
-  edairynews: {
-    bg: "#013091",
-    label: "eDairy",
-    logo: "/sources/edairynews.png",
-  },
-  scmp: { bg: "#001246", label: "SCMP", logo: "/sources/scmp.png" },
-  abc: { bg: "#1E5AEB", label: "ABC AU", logo: "/sources/abc.svg" },
-  bbc: { bg: "#BB1919", label: "BBC", logo: "/sources/bbc.svg" },
-};
 
 const ANGLE_STYLES: Record<string, string> = {
   "Policy focus": "bg-[#ede9fe] text-[#6d28d9]",
@@ -200,7 +176,7 @@ function Breadcrumb({ headline }: { headline: string }) {
 }
 
 function SourceBadge({ source }: { source: string }) {
-  const badge = BADGE_COLORS[source.toLowerCase()];
+  const badge = SOURCE_INFO[source.toLowerCase()];
   if (!badge) {
     return (
       <span className="rounded bg-[#555] px-2 py-0.5 font-sans font-bold text-[9px] text-white tracking-wide">
@@ -503,7 +479,7 @@ export default async function StoryPage({
                         </span>
                         <div className="flex gap-1">
                           {sources.map((s) => {
-                            const badge = BADGE_COLORS[s.toLowerCase()];
+                            const badge = SOURCE_INFO[s.toLowerCase()];
                             return badge ? (
                               <div
                                 className="relative h-[18px] w-[18px] overflow-hidden rounded"
@@ -555,7 +531,7 @@ export default async function StoryPage({
             <div className="space-y-3">
               {articles.map((article) => {
                 const articleAngle = getAngleForSource(angles, article.source);
-                const badge = BADGE_COLORS[article.source.toLowerCase()];
+                const badge = SOURCE_INFO[article.source.toLowerCase()];
                 return (
                   <a
                     className="group grid overflow-hidden rounded-lg border border-[#e5e0d5] transition-colors hover:bg-[#faf8f3] sm:grid-cols-[200px_1fr]"
@@ -666,7 +642,7 @@ export default async function StoryPage({
                   <>
                     <div>
                       {sources.map(([source, { count, earliest }], i) => {
-                        const badge = BADGE_COLORS[source.toLowerCase()];
+                        const badge = SOURCE_INFO[source.toLowerCase()];
                         return (
                           <div
                             className={`flex items-center gap-2.5 px-1 py-2.5 ${i < sources.length - 1 ? "border-[#f0ecdf] border-b" : ""}`}
