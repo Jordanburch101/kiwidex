@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TagPill } from "@/components/news/tag-pill";
+import { parseSources, SOURCE_INFO } from "@/lib/sources";
 import { timeAgo } from "@/lib/time";
 
 function parseTags(json: string): string[] {
@@ -16,10 +17,12 @@ function parseTags(json: string): string[] {
 }
 
 interface Story {
+  firstReportedAt: string;
   headline: string;
   id: string;
   imageUrl: string | null;
   sourceCount: number;
+  sources: string | null;
   tags: string;
   updatedAt: string;
 }
@@ -38,15 +41,73 @@ const TAGS = [
   { label: "Government", value: "government" },
 ];
 
-function OutletBadge({ count }: { count: number }) {
-  if (count <= 1) {
+function SourceLogos({
+  sources,
+  size,
+}: {
+  sources: string | null;
+  size: number;
+}) {
+  const list = parseSources(sources);
+  if (list.length === 0) {
     return null;
   }
+
+  const MAX_VISIBLE = 5;
+  const visible = list.slice(0, MAX_VISIBLE);
+  const overflow = list.length - MAX_VISIBLE;
+
   return (
-    <span className="rounded bg-[#2a2520] px-2 py-0.5 font-sans font-bold text-[9px] text-white tracking-wide">
-      {count} OUTLETS
-    </span>
+    <div className="flex items-center">
+      {visible.map((source, idx) => {
+        const info = SOURCE_INFO[source.toLowerCase()];
+        if (!info) {
+          return null;
+        }
+        return (
+          <div
+            className="relative overflow-hidden rounded-md border-2 border-[#fdfcf9]"
+            key={source}
+            style={{
+              width: size,
+              height: size,
+              marginLeft: idx === 0 ? 0 : -6,
+              zIndex: visible.length - idx,
+            }}
+          >
+            <Image
+              alt={info.label}
+              className="object-cover"
+              fill
+              sizes={`${size}px`}
+              src={info.logo}
+            />
+          </div>
+        );
+      })}
+      {overflow > 0 && (
+        <div
+          className="flex items-center justify-center rounded-md border-2 border-[#fdfcf9] bg-[#e8e3d9] font-sans font-bold text-[#2a2520]"
+          style={{
+            width: size,
+            height: size,
+            marginLeft: -6,
+            zIndex: 0,
+            fontSize: size * 0.4,
+          }}
+        >
+          +{overflow}
+        </div>
+      )}
+    </div>
   );
+}
+
+function showFirstReported(firstReported: string, updated: string): boolean {
+  const diff = Math.abs(
+    new Date(updated).getTime() - new Date(firstReported).getTime()
+  );
+  return diff > 3_600_000;
 }
 
 export function NewsPageContent({ stories }: { stories: Story[] }) {
@@ -130,7 +191,7 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
             </div>
             <div className="flex flex-col justify-center px-7 py-6">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <OutletBadge count={lead.sourceCount} />
+                <SourceLogos size={20} sources={lead.sources} />
                 {parseTags(lead.tags)
                   .slice(0, 2)
                   .map((tag) => (
@@ -143,6 +204,13 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
               <h3 className="text-balance font-bold font-heading text-[22px] text-[#2a2520] leading-[1.25]">
                 {lead.headline}
               </h3>
+              {showFirstReported(lead.firstReportedAt, lead.updatedAt) && (
+                <div className="mt-3 border-[#f0ecdf] border-t pt-2">
+                  <span className="font-sans text-[8px] text-[#bba]">
+                    First reported {timeAgo(lead.firstReportedAt)}
+                  </span>
+                </div>
+              )}
             </div>
           </Link>
 
@@ -170,7 +238,7 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
                     ) : null}
                     <div className="px-4 py-3.5">
                       <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                        <OutletBadge count={story.sourceCount} />
+                        <SourceLogos size={18} sources={story.sources} />
                         {tags.slice(0, 1).map((tag) => (
                           <TagPill key={tag} tag={tag} />
                         ))}
@@ -182,6 +250,16 @@ export function NewsPageContent({ stories }: { stories: Story[] }) {
                         {story.headline}
                       </h4>
                     </div>
+                    {showFirstReported(
+                      story.firstReportedAt,
+                      story.updatedAt
+                    ) && (
+                      <div className="border-[#f0ecdf] border-t px-4 pt-1.5 pb-3">
+                        <span className="font-sans text-[8px] text-[#bba]">
+                          First reported {timeAgo(story.firstReportedAt)}
+                        </span>
+                      </div>
+                    )}
                   </Link>
                 );
               })}
