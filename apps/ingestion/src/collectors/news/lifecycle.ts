@@ -22,6 +22,40 @@ type MatchCategory =
   | { category: "HIGH_CONFIDENCE"; matchedStoryId: string }
   | { category: "AMBIGUOUS"; candidates: CandidateStory[] };
 
+/**
+ * Detect when a story's current headline has drifted so far from its original
+ * slug that the story should chapter. The slug is frozen at creation time, so
+ * if the headline evolves (e.g., "fuel prices rise" → "government announces
+ * relief package"), the Jaccard between slug words and headline words drops.
+ *
+ * Returns true when the story identity has fundamentally shifted.
+ */
+export function hasSlugDrifted(
+  storyId: string,
+  currentHeadline: string
+): boolean {
+  // Strip the month-year suffix from the slug to get the original headline words
+  const slugBase = storyId.replace(/-[a-z]{3}-\d{4}$/, "");
+  const slugWords = extractSignificantWords(slugBase.replace(/-/g, " "));
+  const headlineWords = extractSignificantWords(currentHeadline);
+
+  if (slugWords.size === 0 || headlineWords.size === 0) {
+    return false;
+  }
+
+  let overlap = 0;
+  for (const word of slugWords) {
+    if (headlineWords.has(word)) {
+      overlap++;
+    }
+  }
+
+  // Use Jaccard on slug vs headline — below 0.08 means they share almost nothing
+  const union = new Set([...slugWords, ...headlineWords]).size;
+  const jaccard = union === 0 ? 0 : overlap / union;
+  return jaccard < 0.08;
+}
+
 export function findStoriesToClose(
   stories: { id: string; updatedAt: string; summaryCount: number }[]
 ): { id: string; reason: "expired" | "cap_reached" }[] {

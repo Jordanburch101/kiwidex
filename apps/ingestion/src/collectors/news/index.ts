@@ -20,7 +20,11 @@ import { matchArticleToStory, tagArticles } from "./ai";
 import { extractArticleContent } from "./content-extractor";
 import { enrichStory } from "./enrich";
 import { matchesEconomyKeywords } from "./keywords";
-import { categorizeArticle, findStoriesToClose } from "./lifecycle";
+import {
+  categorizeArticle,
+  findStoriesToClose,
+  hasSlugDrifted,
+} from "./lifecycle";
 import { parse1NewsRss } from "./parse-1news";
 import { parseStuffAtom } from "./parse-atom";
 import { parseHeraldRss } from "./parse-herald";
@@ -612,10 +616,54 @@ export default async function collectNews(): Promise<CollectorResult[]> {
         .slice(0, 3)
         .map(([tag]) => tag);
 
+      // Headline + image evolve with the story — slug stays fixed
       const newestArticle = topArticles[indices.at(-1)!]!;
+      const updatedHeadline = newestArticle.title;
+
+      // Slug drift check: if the headline has evolved so far from the original
+      // slug that they share almost no words, the story has fundamentally shifted
+      // and should chapter into a new story
+      if (hasSlugDrifted(storyId, updatedHeadline)) {
+        console.log(
+          `[news] Slug drift detected: "${updatedHeadline}" vs slug "${storyId}" — creating chapter`
+        );
+        await closeStory(db, storyId, "superseded");
+        const chapterIdx = candidateStories.findIndex((s) => s.id === storyId);
+        if (chapterIdx >= 0) {
+          candidateStories.splice(chapterIdx, 1);
+        }
+        const chapterId = slugifyHeadline(updatedHeadline, new Date());
+        await upsertStory(db, {
+          id: chapterId,
+          headline: updatedHeadline,
+          tags: JSON.stringify(rankedTags),
+          sourceCount: existingSources.size,
+          sources: JSON.stringify([...existingSources]),
+          imageUrl: newestArticle.imageUrl ?? null,
+          firstReportedAt: newestArticle.publishedAt,
+          updatedAt: now,
+          parentStoryId: storyId,
+        });
+        // Reassign this batch's articles to the new chapter
+        for (const idx of indices) {
+          articleStoryIds[idx] = chapterId;
+        }
+        storiesNeedingEnrichment.set(chapterId, {
+          headline: updatedHeadline,
+          isNew: true,
+        });
+        candidateStories.push({
+          id: chapterId,
+          headline: updatedHeadline,
+          tags: rankedTags,
+          articleCount: indices.length,
+        });
+        continue;
+      }
+
       await upsertStory(db, {
         id: storyId,
-        headline: story.headline,
+        headline: updatedHeadline,
         tags: JSON.stringify(rankedTags),
         sourceCount: existingSources.size,
         sources: JSON.stringify([...existingSources]),
@@ -624,8 +672,9 @@ export default async function collectNews(): Promise<CollectorResult[]> {
         updatedAt: now,
       });
 
-      // Update the in-memory candidate's tags so subsequent articles in this batch see the capped tags
+      // Update in-memory candidate so subsequent articles in this batch see current state
       story.tags = rankedTags;
+      story.headline = updatedHeadline;
 
       if (gainedNewSource) {
         storiesNeedingEnrichment.set(storyId, {
